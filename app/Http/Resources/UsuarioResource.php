@@ -30,6 +30,8 @@ class UsuarioResource extends JsonResource
                 'estado' => $this->negocio->estado->value,
             ]),
             'debe_cambiar_password' => $this->debe_cambiar_password,
+            'invitacion' => $this->estadoInvitacion(),
+            'invitacion_enviada_en' => $this->invitacion_enviada_en?->toIso8601String(),
             'two_factor' => $this->two_factor_confirmed_at !== null,
             'ultimo_acceso_en' => $this->ultimo_acceso_en?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),

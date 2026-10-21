@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
+use App\Services\Usuarios\SesionesUsuario;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
@@ -12,7 +13,10 @@ class ResetUserPassword implements ResetsUserPasswords
 {
     use PasswordValidationRules;
 
-    public function __construct(private readonly RegistradorAuditoria $auditoria) {}
+    public function __construct(
+        private readonly RegistradorAuditoria $auditoria,
+        private readonly SesionesUsuario $sesiones,
+    ) {}
 
     /**
      * Validate and reset the user's forgotten password.
@@ -31,7 +35,12 @@ class ResetUserPassword implements ResetsUserPasswords
         $user->forceFill([
             'password' => $input['password'],
             'debe_cambiar_password' => false,
+            'invitacion_aceptada_en' => $user->invitacion_enviada_en !== null && $user->invitacion_aceptada_en === null
+                ? now()
+                : $user->invitacion_aceptada_en,
         ])->save();
+
+        $this->sesiones->cerrarTodas($user);
 
         $this->auditoria->registrar(
             accion: 'usuario.contrasena_restablecida',

@@ -19,7 +19,12 @@ import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
 import { useFiltros } from '@/composables/useFiltros';
-import { fechaCorta, numero } from '@/lib/formato';
+import {
+    coberturaVisitantes,
+    fechaCorta,
+    numero,
+    visitantes,
+} from '@/lib/formato';
 import { index as estadisticasIndex } from '@/routes/admin/estadisticas';
 import { show as negocioShow } from '@/routes/admin/negocios';
 import { show as productoShow } from '@/routes/admin/productos';
@@ -142,9 +147,11 @@ const sinDatos = computed(() => props.totales.total === 0);
         />
         <TarjetaIndicador
             etiqueta="Visitantes únicos estimados"
-            :valor="numero(totales.visitantes_estimados)"
+            :valor="visitantes(totales)"
             :icono="UsersRound"
-            detalle="Por huella diaria anónima"
+            :detalle="
+                coberturaVisitantes(totales) ?? 'Por huella diaria anónima'
+            "
         />
         <TarjetaIndicador
             etiqueta="Bots filtrados"

@@ -6,7 +6,7 @@ use App\Enums\EstadoCuenta;
 use App\Enums\RolUsuario;
 use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
-use Illuminate\Support\Facades\DB;
+use App\Services\Usuarios\SesionesUsuario;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -15,7 +15,10 @@ use Illuminate\Validation\ValidationException;
  */
 class CambiarEstadoUsuario
 {
-    public function __construct(private readonly RegistradorAuditoria $auditoria) {}
+    public function __construct(
+        private readonly RegistradorAuditoria $auditoria,
+        private readonly SesionesUsuario $sesiones,
+    ) {}
 
     public function ejecutar(User $usuario, EstadoCuenta $estado, User $actor, ?string $motivo = null): User
     {
@@ -37,14 +40,10 @@ class CambiarEstadoUsuario
         $usuario->forceFill([
             'estado' => $estado,
             'suspendido_en' => $suspender ? now() : null,
-            'remember_token' => $suspender ? null : $usuario->remember_token,
         ])->save();
 
-        if ($suspender && config('session.driver') === 'database') {
-            DB::connection(config('session.connection'))
-                ->table((string) config('session.table', 'sessions'))
-                ->where('user_id', $usuario->id)
-                ->delete();
+        if ($suspender) {
+            $this->sesiones->cerrarTodas($usuario);
         }
 
         $this->auditoria->registrar(

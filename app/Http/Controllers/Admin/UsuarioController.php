@@ -8,6 +8,7 @@ use App\Actions\Usuarios\CrearUsuario;
 use App\Actions\Usuarios\EnviarInvitacion;
 use App\Actions\Usuarios\EstablecerContrasenaTemporal;
 use App\Enums\EstadoCuenta;
+use App\Enums\ResultadoInvitacion;
 use App\Enums\RolUsuario;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CambiarEstadoRequest;
@@ -90,9 +91,7 @@ class UsuarioController extends Controller
             'password' => $request->validated('metodo') === 'temporal' ? (string) $request->validated('password') : null,
         ], $negocio);
 
-        $this->notificar($request->validated('metodo') === 'temporal'
-            ? "Acceso creado para {$usuario->email}. Comparte la contraseña temporal por un canal seguro."
-            : "Acceso creado. Se envió un enlace de activación a {$usuario->email}.");
+        $this->notificarAcceso("Acceso creado para {$usuario->email}.", $usuario, $request->validated('metodo') !== 'temporal');
 
         return $negocio !== null
             ? redirect()->route('admin.negocios.show', $negocio)
@@ -136,10 +135,11 @@ class UsuarioController extends Controller
 
     public function invitacion(User $usuario, EnviarInvitacion $accion): RedirectResponse
     {
-        abort_if($usuario->estado !== EstadoCuenta::Activo, 422, 'El usuario está suspendido.');
-
-        $accion->ejecutar($usuario);
-        $this->notificar("Se envió un enlace de acceso a {$usuario->email}.");
+        match ($accion->ejecutar($usuario)) {
+            ResultadoInvitacion::Enviada => $this->notificar("Se envió un enlace de acceso a {$usuario->email}. Los enlaces anteriores dejaron de funcionar."),
+            ResultadoInvitacion::Fallida => $this->notificar("No se pudo enviar el correo a {$usuario->email}. Revisa la configuración de correo e inténtalo de nuevo.", 'error'),
+            ResultadoInvitacion::NoPermitida => $this->notificar('No se puede enviar el enlace: el acceso o su negocio están suspendidos.', 'error'),
+        };
 
         return back();
     }

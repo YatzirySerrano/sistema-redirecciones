@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Producto;
 use App\Models\User;
+use App\Services\Configuracion\AjustesPlataforma;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +24,9 @@ class ProductoResource extends JsonResource
         /** @var User|null $usuario */
         $usuario = $request->user();
         $esAdmin = $usuario?->esAdministrador() ?? false;
+        // Con las estadísticas deshabilitadas para clientes, tampoco se envían
+        // los contadores de accesos.
+        $verAccesos = $esAdmin || app(AjustesPlataforma::class)->booleano('clientes_ven_estadisticas');
 
         $datos = [
             'id' => $this->id,
@@ -34,8 +38,8 @@ class ProductoResource extends JsonResource
             'url_destino' => $this->url_destino,
             'estado' => $this->estado->value,
             'estado_etiqueta' => $this->estado->etiqueta(),
-            'total_accesos' => $this->total_accesos,
-            'ultimo_acceso_en' => $this->ultimo_acceso_en?->toIso8601String(),
+            'total_accesos' => $verAccesos ? $this->total_accesos : null,
+            'ultimo_acceso_en' => $verAccesos ? $this->ultimo_acceso_en?->toIso8601String() : null,
             'destino_actualizado_en' => $this->destino_actualizado_en?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'negocio' => $this->whenLoaded('negocio', fn () => [
@@ -47,6 +51,7 @@ class ProductoResource extends JsonResource
             'permisos' => [
                 'cambiar_destino' => $usuario?->can('cambiarDestino', $this->resource) ?? false,
                 'descargar_qr' => $usuario?->can('descargarQr', $this->resource) ?? false,
+                'disenar_qr' => $usuario?->can('disenarQr', $this->resource) ?? false,
             ],
         ];
 

@@ -25,6 +25,8 @@
         <p>
             @if ($estado === 410)
                 El enlace existe, pero en este momento se encuentra inactivo. Inténtalo más tarde.
+            @elseif ($estado === 429)
+                Recibimos demasiadas solicitudes desde tu conexión. Espera un minuto e inténtalo de nuevo.
             @else
                 No encontramos el destino de este enlace. Verifica el código QR o la tarjeta e inténtalo de nuevo.
             @endif

@@ -97,6 +97,7 @@ class ProductoController extends Controller
         return Inertia::render('admin/productos/Create', [
             'negocio_id' => $request->integer('negocio_id') ?: null,
             'url_publica_base' => Producto::construirUrlPermanente(''),
+            'negocios' => $this->opcionesNegocios(),
             ...$this->catalogos(),
         ]);
     }
@@ -207,14 +208,14 @@ class ProductoController extends Controller
     }
 
     /**
+     * Catálogos de los formularios de alta y edición.
+     *
      * @return array<string, mixed>
      */
     private function catalogos(): array
     {
         return [
-            'negocios' => $this->opcionesNegocios(),
             'tipos' => TipoProducto::opciones(),
-            'estados' => EstadoProducto::opciones(),
             'preparaciones' => EstadoPreparacion::opciones(),
         ];
     }

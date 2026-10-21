@@ -22,6 +22,7 @@ use App\Services\Estadisticas\FiltroEstadisticas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -86,9 +87,16 @@ class NegocioController extends Controller
 
     public function store(GuardarNegocioRequest $request, CrearNegocio $accion): RedirectResponse
     {
-        $negocio = $accion->ejecutar($request->datosNegocio(), $request->datosAcceso());
+        $acceso = $request->datosAcceso();
+        $negocio = $accion->ejecutar($request->datosNegocio(), $acceso);
+        $prefijo = "Negocio «{$negocio->nombre_comercial}» registrado.";
 
-        $this->notificar("Negocio «{$negocio->nombre_comercial}» registrado.");
+        if ($acceso === null) {
+            $this->notificar($prefijo);
+        } else {
+            $usuario = $negocio->usuarios()->where('email', Str::lower($acceso['email']))->firstOrFail();
+            $this->notificarAcceso($prefijo, $usuario, $acceso['password'] === null);
+        }
 
         return redirect()->route('admin.negocios.show', $negocio);
     }

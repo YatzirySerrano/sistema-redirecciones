@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { inicio, login } from '@/routes';
 
-const props = defineProps<{ estado: number }>();
+const props = defineProps<{ estado: number; mensaje?: string | null }>();
 const page = usePage();
 
 const MENSAJES: Record<number, { titulo: string; texto: string }> = {
@@ -30,7 +30,12 @@ const MENSAJES: Record<number, { titulo: string; texto: string }> = {
     },
 };
 
-const mensaje = computed(() => MENSAJES[props.estado] ?? MENSAJES[500]);
+const mensaje = computed(() => {
+    const base = MENSAJES[props.estado] ?? MENSAJES[500];
+
+    // Motivo concreto enviado por el servidor (p. ej. producto suspendido).
+    return props.mensaje ? { ...base, texto: props.mensaje } : base;
+});
 const autenticado = computed(() => !!page.props.auth?.user);
 </script>
 

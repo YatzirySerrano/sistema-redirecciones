@@ -2,6 +2,8 @@
  * Formateo consistente (es-MX) de fechas, números y URLs.
  */
 
+import type { TotalesEstadisticas, Usuario } from '@/types/dominio';
+
 const LOCALE = 'es-MX';
 
 const fechaCortaFmt = new Intl.DateTimeFormat(LOCALE, {
@@ -99,4 +101,56 @@ export function hoyIso(): string {
     const d = new Date();
 
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Valor de «visitantes estimados». Es null cuando el periodo completo es
+ * anterior a la conservación de huellas anónimas: no se muestra un cero
+ * engañoso.
+ */
+export function visitantes(totales: TotalesEstadisticas): string {
+    return totales.visitantes_estimados === null
+        ? 'No disponible'
+        : numero(totales.visitantes_estimados);
+}
+
+/**
+ * Aclaración cuando la estimación de visitantes no cubre todo el periodo,
+ * o null si lo cubre completo.
+ */
+export function coberturaVisitantes(
+    totales: TotalesEstadisticas,
+): string | null {
+    if (totales.visitantes_estimados === null) {
+        return 'Las huellas anónimas de este periodo ya se eliminaron.';
+    }
+
+    return totales.visitantes_parcial && totales.visitantes_desde
+        ? `Solo desde el ${fechaCorta(totales.visitantes_desde)}: las huellas anónimas se eliminan con el tiempo.`
+        : null;
+}
+
+/**
+ * Situación pendiente del acceso de un usuario (invitación o contraseña
+ * temporal), o null si ya definió su contraseña.
+ */
+export function pendienteDeAcceso(
+    usuario: Pick<Usuario, 'invitacion' | 'debe_cambiar_password'>,
+): { texto: string; error: boolean } | null {
+    if (usuario.invitacion === 'fallida') {
+        return {
+            texto: 'El correo de invitación no pudo enviarse',
+            error: true,
+        };
+    }
+
+    if (usuario.invitacion === 'pendiente') {
+        return { texto: 'Invitación enviada, sin aceptar', error: false };
+    }
+
+    if (usuario.invitacion === null && usuario.debe_cambiar_password) {
+        return { texto: 'Contraseña temporal pendiente', error: false };
+    }
+
+    return null;
 }

@@ -28,6 +28,9 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property EstadoCuenta $estado
  * @property int|null $negocio_id
  * @property bool $debe_cambiar_password
+ * @property CarbonImmutable|null $invitacion_enviada_en
+ * @property CarbonImmutable|null $invitacion_fallida_en
+ * @property CarbonImmutable|null $invitacion_aceptada_en
  * @property CarbonImmutable|null $ultimo_acceso_en
  * @property CarbonImmutable|null $suspendido_en
  * @property string|null $two_factor_secret
@@ -59,6 +62,9 @@ class User extends Authenticatable
             'rol' => RolUsuario::class,
             'estado' => EstadoCuenta::class,
             'debe_cambiar_password' => 'boolean',
+            'invitacion_enviada_en' => 'datetime',
+            'invitacion_fallida_en' => 'datetime',
+            'invitacion_aceptada_en' => 'datetime',
             'ultimo_acceso_en' => 'datetime',
             'suspendido_en' => 'datetime',
         ];
@@ -70,6 +76,20 @@ class User extends Authenticatable
     public function negocio(): BelongsTo
     {
         return $this->belongsTo(Negocio::class);
+    }
+
+    /**
+     * Estado de la invitación de acceso, o null si el usuario se creó con
+     * contraseña temporal.
+     */
+    public function estadoInvitacion(): ?string
+    {
+        return match (true) {
+            $this->invitacion_aceptada_en !== null => 'aceptada',
+            $this->invitacion_fallida_en !== null => 'fallida',
+            $this->invitacion_enviada_en !== null => 'pendiente',
+            default => null,
+        };
     }
 
     public function esAdministrador(): bool

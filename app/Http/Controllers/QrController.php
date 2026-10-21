@@ -5,22 +5,21 @@ namespace App\Http\Controllers;
 use App\Actions\Productos\GuardarOpcionesQr;
 use App\Http\Requests\OpcionesQrRequest;
 use App\Models\Producto;
+use App\Services\Qr\ErrorGeneracionQr;
 use App\Services\Qr\GeneradorQr;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Vista previa, descarga y diseño del QR de un producto (administrador y
- * cliente propietario, según ProductoPolicy::descargarQr).
+ * cliente propietario). La autorización se aplica en OpcionesQrRequest
+ * (ProductoPolicy::descargarQr para ver/descargar y ::disenarQr para guardar).
  */
 class QrController extends Controller
 {
     public function show(OpcionesQrRequest $request, Producto $producto, GeneradorQr $generador): Response
     {
-        Gate::authorize('descargarQr', $producto);
-
         $producto->loadMissing('negocio');
         $opciones = $request->opciones($producto->opciones_qr);
 
@@ -30,12 +29,18 @@ class QrController extends Controller
             ]);
         }
 
-        $qr = $generador->generar(
-            $producto,
-            $opciones,
-            (string) $request->validated('formato', 'png'),
-            (int) $request->validated('tamano', 1024),
-        );
+        try {
+            $qr = $generador->generar(
+                $producto,
+                $opciones,
+                (string) $request->validated('formato', 'png'),
+                (int) $request->validated('tamano', 1024),
+            );
+        } catch (ErrorGeneracionQr $e) {
+            // JSON 422 para la vista previa (fetch); redirección con errores
+            // si se abrió el enlace directamente.
+            throw ValidationException::withMessages(['qr' => $e->getMessage()]);
+        }
 
         $disposicion = $request->boolean('descargar') ? 'attachment' : 'inline';
 
@@ -51,10 +56,8 @@ class QrController extends Controller
 
     public function update(OpcionesQrRequest $request, Producto $producto, GuardarOpcionesQr $accion): RedirectResponse
     {
-        Gate::authorize('descargarQr', $producto);
-
         $producto->loadMissing('negocio');
-        $accion->ejecutar($producto, $request->opciones($producto->opciones_qr));
+        $accion->ejecutar($producto, $request->opciones($producto->opciones_qr), $request->user());
 
         $this->notificar('Diseño del QR guardado.');
 

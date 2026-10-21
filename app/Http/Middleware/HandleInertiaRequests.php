@@ -60,6 +60,11 @@ class HandleInertiaRequests extends Middleware
                     'administrar' => $usuario->esAdministrador(),
                     'ver_estadisticas' => $usuario->esAdministrador()
                         || app(AjustesPlataforma::class)->booleano('clientes_ven_estadisticas'),
+                    // El administrador debe activar la verificación en dos
+                    // pasos antes de usar el panel (RequerirDosPasosAdministrador).
+                    'requiere_dos_pasos' => $usuario->esAdministrador()
+                        && (bool) config('dasti.exigir_2fa_administradores')
+                        && $usuario->two_factor_confirmed_at === null,
                 ],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

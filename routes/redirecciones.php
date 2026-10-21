@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('r/{codigo}', RedireccionController::class)
-    ->where('codigo', '[A-Za-z0-9]{1,32}')
+    // Se acepta cualquier segmento: el controlador descarta los formatos
+    // inválidos con la misma página neutra (404) que un código inexistente.
+    ->where('codigo', '[^/]{1,64}')
     ->middleware('throttle:redirecciones')
     ->name('redireccion');

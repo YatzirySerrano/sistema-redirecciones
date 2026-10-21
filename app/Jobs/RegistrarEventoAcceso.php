@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Persiste un acceso a un enlace permanente y actualiza los agregados.
  *
- * Se despacha después de enviar la redirección al visitante (o a la cola si
- * DASTI_EVENTOS_EN_COLA=true), de modo que nunca retrasa la respuesta.
+ * Se ejecuta después de enviar la redirección al visitante (defer) o en la
+ * cola si DASTI_EVENTOS_EN_COLA=true, de modo que nunca retrasa la respuesta.
  * El payload no contiene la IP: solo una huella diaria irreversible.
  */
 class RegistrarEventoAcceso implements ShouldQueue
@@ -75,12 +75,21 @@ class RegistrarEventoAcceso implements ShouldQueue
                 ],
             );
 
-            if (! $esBot) {
-                Producto::query()->whereKey($this->productoId)->update([
-                    'total_accesos' => DB::raw('total_accesos + 1'),
-                    'ultimo_acceso_en' => $momento,
-                ]);
+            if ($esBot) {
+                return;
             }
+
+            // Los contadores del producto pertenecen al periodo de propiedad
+            // vigente: si se transfirió mientras el evento esperaba, no se tocan.
+            $vigente = Producto::query()->whereKey($this->productoId)->where('negocio_id', $this->negocioId);
+
+            $vigente->clone()->update(['total_accesos' => DB::raw('total_accesos + 1')]);
+
+            // Con varios procesos de cola los eventos pueden llegar en
+            // desorden: el último acceso nunca retrocede.
+            $vigente->clone()
+                ->where(fn ($q) => $q->whereNull('ultimo_acceso_en')->orWhere('ultimo_acceso_en', '<', $momento))
+                ->update(['ultimo_acceso_en' => $momento]);
         });
     }
 }

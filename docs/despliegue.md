@@ -37,6 +37,8 @@ SESSION_SECURE_COOKIE=true
 LOG_STACK=daily
 LOG_LEVEL=warning
 MAIL_MAILER=smtp    # + MAIL_HOST/PORT/USERNAME/PASSWORD/FROM_ADDRESS reales
+MAIL_TIMEOUT=10
+# DASTI_EXIGIR_2FA_ADMIN=true   # ya es el valor por defecto en production
 ```
 
 `APP_URL` (o `DASTI_URL_PUBLICA`) **no debe cambiar** después de entregar productos: es la dirección impresa en los QR y grabada en las tarjetas NFC.
@@ -105,14 +107,21 @@ Añade al cron del usuario de la aplicación:
 
 Ejecuta `dasti:depurar-eventos` a diario (03:30): aplica la política de conservación.
 
-No se necesita worker de colas mientras `DASTI_EVENTOS_EN_COLA=false`, porque los accesos se registran tras responder gracias a `fastcgi_finish_request`. Con tráfico alto, actívalo y supervisa `php artisan queue:work --tries=3` con systemd o supervisor.
+No se necesita worker de colas mientras `DASTI_EVENTOS_EN_COLA=false`, porque los accesos se registran tras responder (`defer()` de Laravel con `fastcgi_finish_request`). Las invitaciones se envían de forma síncrona tras guardar el alta, con un tiempo máximo de `MAIL_TIMEOUT`; un fallo queda registrado y no revierte el alta. Con tráfico alto, actívalo y supervisa `php artisan queue:work --tries=3` con systemd o supervisor.
 
 ## Seguridad
 
 - `APP_DEBUG=false`, HTTPS obligatorio y cookies `secure` y `httponly`.
 - No hay registro público; el login tiene límite de intentos por correo e IP.
+- Los administradores deben activar la verificación en dos pasos antes de usar el panel (crea el primero con `dasti:crear-administrador` y actívala en su primer acceso).
+- `trustProxies` confía solo en `127.0.0.1`/`::1` (Nginx en el mismo servidor). Si se añade Cloudflare o un balanceador, ajústalo para que los límites por IP sigan funcionando.
+- El SSR de Inertia no se usa en producción (no se ejecuta `inertia:start-ssr`): la interfaz se renderiza en el navegador.
 - No guardes secretos en el repositorio. Respalda `.env` y `APP_KEY` fuera del servidor.
 - Respalda la base a diario (`mariadb-dump --single-transaction`).
+
+## Identidad visual pendiente
+
+`public/favicon.ico`, `public/favicon.svg` y `public/apple-touch-icon.png` siguen siendo los del starter kit de Laravel. Sustitúyelos por el logotipo oficial de DASTI cuando esté disponible (no se generó uno provisional). Los QR de los clientes nunca llevan marca de DASTI.
 
 ## Verificaciones posteriores al despliegue
 

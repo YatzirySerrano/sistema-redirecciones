@@ -29,7 +29,7 @@ class ContrasenaInicialController extends Controller
 
     public function update(ContrasenaInicialRequest $request, CambiarContrasenaInicial $accion): RedirectResponse
     {
-        $accion->ejecutar($request->user(), (string) $request->validated('password'));
+        $accion->ejecutar($request->user(), (string) $request->validated('password'), $request->session()->getId());
 
         $this->notificar('Contraseña actualizada. ¡Bienvenido!');
 

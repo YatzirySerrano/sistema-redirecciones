@@ -11,6 +11,7 @@
         "types:check": "vue-tsc --noEmit"
     },
     "dependencies": {
+        "@inertiajs/core": "^3.9.1",
         "@inertiajs/vite": "^3.0.0",
         "@inertiajs/vue3": "^3.0.0",
         "@lucide/vue": "^1.59.0",
@@ -45,5 +46,8 @@
         "@tailwindcss/oxide-win32-x64-msvc": "^4.0.1",
         "lightningcss-linux-x64-gnu": "^1.29.1",
         "lightningcss-win32-x64-msvc": "^1.29.1"
+    },
+    "overrides": {
+        "tinypool": "2.1.2"
     }
 }

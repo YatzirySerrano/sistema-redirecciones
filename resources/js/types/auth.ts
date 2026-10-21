@@ -11,6 +11,8 @@ export type User = {
 export type Permisos = {
     administrar: boolean;
     ver_estadisticas: boolean;
+    /** Administrador que aún debe activar la verificación en dos pasos. */
+    requiere_dos_pasos: boolean;
 };
 
 export type Auth = {

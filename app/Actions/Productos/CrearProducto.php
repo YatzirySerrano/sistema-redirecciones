@@ -12,14 +12,22 @@ use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
 use App\Services\Redirecciones\GeneradorCodigo;
 use App\Services\Redirecciones\ValidadorUrlDestino;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Registra uno o varios productos físicos para un negocio, cada uno con su
  * propio enlace permanente.
+ *
+ * Cada unidad recibe un código distinto de GeneradorCodigo. La unicidad la
+ * garantiza el índice UNIQUE de productos.codigo: si dos altas simultáneas
+ * llegaran a generar el mismo código, el INSERT perdedor se reintenta con un
+ * código nuevo (dentro de un savepoint) en lugar de fallar.
  */
 class CrearProducto
 {
+    private const INTENTOS_CODIGO = 5;
+
     public function __construct(
         private readonly GeneradorCodigo $generadorCodigo,
         private readonly ValidadorUrlDestino $validador,
@@ -68,11 +76,12 @@ class CrearProducto
         ]);
         $producto->forceFill([
             'negocio_id' => $negocio->id,
-            'codigo' => $this->generadorCodigo->generar(),
             'estado' => EstadoProducto::Activo,
             'url_destino' => $url,
             'destino_actualizado_en' => $url !== null ? now() : null,
-        ])->save();
+        ]);
+
+        $this->guardarConCodigoUnico($producto);
 
         if ($url !== null) {
             CambioDestino::query()->create([
@@ -100,5 +109,24 @@ class CrearProducto
         );
 
         return $producto;
+    }
+
+    private function guardarConCodigoUnico(Producto $producto): void
+    {
+        for ($intento = 1; ; $intento++) {
+            $producto->codigo = $this->generadorCodigo->generar();
+
+            try {
+                // Transacción anidada = savepoint: un INSERT rechazado no
+                // invalida el resto del lote.
+                DB::transaction(fn () => $producto->save());
+
+                return;
+            } catch (UniqueConstraintViolationException $e) {
+                if ($intento >= self::INTENTOS_CODIGO) {
+                    throw $e;
+                }
+            }
+        }
     }
 }

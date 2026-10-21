@@ -42,7 +42,8 @@ export type Producto = {
     url_destino: string | null;
     estado: EstadoCuenta;
     estado_etiqueta: string;
-    total_accesos: number;
+    /** null para clientes con las estadísticas deshabilitadas. */
+    total_accesos: number | null;
     ultimo_acceso_en: string | null;
     destino_actualizado_en: string | null;
     created_at: string | null;
@@ -59,7 +60,11 @@ export type Producto = {
     referencia_comercial?: string | null;
     notas_internas?: string | null;
     suspendido_en?: string | null;
-    permisos: { cambiar_destino: boolean; descargar_qr: boolean };
+    permisos: {
+        cambiar_destino: boolean;
+        descargar_qr: boolean;
+        disenar_qr: boolean;
+    };
 };
 
 export type Negocio = {
@@ -97,6 +102,9 @@ export type Usuario = {
         estado: EstadoCuenta;
     } | null;
     debe_cambiar_password: boolean;
+    /** null si el acceso se creó con contraseña temporal. */
+    invitacion: 'pendiente' | 'fallida' | 'aceptada' | null;
+    invitacion_enviada_en: string | null;
     two_factor: boolean;
     ultimo_acceso_en: string | null;
     created_at: string | null;
@@ -139,7 +147,12 @@ export type ElementoDesglose = {
 export type TotalesEstadisticas = {
     total: number;
     bots: number;
-    visitantes_estimados: number;
+    /** null si el periodo es anterior a la conservación de huellas. */
+    visitantes_estimados: number | null;
+    /** Primer día cubierto por la estimación de visitantes. */
+    visitantes_desde: string | null;
+    /** true si la estimación no cubre todo el periodo. */
+    visitantes_parcial: boolean;
     productos_con_accesos: number;
     promedio_diario: number;
 };

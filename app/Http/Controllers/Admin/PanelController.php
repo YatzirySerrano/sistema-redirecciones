@@ -32,7 +32,6 @@ class PanelController extends Controller
             ->selectRaw('COUNT(*) as total')
             ->selectRaw('SUM(CASE WHEN tipo IN (?, ?) THEN 1 ELSE 0 END) as qr', [TipoProducto::Qr->value, TipoProducto::Combinado->value])
             ->selectRaw('SUM(CASE WHEN tipo IN (?, ?) THEN 1 ELSE 0 END) as nfc', [TipoProducto::Nfc->value, TipoProducto::Combinado->value])
-            ->selectRaw('COALESCE(SUM(total_accesos), 0) as accesos')
             ->first();
 
         $redireccionesActivas = Producto::query()
@@ -49,7 +48,9 @@ class PanelController extends Controller
                 'productos_qr' => (int) ($productos->qr ?? 0),
                 'productos_nfc' => (int) ($productos->nfc ?? 0),
                 'redirecciones_activas' => $redireccionesActivas,
-                'accesos_totales' => (int) ($productos->accesos ?? 0),
+                // Histórico completo (todos los periodos de propiedad), desde el
+                // agregado diario que no se depura.
+                'accesos_totales' => $estadisticas->totalHistorico(),
                 'periodo' => $estadisticas->totales($filtro),
             ],
             'serie' => $estadisticas->serieDiaria($filtro),

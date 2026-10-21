@@ -138,4 +138,29 @@ class RedireccionPublicaTest extends TestCase
 
         $this->get('/r/'.$producto->codigo)->assertStatus(429);
     }
+
+    public function test_codigos_con_formato_invalido_muestran_la_misma_pagina_neutra(): void
+    {
+        foreach (['abc-def', 'código', 'a.b', str_repeat('a', 40), "x'or1=1"] as $codigo) {
+            $this->get('/r/'.rawurlencode($codigo))
+                ->assertNotFound()
+                ->assertSee('Este enlace no está disponible')
+                ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+        }
+
+        $this->assertDatabaseCount('eventos_acceso', 0);
+    }
+
+    public function test_superar_el_limite_muestra_la_pagina_neutra_con_reintento(): void
+    {
+        config(['dasti.limite_redirecciones_por_minuto' => 1]);
+        $producto = Producto::factory()->create();
+
+        $this->get('/r/'.$producto->codigo)->assertRedirect();
+        $this->get('/r/'.$producto->codigo)
+            ->assertStatus(429)
+            ->assertSee('demasiadas solicitudes', false)
+            ->assertHeader('Retry-After')
+            ->assertDontSee($producto->negocio->nombre_comercial);
+    }
 }

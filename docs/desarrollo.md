@@ -46,11 +46,13 @@ php artisan serve
 npm run dev
 ```
 
-Los correos (invitaciones y recuperación de contraseña) se escriben en `storage/logs/laravel.log` mientras `MAIL_MAILER=log`.
+Los correos (invitaciones y recuperación de contraseña) se escriben en `storage/logs/laravel.log` mientras `MAIL_MAILER=log`. El enlace de invitación es una URL firmada `…/invitacion/{id}?expires=…&huella=…&signature=…`.
+
+En desarrollo, el plugin `@inertiajs/vite` renderiza también en el servidor (SSR). En móvil, la consola muestra avisos de _hydration mismatch_ del sidebar del starter kit (el servidor no conoce el ancho de pantalla) y de los tiempos relativos («hace 1 minuto»). Son solo de desarrollo: en producción no se ejecuta el SSR.
 
 ## Pruebas y calidad
 
-Las pruebas usan **MariaDB** sobre `sistema_redirecciones_testing`, configurada en `phpunit.xml`. `tests/TestCase.php` se niega a ejecutar las pruebas sobre cualquier base cuyo nombre no termine en `_testing`. Las credenciales se toman del entorno:
+Las pruebas usan **MariaDB** sobre `sistema_redirecciones_testing`, configurada en `phpunit.xml`. Las pruebas que renderizan páginas necesitan `public/build/manifest.json` (ejecuta `npm run build` antes) o el servidor de Vite en marcha. `tests/TestCase.php` se niega a ejecutar las pruebas sobre cualquier base cuyo nombre no termine en `_testing`. Las credenciales se toman del entorno:
 
 ```bash
 DB_USERNAME=root DB_PASSWORD=secreto php artisan test

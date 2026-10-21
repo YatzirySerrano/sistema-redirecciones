@@ -33,8 +33,8 @@ const props = defineProps<{
     indicadores: {
         productos: number;
         productos_activos: number;
-        accesos_totales: number;
-        accesos_30_dias: number;
+        accesos_totales: number | null;
+        accesos_30_dias: number | null;
     };
     serie: PuntoSerie[] | null;
     productos: Coleccion<Producto>;
@@ -81,12 +81,14 @@ const saludo = computed(() => {
             :icono="CircleCheck"
         />
         <TarjetaIndicador
+            v-if="indicadores.accesos_totales !== null"
             etiqueta="Accesos registrados"
             :valor="numero(indicadores.accesos_totales)"
             :icono="MousePointerClick"
             detalle="Desde que tienes tus productos"
         />
         <TarjetaIndicador
+            v-if="indicadores.accesos_30_dias !== null"
             etiqueta="Accesos (30 días)"
             :valor="numero(indicadores.accesos_30_dias)"
             :icono="TrendingUp"
@@ -111,7 +113,14 @@ const saludo = computed(() => {
     <div
         class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
     >
-        <Panel titulo="Tus productos más usados" sin-relleno>
+        <Panel
+            :titulo="
+                indicadores.accesos_totales !== null
+                    ? 'Tus productos más usados'
+                    : 'Tus productos'
+            "
+            sin-relleno
+        >
             <template #acciones>
                 <Button variant="ghost" size="sm" as-child>
                     <Link :href="productosIndex()">Ver todos</Link>
@@ -149,7 +158,10 @@ const saludo = computed(() => {
                                 }}
                             </p>
                         </div>
-                        <div class="shrink-0 text-right">
+                        <div
+                            v-if="p.total_accesos !== null"
+                            class="shrink-0 text-right"
+                        >
                             <p class="font-semibold tabular-nums">
                                 {{ numero(p.total_accesos) }}
                             </p>

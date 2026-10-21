@@ -36,6 +36,7 @@ defineProps<{ producto: Producto }>();
                 :etiqueta="producto.tipo_etiqueta"
             />
             <span
+                v-if="producto.total_accesos !== null"
                 class="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums"
             >
                 <MousePointerClick class="size-3.5" aria-hidden="true" />

@@ -45,7 +45,7 @@ class ProductoController extends Controller
         $productos = Producto::query()
             ->deNegocio($negocioId)
             ->with('negocio')
-            ->buscar($filtros['buscar'] ?? null)
+            ->buscar($filtros['buscar'] ?? null, incluirInternos: false)
             ->when($filtros['tipo'] ?? null, fn (Builder $q, string $v) => $q->where('tipo', $v))
             ->when($filtros['estado'] ?? null, fn (Builder $q, string $v) => $q->where('estado', $v))
             ->orderBy('nombre')

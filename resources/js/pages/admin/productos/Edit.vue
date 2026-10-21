@@ -24,9 +24,7 @@ defineOptions({
 
 const props = defineProps<{
     producto: Recurso<Producto>;
-    negocios: Opcion[];
     tipos: Opcion[];
-    estados: Opcion[];
     preparaciones: Opcion[];
 }>();
 

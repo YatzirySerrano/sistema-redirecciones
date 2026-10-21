@@ -17,7 +17,12 @@ import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
 import { useFiltros } from '@/composables/useFiltros';
-import { fechaCorta, numero } from '@/lib/formato';
+import {
+    coberturaVisitantes,
+    fechaCorta,
+    numero,
+    visitantes,
+} from '@/lib/formato';
 import { index } from '@/routes/cliente/estadisticas';
 import { show } from '@/routes/cliente/productos';
 import type {
@@ -42,7 +47,6 @@ const props = defineProps<{
     navegadores: ElementoDesglose[];
     sistemas: ElementoDesglose[];
     productos: Opcion[];
-    dias_conservacion_huella: number;
 }>();
 
 const { filtros } = useFiltros(index().url, { ...props.filtros });
@@ -101,9 +105,12 @@ const aBarras = (lista: ElementoDesglose[]): Barra[] =>
         />
         <TarjetaIndicador
             etiqueta="Visitantes estimados"
-            :valor="numero(totales.visitantes_estimados)"
+            :valor="visitantes(totales)"
             :icono="UsersRound"
-            :detalle="`Aproximación de los últimos ${dias_conservacion_huella} días`"
+            :detalle="
+                coberturaVisitantes(totales) ??
+                'Aproximación por dispositivo y día'
+            "
         />
     </div>
 

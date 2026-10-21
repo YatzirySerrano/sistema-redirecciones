@@ -81,9 +81,15 @@ class RedireccionController extends Controller
 
         if (config('dasti.eventos_en_cola')) {
             dispatch($job);
-        } else {
-            dispatch($job)->afterResponse();
+
+            return;
         }
+
+        // Se ejecuta tras enviar la respuesta (también en 404/410). A
+        // diferencia de dispatch()->afterResponse(), los callbacks diferidos
+        // se vacían en cada petición y no se acumulan en procesos de larga
+        // vida ni en las pruebas.
+        defer(fn () => dispatch_sync($job), always: true);
     }
 
     private function noDisponible(int $estado): Response

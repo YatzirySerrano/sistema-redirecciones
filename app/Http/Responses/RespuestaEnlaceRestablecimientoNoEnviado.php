@@ -8,9 +8,10 @@ use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 
 /**
- * Evita la enumeración de cuentas: si el correo no existe se responde igual
- * que si el enlace se hubiera enviado. Los demás fallos (p. ej. límite de
- * intentos) sí se informan.
+ * Evita la enumeración de cuentas: si el correo no existe, o si ya se envió
+ * un enlace hace poco (límite del broker, que solo ocurre con cuentas
+ * existentes), se responde igual que si el enlace se hubiera enviado. Los
+ * demás fallos sí se informan.
  */
 class RespuestaEnlaceRestablecimientoNoEnviado implements FailedPasswordResetLinkRequestResponse
 {
@@ -18,7 +19,7 @@ class RespuestaEnlaceRestablecimientoNoEnviado implements FailedPasswordResetLin
 
     public function toResponse($request): RedirectResponse
     {
-        if ($this->status === Password::INVALID_USER) {
+        if (in_array($this->status, [Password::INVALID_USER, Password::RESET_THROTTLED], true)) {
             return back()->with('status', trans(Password::RESET_LINK_SENT));
         }
 

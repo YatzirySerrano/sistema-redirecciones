@@ -2,13 +2,16 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -43,19 +46,46 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             $estado = $response->getStatusCode();
 
+            // Enlaces permanentes: siempre la página neutra, sin datos del
+            // negocio (también al superar el límite de solicitudes).
+            if ($request->is('r/*') || $request->is('r')) {
+                if (! in_array($estado, [404, 410, 429], true)) {
+                    return $response;
+                }
+
+                return response()
+                    ->view('publico.no-disponible', ['estado' => $estado], $estado)
+                    ->withHeaders(array_filter([
+                        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                        'X-Robots-Tag' => 'noindex, nofollow',
+                        'Retry-After' => $response->headers->get('Retry-After'),
+                    ]));
+            }
+
             if (app()->hasDebugModeEnabled() && $estado >= 500) {
                 return $response;
             }
 
-            if ($request->is('r/*') || ! in_array($estado, [403, 404, 419, 429, 500, 503], true)) {
+            // Peticiones fetch (vista previa del QR, comprobación de destinos):
+            // se conserva la respuesta JSON para que la interfaz muestre el motivo.
+            if ($request->expectsJson() || ! in_array($estado, [403, 404, 419, 429, 500, 503], true)) {
                 return $response;
             }
 
             if ($estado === 419) {
-                return back()->with('status', 'La página expiró. Inténtalo de nuevo.');
+                Inertia::flash('toast', ['type' => 'warning', 'message' => 'La sesión expiró. Vuelve a intentarlo.']);
+
+                return back();
             }
 
-            return inertia('Error', ['estado' => $estado])
+            // Mensajes explícitos de las políticas (p. ej. «producto
+            // suspendido»); los genéricos del framework no se muestran.
+            $mensaje = $exception instanceof HttpExceptionInterface || $exception instanceof AuthorizationException
+                ? $exception->getMessage()
+                : '';
+            $mensaje = $estado === 403 && $mensaje !== '' && $mensaje !== 'This action is unauthorized.' ? $mensaje : null;
+
+            return inertia('Error', ['estado' => $estado, 'mensaje' => $mensaje])
                 ->toResponse($request)
                 ->setStatusCode($estado);
         });

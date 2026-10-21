@@ -35,11 +35,14 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import {
+    coberturaVisitantes,
     dominio,
     fechaCorta,
     fechaHora,
     numero,
+    pendienteDeAcceso,
     relativo,
+    visitantes,
 } from '@/lib/formato';
 import { edit, estado, index } from '@/routes/admin/negocios';
 import {
@@ -90,6 +93,7 @@ const suspendido = computed(() => n.value.estado === 'suspendido');
 // Suspensión / reactivación
 const dialogoEstado = ref(false);
 const motivo = ref('');
+const errorEstado = ref<string | undefined>();
 const cambiandoEstado = ref(false);
 
 const cambiarEstado = () => {
@@ -101,8 +105,16 @@ const cambiarEstado = () => {
         },
         {
             preserveScroll: true,
-            onStart: () => (cambiandoEstado.value = true),
+            onStart: () => {
+                cambiandoEstado.value = true;
+                errorEstado.value = undefined;
+            },
             onFinish: () => (cambiandoEstado.value = false),
+            onError: (errores) =>
+                (errorEstado.value =
+                    errores.motivo ??
+                    errores.estado ??
+                    Object.values(errores)[0]),
             onSuccess: () => {
                 dialogoEstado.value = false;
                 motivo.value = '';
@@ -233,9 +245,12 @@ const quitarLogo = () => {
         />
         <TarjetaIndicador
             etiqueta="Visitantes estimados"
-            :valor="numero(estadisticas.totales.visitantes_estimados)"
+            :valor="visitantes(estadisticas.totales)"
             :icono="UsersRound"
-            detalle="Únicos por día, aproximado"
+            :detalle="
+                coberturaVisitantes(estadisticas.totales) ??
+                'Únicos por día, aproximado'
+            "
         />
     </div>
 
@@ -530,10 +545,15 @@ const quitarLogo = () => {
                             <span :title="fechaHora(u.ultimo_acceso_en)">{{
                                 relativo(u.ultimo_acceso_en)
                             }}</span>
-                            <template v-if="u.debe_cambiar_password">
+                            <template v-if="pendienteDeAcceso(u)">
                                 ·
-                                <span class="text-warning"
-                                    >contraseña temporal pendiente</span
+                                <span
+                                    :class="
+                                        pendienteDeAcceso(u)?.error
+                                            ? 'text-destructive'
+                                            : 'text-warning'
+                                    "
+                                    >{{ pendienteDeAcceso(u)?.texto }}</span
                                 ></template
                             >
                         </p>
@@ -601,6 +621,7 @@ const quitarLogo = () => {
                 maxlength="255"
                 placeholder="Se guardará en la auditoría"
             />
+            <InputError :message="errorEstado" />
         </div>
     </DialogoConfirmacion>
 

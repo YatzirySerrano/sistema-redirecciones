@@ -22,6 +22,15 @@ final class CatalogoAcciones
         'usuario.contrasena_temporal' => 'Contraseña temporal asignada',
         'usuario.contrasena_inicial' => 'Contraseña personal definida',
         'usuario.contrasena_restablecida' => 'Contraseña restablecida',
+        'usuario.contrasena_cambiada' => 'Contraseña cambiada por el usuario',
+        'usuario.perfil_actualizado' => 'Perfil actualizado por el usuario',
+        'usuario.invitacion_fallida' => 'Envío de invitación fallido',
+        'usuario.invitacion_aceptada' => 'Invitación aceptada',
+        'usuario.2fa_activada' => 'Verificación en dos pasos activada',
+        'usuario.2fa_desactivada' => 'Verificación en dos pasos desactivada',
+        'usuario.codigos_recuperacion' => 'Códigos de recuperación regenerados',
+        'sesion.iniciada' => 'Inicio de sesión',
+        'sesion.bloqueada' => 'Inicio de sesión bloqueado por intentos fallidos',
         'producto.creado' => 'Alta de producto',
         'producto.actualizado' => 'Producto actualizado',
         'producto.destino_cambiado' => 'Cambio de destino',
@@ -30,6 +39,7 @@ final class CatalogoAcciones
         'producto.transferido' => 'Producto transferido',
         'producto.recibido' => 'Producto recibido por transferencia',
         'producto.eliminado' => 'Producto eliminado',
+        'producto.qr_actualizado' => 'Diseño de QR actualizado',
         'configuracion.actualizada' => 'Configuración actualizada',
     ];
 

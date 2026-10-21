@@ -23,7 +23,12 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import CampoContrasenaTemporal from '@/components/usuarios/CampoContrasenaTemporal.vue';
-import { fechaCorta, fechaHora, relativo } from '@/lib/formato';
+import {
+    fechaCorta,
+    fechaHora,
+    pendienteDeAcceso,
+    relativo,
+} from '@/lib/formato';
 import { show as verNegocio } from '@/routes/admin/negocios';
 import {
     contrasena,
@@ -266,11 +271,16 @@ const asignarClave = () =>
                     </div>
                     <div class="flex justify-between gap-3">
                         <dt class="text-muted-foreground">Contraseña</dt>
-                        <dd :class="u.debe_cambiar_password && 'text-warning'">
+                        <dd
+                            :class="
+                                pendienteDeAcceso(u)?.error
+                                    ? 'text-destructive'
+                                    : pendienteDeAcceso(u) && 'text-warning'
+                            "
+                        >
                             {{
-                                u.debe_cambiar_password
-                                    ? 'Temporal (pendiente de cambio)'
-                                    : 'Definida por el usuario'
+                                pendienteDeAcceso(u)?.texto ??
+                                'Definida por el usuario'
                             }}
                         </dd>
                     </div>

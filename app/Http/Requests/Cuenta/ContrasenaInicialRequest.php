@@ -10,6 +10,15 @@ class ContrasenaInicialRequest extends FormRequest
     use PasswordValidationRules;
 
     /**
+     * Solo aplica mientras la contraseña sea temporal; para cambiarla en otro
+     * momento se usa Ajustes › Seguridad.
+     */
+    public function authorize(): bool
+    {
+        return (bool) $this->user()?->debe_cambiar_password;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array

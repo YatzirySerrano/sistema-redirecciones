@@ -7,13 +7,17 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Invitación para que un usuario defina su contraseña. Reutiliza el broker de
- * restablecimiento de contraseñas de Laravel: el enlace caduca según
- * auth.passwords.users.expire y el token se guarda cifrado (hash).
+ * Invitación para que un usuario defina su contraseña.
+ *
+ * El enlace es una URL firmada de un solo uso (App\Services\Usuarios\
+ * EnlaceInvitacion); no contiene ni expone ningún token almacenado.
  */
 class InvitacionAcceso extends Notification
 {
-    public function __construct(public readonly string $token) {}
+    public function __construct(
+        public readonly string $url,
+        public readonly int $horasValidez,
+    ) {}
 
     /**
      * @return list<string>
@@ -25,9 +29,10 @@ class InvitacionAcceso extends Notification
 
     public function toMail(User $notifiable): MailMessage
     {
-        $url = route('password.reset', ['token' => $this->token, 'email' => $notifiable->email]);
-        $minutos = (int) config('auth.passwords.users.expire');
         $negocio = $notifiable->negocio?->nombre_comercial;
+        $vigencia = $this->horasValidez % 24 === 0
+            ? ($this->horasValidez / 24).' '.($this->horasValidez === 24 ? 'día' : 'días')
+            : $this->horasValidez.' horas';
 
         return (new MailMessage)
             ->subject('Tu acceso al panel de redirecciones')
@@ -36,8 +41,8 @@ class InvitacionAcceso extends Notification
                 ? "Se creó tu acceso para administrar los enlaces QR y NFC de {$negocio}."
                 : 'Se creó tu acceso al panel de administración de redirecciones.')
             ->line('Para entrar por primera vez, define tu contraseña desde el siguiente enlace:')
-            ->action('Definir mi contraseña', $url)
-            ->line("Este enlace caduca en {$minutos} minutos. Si expira, solicita uno nuevo desde «¿Olvidaste tu contraseña?».")
+            ->action('Definir mi contraseña', $this->url)
+            ->line("El enlace funciona una sola vez y caduca en {$vigencia}. Si expira, pide a DASTI que te envíe uno nuevo.")
             ->line('Si no esperabas este mensaje, puedes ignorarlo.');
     }
 }

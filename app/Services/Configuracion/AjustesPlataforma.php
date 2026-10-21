@@ -32,16 +32,28 @@ class AjustesPlataforma
     ];
 
     /**
+     * Ajustes ya resueltos durante la petición actual (el servicio se
+     * registra como «scoped» en AppServiceProvider).
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $resueltos = null;
+
+    /**
      * @return array<string, mixed>
      */
     public function todos(): array
     {
+        if ($this->resueltos !== null) {
+            return $this->resueltos;
+        }
+
         /** @var array<string, mixed> $guardados */
         $guardados = Cache::rememberForever(self::CACHE_KEY, fn () => Configuracion::query()
             ->pluck('valor', 'clave')
             ->all());
 
-        return array_merge(self::PREDETERMINADOS, array_intersect_key($guardados, self::PREDETERMINADOS));
+        return $this->resueltos = array_merge(self::PREDETERMINADOS, array_intersect_key($guardados, self::PREDETERMINADOS));
     }
 
     public function obtener(string $clave): mixed
@@ -88,6 +100,7 @@ class AjustesPlataforma
         }
 
         Cache::forget(self::CACHE_KEY);
+        $this->resueltos = null;
 
         return ['anteriores' => $anteriores, 'nuevos' => $nuevos];
     }

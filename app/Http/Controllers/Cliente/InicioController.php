@@ -32,17 +32,20 @@ class InicioController extends Controller
             ->each(fn (Producto $p) => $p->total_accesos = $accesos[$p->id] ?? 0);
 
         $verEstadisticas = $ajustes->booleano('clientes_ven_estadisticas');
+        $destacados = $verEstadisticas ? $productos->sortByDesc('total_accesos') : $productos;
 
         return Inertia::render('cliente/Inicio', [
             'negocio' => ['nombre_comercial' => $negocio->nombre_comercial],
             'indicadores' => [
                 'productos' => $productos->count(),
                 'productos_activos' => $productos->where('estado', EstadoProducto::Activo)->count(),
-                'accesos_totales' => array_sum($accesos),
-                'accesos_30_dias' => $estadisticas->totales($filtro)['total'],
+                // Solo los productos que el negocio posee hoy (los transferidos
+                // ya no cuentan), igual que el indicador de 30 días.
+                'accesos_totales' => $verEstadisticas ? (int) $productos->sum('total_accesos') : null,
+                'accesos_30_dias' => $verEstadisticas ? $estadisticas->totales($filtro)['total'] : null,
             ],
             'serie' => $verEstadisticas ? $estadisticas->serieDiaria($filtro) : null,
-            'productos' => ProductoResource::collection($productos->sortByDesc('total_accesos')->take(5)->values()),
+            'productos' => ProductoResource::collection($destacados->take(5)->values()),
             'actividad' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['producto', 'usuario'])->where('negocio_id', $negocio->id)
                     ->whereHas('producto', fn ($q) => $q->where('negocio_id', $negocio->id))

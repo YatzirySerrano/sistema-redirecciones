@@ -47,7 +47,6 @@ class EstadisticaController extends Controller
             'sistemas' => $estadisticas->desglose($filtro, 'sistema_operativo'),
             'productos' => Producto::query()->deNegocio($negocioId)->orderBy('nombre')->get(['id', 'nombre'])
                 ->map(fn (Producto $p) => ['value' => (string) $p->id, 'label' => $p->nombre])->values()->all(),
-            'dias_conservacion_huella' => (int) config('dasti.dias_conservacion_huella'),
         ]);
     }
 }

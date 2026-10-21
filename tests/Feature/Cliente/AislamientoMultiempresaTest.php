@@ -135,4 +135,45 @@ class AislamientoMultiempresaTest extends TestCase
 
         $this->actingAs($this->clienteA)->get(route('cliente.estadisticas.index'))->assertForbidden();
     }
+
+    public function test_la_busqueda_del_cliente_no_usa_campos_internos(): void
+    {
+        $this->productoA->forceFill(['nombre' => 'Tarjeta mostrador', 'referencia_comercial' => 'PED-SECRETO-77'])->save();
+
+        $this->actingAs($this->clienteA)->get(route('cliente.productos.index', ['buscar' => 'SECRETO']))
+            ->assertInertia(fn (AssertableInertia $pagina) => $pagina->has('productos.data', 0));
+        $this->actingAs($this->clienteA)->get(route('cliente.productos.index', ['buscar' => 'mostrador']))
+            ->assertInertia(fn (AssertableInertia $pagina) => $pagina->has('productos.data', 1));
+
+        // El administrador sí busca por referencia comercial.
+        $this->actingAs(User::factory()->create())->get(route('admin.productos.index', ['buscar' => 'SECRETO']))
+            ->assertInertia(fn (AssertableInertia $pagina) => $pagina->has('productos.data', 1));
+    }
+
+    public function test_el_cliente_no_accede_al_logotipo_ni_al_historial_de_otro_negocio(): void
+    {
+        $this->actingAs($this->clienteA)->get(route('admin.negocios.logo.show', $this->productoB->negocio_id))->assertForbidden();
+        $this->actingAs($this->clienteA)->get(route('admin.negocios.show', $this->productoB->negocio_id))->assertForbidden();
+
+        $this->actingAs($this->clienteA)->get(route('cliente.inicio'))
+            ->assertInertia(function (AssertableInertia $pagina) {
+                $json = (string) json_encode($pagina->toArray()['props']);
+                $this->assertStringNotContainsString('example.com/b', $json);
+                $this->assertStringNotContainsString($this->productoB->codigo, $json);
+            });
+    }
+
+    public function test_los_limitadores_protegen_cambios_de_destino_y_qr(): void
+    {
+        for ($i = 0; $i < 20; $i++) {
+            $this->actingAs($this->clienteA)->put(route('cliente.productos.destino', $this->productoA), ['url_destino' => "https://example.com/v{$i}"]);
+        }
+        $this->actingAs($this->clienteA)->put(route('cliente.productos.destino', $this->productoA), ['url_destino' => 'https://example.com/extra'])
+            ->assertTooManyRequests();
+
+        for ($i = 0; $i < 90; $i++) {
+            $this->actingAs($this->clienteA)->put(route('productos.qr.update', $this->productoA), ['margen' => $i % 2 ? 'amplio' : 'reducido']);
+        }
+        $this->actingAs($this->clienteA)->put(route('productos.qr.update', $this->productoA), ['margen' => 'estandar'])->assertTooManyRequests();
+    }
 }

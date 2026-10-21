@@ -18,7 +18,7 @@ import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import { Button } from '@/components/ui/button';
-import { numero } from '@/lib/formato';
+import { coberturaVisitantes, numero, visitantes } from '@/lib/formato';
 import { panel } from '@/routes/admin';
 import { index as auditoriaIndex } from '@/routes/admin/auditoria';
 import { index as enlacesIndex } from '@/routes/admin/enlaces';
@@ -151,9 +151,12 @@ const barrasTipo = computed<Barra[]>(() =>
         >
             <TarjetaIndicador
                 etiqueta="Visitantes únicos estimados · 30 días"
-                :valor="numero(indicadores.periodo.visitantes_estimados)"
+                :valor="visitantes(indicadores.periodo)"
                 :icono="UsersRound"
-                detalle="Estimación por huella diaria anónima; no representa personas exactas."
+                :detalle="
+                    coberturaVisitantes(indicadores.periodo) ??
+                    'Estimación por huella diaria anónima; no representa personas exactas.'
+                "
             />
         </div>
     </div>

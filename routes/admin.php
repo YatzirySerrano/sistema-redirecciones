@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PanelController;
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Middleware\RequerirContrasenaDefinitiva;
+use App\Http\Middleware\RequerirDosPasosAdministrador;
 use App\Http\Middleware\VerificarCuentaActiva;
 use Illuminate\Support\Facades\Route;
 
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefinitiva::class, 'can:administrar-plataforma'])
+Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefinitiva::class, 'can:administrar-plataforma', RequerirDosPasosAdministrador::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

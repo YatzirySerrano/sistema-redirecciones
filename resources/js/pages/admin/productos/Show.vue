@@ -30,7 +30,14 @@ import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import InstruccionesNfc from '@/components/productos/InstruccionesNfc.vue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { fechaCorta, fechaHora, numero, relativo } from '@/lib/formato';
+import {
+    coberturaVisitantes,
+    fechaCorta,
+    fechaHora,
+    numero,
+    relativo,
+    visitantes,
+} from '@/lib/formato';
 import { show as negocioShow } from '@/routes/admin/negocios';
 import { destino, edit, index } from '@/routes/admin/productos';
 import type {
@@ -291,11 +298,12 @@ const barrasDispositivos = computed(() =>
                     />
                     <TarjetaIndicador
                         etiqueta="Visitantes estimados"
-                        :valor="
-                            numero(estadisticas.totales.visitantes_estimados)
-                        "
+                        :valor="visitantes(estadisticas.totales)"
                         :icono="UsersRound"
-                        detalle="Huellas diarias anónimas distintas; no son personas únicas."
+                        :detalle="
+                            coberturaVisitantes(estadisticas.totales) ??
+                            'Huellas diarias anónimas distintas; no son personas únicas.'
+                        "
                     />
                     <TarjetaIndicador
                         etiqueta="Promedio diario"

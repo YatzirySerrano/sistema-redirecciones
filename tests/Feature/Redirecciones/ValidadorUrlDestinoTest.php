@@ -93,4 +93,21 @@ class ValidadorUrlDestinoTest extends TestCase
 
         $this->assertNull($validador->error('http://example.com'));
     }
+
+    /**
+     * Con el dominio real de producción (sin el sufijo .test, que se
+     * rechazaría por ser interno) se comprueba la regla de bucles.
+     */
+    public function test_rechaza_bucles_hacia_el_dominio_real_del_servicio(): void
+    {
+        config(['dasti.url_publica' => 'https://redireccion.dasti.cloud', 'app.url' => 'https://redireccion.dasti.cloud']);
+        $validador = app(ValidadorUrlDestino::class);
+        $mensaje = 'El destino no puede apuntar a este mismo servicio de redirecciones.';
+
+        $this->assertSame($mensaje, $validador->error('https://redireccion.dasti.cloud/r/a7k92mabcd'));
+        $this->assertSame($mensaje, $validador->error('https://REDIRECCION.dasti.cloud/r/otro'));
+        $this->assertSame($mensaje, $validador->error('https://panel.redireccion.dasti.cloud/'));
+        $this->assertNull($validador->error('https://dasti.cloud/contacto'));
+        $this->assertNull($validador->error('https://www.example.com/r/a7k92mabcd'));
+    }
 }

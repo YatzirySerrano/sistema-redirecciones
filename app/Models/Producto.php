@@ -126,12 +126,13 @@ class Producto extends Model
     }
 
     /**
-     * Búsqueda por nombre, código, destino o referencia.
+     * Búsqueda por nombre, código y destino; la referencia comercial (dato
+     * interno de DASTI) solo se incluye para el administrador.
      *
      * @param  Builder<Producto>  $query
      * @return Builder<Producto>
      */
-    public function scopeBuscar(Builder $query, ?string $termino): Builder
+    public function scopeBuscar(Builder $query, ?string $termino, bool $incluirInternos = true): Builder
     {
         $termino = trim((string) $termino);
 
@@ -141,11 +142,11 @@ class Producto extends Model
 
         $like = '%'.addcslashes($termino, '%_\\').'%';
 
-        return $query->where(function (Builder $q) use ($like) {
+        return $query->where(function (Builder $q) use ($like, $incluirInternos) {
             $q->where('nombre', 'like', $like)
                 ->orWhere('codigo', 'like', $like)
                 ->orWhere('url_destino', 'like', $like)
-                ->orWhere('referencia_comercial', 'like', $like);
+                ->when($incluirInternos, fn (Builder $w) => $w->orWhere('referencia_comercial', 'like', $like));
         });
     }
 }

@@ -12,7 +12,7 @@ import DisenadorQr from '@/components/productos/DisenadorQr.vue';
 import FormularioDestino from '@/components/productos/FormularioDestino.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import { Button } from '@/components/ui/button';
-import { numero } from '@/lib/formato';
+import { numero, visitantes } from '@/lib/formato';
 import { destino, index, show } from '@/routes/cliente/productos';
 import type {
     CambioDestino,
@@ -180,11 +180,7 @@ const muestraQr = computed(
                             Visitantes estimados
                         </dt>
                         <dd class="text-xl font-semibold tabular-nums">
-                            {{
-                                numero(
-                                    estadisticas.totales.visitantes_estimados,
-                                )
-                            }}
+                            {{ visitantes(estadisticas.totales) }}
                         </dd>
                     </div>
                 </dl>

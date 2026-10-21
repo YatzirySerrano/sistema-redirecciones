@@ -227,6 +227,7 @@ class DemoSeeder extends Seeder
         $total = 0;
         $ultimo = null;
         $hoy = CarbonImmutable::today();
+        $ahora = CarbonImmutable::now();
 
         for ($dias = 59; $dias >= 0; $dias--) {
             $fecha = $hoy->subDays($dias);
@@ -236,8 +237,17 @@ class DemoSeeder extends Seeder
             $humanos = 0;
             $bots = 0;
 
+            // Horario de 08:00 a 22:59, sin pasar del momento actual: nunca se
+            // generan accesos con fecha futura.
+            $inicio = $fecha->setTime(8, 0);
+            $fin = $dias === 0 ? min($ahora, $fecha->setTime(22, 59, 59)) : $fecha->setTime(22, 59, 59);
+
+            if ($fin->lessThanOrEqualTo($inicio)) {
+                $cantidad = 0;
+            }
+
             for ($i = 0; $i < $cantidad; $i++) {
-                $momento = $fecha->setTime(mt_rand(8, 22), mt_rand(0, 59), mt_rand(0, 59));
+                $momento = $inicio->addSeconds(mt_rand(0, (int) $inicio->diffInSeconds($fin)));
                 $dispositivo = $this->elegir($dispositivos);
                 $esBot = $dispositivo === CategoriaDispositivo::Bot->value;
                 $esBot ? $bots++ : $humanos++;

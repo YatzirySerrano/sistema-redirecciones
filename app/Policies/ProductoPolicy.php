@@ -59,8 +59,20 @@ class ProductoPolicy
             : Response::deny('La descarga de QR no está habilitada para tu cuenta.');
     }
 
-    public function administrar(User $usuario, Producto $producto): bool
+    /**
+     * Guardar el diseño del QR: además del permiso de descarga, el cliente
+     * solo lo modifica mientras el producto y su negocio estén activos.
+     */
+    public function disenarQr(User $usuario, Producto $producto): Response
     {
-        return $usuario->esAdministrador();
+        $descarga = $this->descargarQr($usuario, $producto);
+
+        if ($descarga->denied() || $usuario->esAdministrador()) {
+            return $descarga;
+        }
+
+        return $producto->admiteCambiosDelCliente()
+            ? Response::allow()
+            : Response::deny('Este producto está suspendido. Contacta a DASTI para reactivarlo.');
     }
 }

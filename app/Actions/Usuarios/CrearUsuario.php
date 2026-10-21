@@ -7,6 +7,7 @@ use App\Enums\RolUsuario;
 use App\Models\Negocio;
 use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -15,7 +16,9 @@ use InvalidArgumentException;
  *
  * - Con contraseña: se toma como temporal y se exige cambiarla al entrar.
  * - Sin contraseña: se asigna una aleatoria que nadie conoce y se envía una
- *   invitación por correo para que el usuario defina la suya.
+ *   invitación por correo para que el usuario defina la suya. El envío se
+ *   difiere hasta confirmar la transacción (DB::afterCommit) y sus fallos no
+ *   revierten el alta: quedan en invitacion_fallida_en.
  */
 class CrearUsuario
 {
@@ -63,7 +66,7 @@ class CrearUsuario
         );
 
         if ($invitar) {
-            $this->enviarInvitacion->ejecutar($usuario, registrar: false);
+            DB::afterCommit(fn () => $this->enviarInvitacion->ejecutar($usuario));
         }
 
         return $usuario;

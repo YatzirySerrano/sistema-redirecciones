@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
+use App\Listeners\AuditarEventosDeSeguridad;
 use App\Models\Negocio;
 use App\Models\Producto;
 use App\Models\User;
 use App\Services\Configuracion\AjustesPlataforma;
 use Carbon\CarbonImmutable;
-use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\CanResetPassword;
@@ -30,7 +30,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Una instancia por petición: los ajustes se leen una sola vez de la
+        // caché aunque se consulten en cada producto de un listado.
+        $this->app->scoped(AjustesPlataforma::class);
     }
 
     /**
@@ -43,11 +45,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->configureNotifications();
 
-        Event::listen(Login::class, function (Login $event): void {
-            if ($event->user instanceof User) {
-                $event->user->forceFill(['ultimo_acceso_en' => now()])->saveQuietly();
-            }
-        });
+        Event::subscribe(AuditarEventosDeSeguridad::class);
     }
 
     /**
@@ -98,7 +96,7 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configureRateLimiting(): void
     {
-        RateLimiter::for('redirecciones', fn (Request $request) => Limit::perMinute((int) config('dasti.limite_redirecciones_por_minuto'))
+        RateLimiter::for('redirecciones', fn (Request $request) => Limit::perMinute(max(1, (int) config('dasti.limite_redirecciones_por_minuto')))
             ->by($request->ip()));
 
         RateLimiter::for('cambios-destino', fn (Request $request) => Limit::perMinute(20)

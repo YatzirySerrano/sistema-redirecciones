@@ -9,7 +9,7 @@ import Paginacion from '@/components/comun/Paginacion.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
 import { Button } from '@/components/ui/button';
 import { useFiltros } from '@/composables/useFiltros';
-import { fechaHora, relativo } from '@/lib/formato';
+import { fechaHora, pendienteDeAcceso, relativo } from '@/lib/formato';
 import { show as verNegocio } from '@/routes/admin/negocios';
 import { create, edit, index } from '@/routes/admin/usuarios';
 import type { Opcion, Paginado, Usuario } from '@/types';
@@ -193,11 +193,16 @@ const hayFiltros = () => Object.values(filtros).some((v) => v !== '');
                                 {{ u.two_factor ? 'activado' : 'no activado' }}
                             </p>
                             <p
-                                v-if="u.debe_cambiar_password"
-                                class="mt-0.5 inline-flex items-center gap-1 text-warning"
+                                v-if="pendienteDeAcceso(u)"
+                                class="mt-0.5 inline-flex items-center gap-1"
+                                :class="
+                                    pendienteDeAcceso(u)?.error
+                                        ? 'text-destructive'
+                                        : 'text-warning'
+                                "
                             >
                                 <KeyRound class="size-3" aria-hidden="true" />
-                                Contraseña temporal pendiente
+                                {{ pendienteDeAcceso(u)?.texto }}
                             </p>
                         </td>
                         <td

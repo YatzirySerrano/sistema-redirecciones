@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { CircleAlert, CircleCheck, Info, Link2 } from '@lucide/vue';
-import { computed } from 'vue';
+import { Info, Link2 } from '@lucide/vue';
+import { computed, toRef } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
 import SelectorTipoProducto from '@/components/admin-productos/SelectorTipoProducto.vue';
+import EstadoValidacionDestino from '@/components/productos/EstadoValidacionDestino.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import { comprobarUrl } from '@/lib/urlDestino';
+import { useValidacionDestino } from '@/composables/useValidacionDestino';
 import { create, index, store } from '@/routes/admin/productos';
 import type { Opcion } from '@/types';
 
@@ -29,7 +30,6 @@ const props = defineProps<{
     url_publica_base: string;
     negocios: Opcion[];
     tipos: Opcion[];
-    estados: Opcion[];
     preparaciones: Opcion[];
 }>();
 
@@ -45,7 +45,7 @@ const form = useForm({
     notas_internas: '',
 });
 
-const comprobacion = computed(() => comprobarUrl(form.url_destino));
+const { resultado } = useValidacionDestino(toRef(form, 'url_destino'));
 const cantidad = computed(() =>
     Math.max(1, Math.min(50, Number(form.cantidad) || 1)),
 );
@@ -188,30 +188,12 @@ const guardar = () => {
                         aria-describedby="ayuda-url-destino"
                     />
                 </CampoFormulario>
-                <div
+                <EstadoValidacionDestino
                     id="ayuda-url-destino"
-                    aria-live="polite"
-                    class="mt-2 min-h-5 text-xs"
-                >
-                    <p v-if="!comprobacion" class="text-muted-foreground">
-                        Sin destino, el enlace mostrará «no disponible» hasta
-                        configurarlo.
-                    </p>
-                    <p
-                        v-else-if="!comprobacion.valida"
-                        class="flex items-center gap-1.5 text-warning"
-                    >
-                        <CircleAlert class="size-3.5" />
-                        {{ comprobacion.motivo }}
-                    </p>
-                    <p v-else class="flex items-center gap-1.5 text-success">
-                        <CircleCheck class="size-3.5" /> Llevará a
-                        <strong>{{ comprobacion.dominio }}</strong>
-                        <span v-if="!comprobacion.segura" class="text-warning"
-                            >(sin https)</span
-                        >
-                    </p>
-                </div>
+                    class="mt-2"
+                    :resultado="resultado"
+                    texto-vacio="Sin destino, el enlace mostrará «no disponible» hasta configurarlo."
+                />
             </Panel>
 
             <Panel

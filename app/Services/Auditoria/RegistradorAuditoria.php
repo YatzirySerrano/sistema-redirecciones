@@ -22,8 +22,6 @@ class RegistradorAuditoria
         'two_factor_secret', 'two_factor_recovery_codes', 'token',
     ];
 
-    public function __construct(private readonly Request $request) {}
-
     /**
      * @param  array<string, mixed>|null  $anteriores
      * @param  array<string, mixed>|null  $nuevos
@@ -37,7 +35,10 @@ class RegistradorAuditoria
         ?array $nuevos = null,
         ?User $actor = null,
     ): RegistroAuditoria {
-        $actor ??= $this->request->user();
+        // La petición se resuelve en cada registro (no en el constructor) para
+        // que los listeners y procesos largos no usen una petición obsoleta.
+        $request = app(Request::class);
+        $actor ??= $request->user();
 
         return RegistroAuditoria::query()->create([
             'user_id' => $actor?->getKey(),
@@ -48,7 +49,7 @@ class RegistradorAuditoria
             'descripcion' => mb_substr($descripcion, 0, 255),
             'valores_anteriores' => $this->limpiar($anteriores),
             'valores_nuevos' => $this->limpiar($nuevos),
-            'ip' => $this->request->ip(),
+            'ip' => $request->ip(),
         ]);
     }
 

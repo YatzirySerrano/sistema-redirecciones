@@ -2,16 +2,31 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Producto;
 use App\Services\Qr\OpcionesQr;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 /**
  * Opciones de diseño y exportación del QR (descarga, vista previa o
- * guardado). La autorización la aplica el controlador según la acción.
+ * guardado).
+ *
+ * La autorización se resuelve antes de validar, para que un producto ajeno
+ * responda siempre 404 sin importar los parámetros enviados.
  */
 class OpcionesQrRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        $producto = $this->route('producto');
+        abort_unless($producto instanceof Producto, 404);
+
+        Gate::authorize($this->isMethod('GET') ? 'descargarQr' : 'disenarQr', $producto);
+
+        return true;
+    }
+
     protected function prepareForValidation(): void
     {
         // Solo se normalizan los booleanos presentes: los ausentes conservan

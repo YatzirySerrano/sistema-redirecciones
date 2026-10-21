@@ -5,6 +5,7 @@ namespace App\Services\Estadisticas;
 use App\Enums\CategoriaDispositivo;
 use App\Enums\ResultadoAcceso;
 use App\Enums\TipoProducto;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +21,15 @@ use Illuminate\Support\Facades\DB;
 class ConsultasEstadisticas
 {
     /**
-     * @return array{total: int, bots: int, visitantes_estimados: int, productos_con_accesos: int, promedio_diario: float}
+     * Totales del periodo.
+     *
+     * Los «visitantes estimados» cuentan huellas diarias anónimas distintas
+     * (una por dispositivo y día). Las huellas se eliminan pasados
+     * dasti.dias_conservacion_huella días, así que para periodos más antiguos
+     * la estimación solo cubre desde `visitantes_desde` y se marca como
+     * parcial (null si ningún día del periodo conserva huellas).
+     *
+     * @return array{total: int, bots: int, visitantes_estimados: int|null, visitantes_desde: string|null, visitantes_parcial: bool, productos_con_accesos: int, promedio_diario: float}
      */
     public function totales(FiltroEstadisticas $filtro): array
     {
@@ -28,21 +37,56 @@ class ConsultasEstadisticas
             ->selectRaw('COALESCE(SUM(ad.total), 0) as total, COALESCE(SUM(ad.bots), 0) as bots, COUNT(DISTINCT CASE WHEN ad.total > 0 THEN ad.producto_id END) as productos')
             ->first();
 
-        $visitantes = (int) $this->eventos($filtro)
-            ->whereNotNull('ea.huella_diaria')
-            ->selectRaw('COUNT(DISTINCT DATE(ea.ocurrido_en), ea.huella_diaria) as visitantes')
-            ->value('visitantes');
-
         $total = (int) ($fila->total ?? 0);
         $dias = max(1, (int) $filtro->desde->diffInDays($filtro->hasta) + 1);
+        $cobertura = $this->coberturaHuellas($filtro);
+
+        $visitantes = null;
+
+        if ($cobertura !== null) {
+            // La huella ya incluye el día en su cálculo (HMAC de IP + agente +
+            // fecha), por lo que contar huellas distintas equivale a contar
+            // visitantes por día. Consulta portable (MariaDB y SQLite).
+            $visitantes = (int) $this->eventos($filtro)
+                ->whereNotNull('ea.huella_diaria')
+                ->where('ea.ocurrido_en', '>=', $cobertura)
+                ->selectRaw('COUNT(DISTINCT ea.huella_diaria) as visitantes')
+                ->value('visitantes');
+        }
 
         return [
             'total' => $total,
             'bots' => (int) ($fila->bots ?? 0),
             'visitantes_estimados' => $visitantes,
+            'visitantes_desde' => $cobertura?->toDateString(),
+            'visitantes_parcial' => $cobertura !== null && $cobertura->greaterThan($filtro->desde),
             'productos_con_accesos' => (int) ($fila->productos ?? 0),
             'promedio_diario' => round($total / $dias, 1),
         ];
+    }
+
+    /**
+     * Total histórico de accesos humanos de toda la plataforma.
+     */
+    public function totalHistorico(): int
+    {
+        return (int) DB::table('accesos_diarios')->sum('total');
+    }
+
+    /**
+     * Primer instante del periodo que aún conserva huellas diarias, o null
+     * si el periodo completo es anterior a la conservación.
+     */
+    private function coberturaHuellas(FiltroEstadisticas $filtro): ?CarbonImmutable
+    {
+        $dias = max(1, (int) config('dasti.dias_conservacion_huella'));
+        $limite = CarbonImmutable::today()->subDays($dias - 1)->startOfDay();
+
+        if ($filtro->hasta->lessThan($limite)) {
+            return null;
+        }
+
+        return $filtro->desde->greaterThan($limite) ? $filtro->desde : $limite;
     }
 
     /**

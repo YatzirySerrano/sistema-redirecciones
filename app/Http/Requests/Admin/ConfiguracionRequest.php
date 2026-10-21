@@ -6,9 +6,18 @@ class ConfiguracionRequest extends SolicitudAdministrativa
 {
     protected function prepareForValidation(): void
     {
-        $dominios = preg_split('/[\s,]+/', strtolower((string) $this->input('dominios_bloqueados', ''))) ?: [];
+        // Se aceptan como texto (separados por espacios, comas o saltos de
+        // línea) o como lista.
+        $entrada = $this->input('dominios_bloqueados', '');
+        $texto = is_array($entrada) ? implode(' ', array_filter($entrada, 'is_string')) : (is_string($entrada) ? $entrada : '');
+        $dominios = preg_split('/[\s,]+/', strtolower($texto)) ?: [];
+
+        $dias = $this->input('dias_retencion_eventos');
 
         $this->merge([
+            // Entero real: así la comparación con el valor guardado no
+            // registra cambios inexistentes por diferencias de tipo.
+            'dias_retencion_eventos' => is_numeric($dias) && (string) (int) $dias === (string) $dias ? (int) $dias : $dias,
             'permitir_destinos_http' => $this->boolean('permitir_destinos_http'),
             'clientes_descargan_qr' => $this->boolean('clientes_descargan_qr'),
             'clientes_ven_estadisticas' => $this->boolean('clientes_ven_estadisticas'),

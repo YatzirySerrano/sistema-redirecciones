@@ -2,18 +2,25 @@
 import { router } from '@inertiajs/vue3';
 import { refDebounced } from '@vueuse/core';
 import { CircleAlert, Download, ImageOff, RotateCcw, Save } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import { ErrorPeticion, pedir } from '@/lib/peticion';
 import { show as qrShow, update as qrUpdate } from '@/routes/productos/qr';
 import type { OpcionesQr, Producto } from '@/types';
 
 /**
  * Diseño, vista previa y descarga del QR de un producto. El QR siempre
  * contiene la URL permanente y nunca lleva marca de DASTI.
+ *
+ * La vista previa y las descargas se piden con fetch para poder mostrar el
+ * motivo real de un error (contraste, logotipo dañado, permisos, sesión
+ * expirada o límite de solicitudes) en lugar de una imagen rota.
  */
 const props = defineProps<{
     producto: Producto;
@@ -23,10 +30,15 @@ const props = defineProps<{
 const diseno = reactive<OpcionesQr>({ ...props.opciones });
 const tamano = ref('1024');
 const cargando = ref(true);
-const errorVista = ref(false);
+const errorVista = ref<string | null>(null);
+const imagenVista = ref<string | null>(null);
 const guardando = ref(false);
+const descargando = ref<'png' | 'svg' | null>(null);
+const errorDescarga = ref<string | null>(null);
+const erroresGuardado = ref<Record<string, string>>({});
 
 const tieneLogo = computed(() => props.producto.negocio?.tiene_logo ?? false);
+const puedeGuardar = computed(() => props.producto.permisos.disenar_qr);
 
 const MARGENES = [
     { value: 'ninguno', label: 'Sin margen' },
@@ -87,20 +99,98 @@ const vistaPrevia = computed(() =>
     }),
 );
 const vistaPreviaEstable = refDebounced(vistaPrevia, 250);
+let peticionVista: AbortController | null = null;
 
-watch(vistaPreviaEstable, () => {
+const reemplazarImagen = (nueva: string | null) => {
+    if (imagenVista.value) {
+        URL.revokeObjectURL(imagenVista.value);
+    }
+
+    imagenVista.value = nueva;
+};
+
+const cargarVistaPrevia = async (url: string) => {
+    peticionVista?.abort();
+
+    if (!legible.value) {
+        // No se pide al servidor un diseño que rechazará.
+        cargando.value = false;
+        errorVista.value =
+            'Ajusta el contraste para ver la vista previa del código.';
+
+        return;
+    }
+
+    peticionVista = new AbortController();
     cargando.value = true;
-    errorVista.value = false;
+    errorVista.value = null;
+
+    try {
+        const respuesta = await pedir(url, { senal: peticionVista.signal });
+        reemplazarImagen(URL.createObjectURL(await respuesta.blob()));
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+        }
+
+        reemplazarImagen(null);
+        errorVista.value =
+            error instanceof ErrorPeticion
+                ? error.message
+                : 'No se pudo generar la vista previa.';
+    } finally {
+        cargando.value = false;
+    }
+};
+
+watch(vistaPreviaEstable, (url) => void cargarVistaPrevia(url), {
+    immediate: true,
+});
+onBeforeUnmount(() => {
+    peticionVista?.abort();
+    reemplazarImagen(null);
 });
 
-const descarga = (formato: 'png' | 'svg') =>
-    qrShow.url(props.producto.id, {
-        query: consulta({
-            formato,
-            tamano: Number(tamano.value),
-            descargar: 1,
-        }),
-    });
+const nombreArchivo = (respuesta: Response, formato: string) =>
+    /filename="([^"]+)"/.exec(
+        respuesta.headers.get('Content-Disposition') ?? '',
+    )?.[1] ?? `qr-${props.producto.codigo}.${formato}`;
+
+const descargar = async (formato: 'png' | 'svg') => {
+    if (!legible.value || descargando.value) {
+        return;
+    }
+
+    descargando.value = formato;
+    errorDescarga.value = null;
+
+    try {
+        const respuesta = await pedir(
+            qrShow.url(props.producto.id, {
+                query: consulta({
+                    formato,
+                    tamano: Number(tamano.value),
+                    descargar: 1,
+                }),
+            }),
+        );
+        const enlace = document.createElement('a');
+        enlace.href = URL.createObjectURL(await respuesta.blob());
+        enlace.download = nombreArchivo(respuesta, formato);
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
+    } catch (error) {
+        errorDescarga.value =
+            error instanceof ErrorPeticion
+                ? error.message
+                : 'No se pudo descargar el archivo.';
+        toast.error(errorDescarga.value);
+    } finally {
+        descargando.value = null;
+    }
+};
 
 const modificado = computed(() =>
     (Object.keys(props.opciones) as (keyof OpcionesQr)[]).some(
@@ -120,7 +210,14 @@ const restablecer = () =>
 const guardar = () => {
     router.put(qrUpdate.url(props.producto.id), consulta(), {
         preserveScroll: true,
-        onStart: () => (guardando.value = true),
+        onStart: () => {
+            guardando.value = true;
+            erroresGuardado.value = {};
+        },
+        onError: (errores) => {
+            erroresGuardado.value = errores;
+            toast.error('No se guardó el diseño. Revisa el motivo indicado.');
+        },
         onFinish: () => (guardando.value = false),
     });
 };
@@ -136,15 +233,10 @@ const guardar = () => {
                     class="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border bg-[repeating-conic-gradient(var(--muted)_0%_25%,transparent_0%_50%)] bg-[length:16px_16px]"
                 >
                     <img
-                        v-show="!errorVista"
-                        :src="vistaPreviaEstable"
+                        v-if="imagenVista && !errorVista"
+                        :src="imagenVista"
                         :alt="`Vista previa del QR de ${producto.nombre}`"
                         class="size-full object-contain"
-                        @load="cargando = false"
-                        @error="
-                            cargando = false;
-                            errorVista = true;
-                        "
                     />
                     <div
                         v-if="cargando && !errorVista"
@@ -155,9 +247,10 @@ const guardar = () => {
                     <div
                         v-if="errorVista"
                         class="flex flex-col items-center gap-2 p-6 text-center text-sm text-muted-foreground"
+                        role="status"
                     >
-                        <ImageOff class="size-6" />
-                        No se pudo generar la vista previa con este diseño.
+                        <ImageOff class="size-6" aria-hidden="true" />
+                        {{ errorVista }}
                     </div>
                 </div>
                 <p class="text-center text-xs break-all text-muted-foreground">
@@ -277,6 +370,14 @@ const guardar = () => {
                     superficie clara y lisa.
                 </p>
                 <p
+                    v-if="diseno.margen === 'ninguno'"
+                    class="text-xs text-warning"
+                >
+                    Sin margen, deja al imprimir un espacio libre alrededor del
+                    código (al menos el ancho de cuatro módulos): muchos
+                    lectores lo necesitan.
+                </p>
+                <p
                     v-if="diseno.incluir_logo && tieneLogo"
                     class="text-xs text-muted-foreground"
                 >
@@ -290,7 +391,7 @@ const guardar = () => {
                 >
                     <div class="grid flex-1 gap-2">
                         <Label :for="`qr-tamano-${producto.id}`"
-                            >Tamaño de exportación (PNG)</Label
+                            >Tamaño de exportación</Label
                         >
                         <SelectNativo
                             :id="`qr-tamano-${producto.id}`"
@@ -300,35 +401,29 @@ const guardar = () => {
                     </div>
                     <div class="flex gap-2">
                         <Button
-                            as-child
-                            :disabled="!legible"
-                            :class="
-                                !legible && 'pointer-events-none opacity-50'
-                            "
+                            type="button"
+                            :disabled="!legible || descargando !== null"
+                            @click="descargar('png')"
                         >
-                            <a
-                                :href="descarga('png')"
-                                download
-                                :aria-disabled="!legible"
-                                ><Download /> PNG</a
-                            >
+                            <Spinner v-if="descargando === 'png'" />
+                            <Download v-else /> PNG
                         </Button>
                         <Button
+                            type="button"
                             variant="outline"
-                            as-child
-                            :class="
-                                !legible && 'pointer-events-none opacity-50'
-                            "
+                            :disabled="!legible || descargando !== null"
+                            @click="descargar('svg')"
                         >
-                            <a
-                                :href="descarga('svg')"
-                                download
-                                :aria-disabled="!legible"
-                                ><Download /> SVG</a
-                            >
+                            <Spinner v-if="descargando === 'svg'" />
+                            <Download v-else /> SVG
                         </Button>
                     </div>
                 </div>
+                <p class="-mt-3 text-xs text-muted-foreground">
+                    El PNG se genera con el tamaño elegido; el SVG es vectorial
+                    y se puede ampliar sin perder calidad.
+                </p>
+                <InputError :message="errorDescarga ?? undefined" />
 
                 <div class="flex flex-wrap items-center justify-end gap-2">
                     <Button
@@ -340,6 +435,7 @@ const guardar = () => {
                         <RotateCcw /> QR negro tradicional
                     </Button>
                     <Button
+                        v-if="puedeGuardar"
                         type="button"
                         variant="secondary"
                         size="sm"
@@ -350,6 +446,13 @@ const guardar = () => {
                         <Save v-else />
                         Guardar diseño
                     </Button>
+                </div>
+                <div v-if="Object.keys(erroresGuardado).length" role="alert">
+                    <InputError
+                        v-for="(mensaje, campo) in erroresGuardado"
+                        :key="campo"
+                        :message="mensaje"
+                    />
                 </div>
             </div>
         </div>
