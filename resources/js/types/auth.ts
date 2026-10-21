@@ -2,34 +2,24 @@ export type User = {
     id: number;
     name: string;
     email: string;
+    rol: 'admin' | 'cliente';
+    two_factor_enabled: boolean;
+    negocio: { id: number; nombre_comercial: string } | null;
     avatar?: string;
-    email_verified_at: string | null;
-    /* @chisel-2fa */
-    two_factor_enabled?: boolean;
-    /* @end-chisel-2fa */
-    created_at: string;
-    updated_at: string;
-    [key: string]: unknown;
+};
+
+export type Permisos = {
+    administrar: boolean;
+    ver_estadisticas: boolean;
 };
 
 export type Auth = {
     user: User;
+    permisos: Permisos;
 };
 
-/* @chisel-passkeys */
-export type Passkey = {
-    id: number;
-    name: string;
-    authenticator: string | null;
-    created_at_diff: string;
-    last_used_at_diff: string | null;
-};
-/* @end-chisel-passkeys */
-
-/* @chisel-2fa */
 export type TwoFactorConfigContent = {
     title: string;
     description: string;
     buttonText: string;
 };
-/* @end-chisel-2fa */

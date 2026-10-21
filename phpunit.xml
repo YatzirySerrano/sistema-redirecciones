@@ -23,8 +23,14 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- Las pruebas usan una base MariaDB aislada (nunca la de desarrollo).
+             Credenciales locales: DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD o DB_SOCKET
+             desde el entorno del proceso. -->
+        <env name="DB_CONNECTION" value="mariadb" force="true"/>
+        <env name="DB_DATABASE" value="sistema_redirecciones_testing" force="true"/>
+        <env name="APP_LOCALE" value="es" force="true"/>
+        <env name="APP_URL" value="https://redireccion.test" force="true"/>
+        <env name="DASTI_URL_PUBLICA" value="https://redireccion.test" force="true"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

@@ -1,0 +1,45 @@
+# Manual del cliente
+
+## Iniciar sesión
+
+Entra en `https://redireccion.dasti.cloud/login` con el correo y la contraseña que te dio DASTI, o define tu contraseña con el enlace que recibiste por correo. Si te dieron una contraseña temporal, el sistema te pedirá crear una propia al entrar.
+
+¿La olvidaste? Usa **¿Olvidaste tu contraseña?** en la pantalla de acceso.
+
+## Consultar tus productos
+
+En **Mis productos** ves cada QR o tarjeta NFC que compraste con:
+
+- su destino actual;
+- su enlace permanente (con los botones copiar y probar);
+- su estado;
+- el número de accesos.
+
+## Cambiar el destino
+
+1. Pulsa **Editar destino** en el producto.
+2. Escribe la nueva dirección completa, empezando por `https://`.
+3. Comprueba el aviso «Lleva a …» y, si quieres, **Abrir para comprobar**.
+4. Pulsa **Guardar destino**.
+
+El cambio es inmediato. **No necesitas reimprimir el QR ni reprogramar la tarjeta NFC**: siguen usando el mismo enlace permanente.
+
+## Verificar que funciona
+
+Escanea el QR o acerca la tarjeta a un teléfono. También puedes abrir el enlace permanente con el botón ↗. Debe llevarte al nuevo destino.
+
+Si un producto aparece como **Suspendido**, no se puede modificar: contacta a DASTI.
+
+## Estadísticas
+
+En **Estadísticas** puedes elegir el periodo y el producto, y ver los accesos por día, los productos más usados y el desglose por dispositivo y navegador. Las cifras son accesos registrados (sin bots identificados), no necesariamente personas distintas.
+
+## Mi cuenta
+
+Desde el menú de tu nombre:
+
+- **Mi cuenta**: cambiar tu nombre, tu contraseña y la verificación en dos pasos;
+- **Apariencia**: tema claro u oscuro;
+- **Cerrar sesión**.
+
+Para cambiar tu correo de acceso, contacta a DASTI.

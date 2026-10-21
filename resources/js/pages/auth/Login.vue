@@ -8,19 +8,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-/* @chisel-registration */
-import { register } from '@/routes';
-/* @end-chisel-registration */
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
-/* @chisel-passkeys */
-import PasskeyVerify from '@/components/PasskeyVerify.vue';
-/* @end-chisel-passkeys */
 
 defineOptions({
     layout: {
-        title: 'Log in to your account',
-        description: 'Enter your email and password below to log in',
+        title: 'Inicia sesión',
+        description:
+            'Administra los destinos de tus códigos QR y tarjetas NFC.',
     },
 });
 
@@ -31,18 +26,15 @@ defineProps<{
 </script>
 
 <template>
-    <Head title="Log in" />
+    <Head title="Iniciar sesión" />
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-6 rounded-lg border border-primary/20 bg-accent px-4 py-3 text-sm text-accent-foreground"
+        role="status"
     >
         {{ status }}
     </div>
-
-    <!-- @chisel-passkeys -->
-    <PasskeyVerify />
-    <!-- @end-chisel-passkeys -->
 
     <Form
         v-bind="store.form()"
@@ -50,69 +42,63 @@ defineProps<{
         v-slot="{ errors, processing }"
         class="flex flex-col gap-6"
     >
-        <div class="grid gap-6">
+        <div class="grid gap-5">
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">Correo electrónico</Label>
                 <Input
                     id="email"
                     type="email"
                     name="email"
                     required
                     v-focus
-                    :tabindex="1"
                     autocomplete="email"
-                    placeholder="email@example.com"
+                    placeholder="nombre@negocio.com"
+                    class="h-10"
                 />
                 <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
                 <div class="flex items-center justify-between">
-                    <Label for="password">Password</Label>
+                    <Label for="password">Contraseña</Label>
                     <TextLink
                         v-if="canResetPassword"
                         :href="request()"
                         class="text-sm"
-                        :tabindex="5"
                     >
-                        Forgot your password?
+                        ¿Olvidaste tu contraseña?
                     </TextLink>
                 </div>
                 <PasswordInput
                     id="password"
                     name="password"
                     required
-                    :tabindex="2"
                     autocomplete="current-password"
-                    placeholder="Password"
+                    placeholder="Tu contraseña"
+                    class="h-10"
                 />
                 <InputError :message="errors.password" />
             </div>
 
-            <div class="flex items-center justify-between">
-                <Label for="remember" class="flex items-center space-x-3">
-                    <Checkbox id="remember" name="remember" :tabindex="3" />
-                    <span>Remember me</span>
-                </Label>
-            </div>
+            <Label for="remember" class="flex items-center gap-3 font-normal">
+                <Checkbox id="remember" name="remember" />
+                <span>Mantener la sesión iniciada</span>
+            </Label>
 
             <Button
                 type="submit"
-                class="mt-4 w-full"
-                :tabindex="4"
+                class="mt-2 h-10 w-full"
                 :disabled="processing"
                 data-test="login-button"
             >
                 <Spinner v-if="processing" />
-                Log in
+                Entrar
             </Button>
         </div>
 
-        <!-- @chisel-registration -->
-        <div class="text-center text-sm text-muted-foreground">
-            Don't have an account?
-            <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
-        </div>
-        <!-- @end-chisel-registration -->
+        <p class="text-center text-xs text-muted-foreground">
+            ¿No tienes cuenta? Los accesos los proporciona DASTI al entregar tu
+            pedido.
+        </p>
     </Form>
 </template>

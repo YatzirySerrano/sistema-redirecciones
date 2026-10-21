@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-
-const name = usePage().props.name;
+/**
+ * Tratamiento tipográfico provisional de la plataforma (no es el logotipo
+ * oficial de DASTI, que no se ha proporcionado).
+ */
+withDefaults(defineProps<{ invertido?: boolean }>(), { invertido: false });
 </script>
 
 <template>
     <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+        class="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-[13px] font-bold tracking-tight text-sidebar-primary-foreground"
+        aria-hidden="true"
     >
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
+        D
     </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{
-            name
-        }}</span>
+    <div class="ml-1 grid flex-1 text-left leading-tight">
+        <span
+            class="truncate text-sm font-bold tracking-[0.18em]"
+            :class="invertido ? 'text-foreground' : 'text-white'"
+            >DASTI</span
+        >
+        <span
+            class="truncate text-[11px]"
+            :class="
+                invertido ? 'text-muted-foreground' : 'text-sidebar-foreground'
+            "
+            >Redirecciones QR · NFC</span
+        >
     </div>
 </template>

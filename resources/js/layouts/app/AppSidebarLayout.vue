@@ -18,10 +18,20 @@ withDefaults(defineProps<Props>(), {
 <template>
     <AppShell variant="sidebar">
         <AppSidebar />
-        <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">
+        <AppContent
+            variant="sidebar"
+            class="min-w-0 overflow-x-clip bg-background"
+        >
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <slot />
+            <main
+                id="contenido"
+                class="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+            >
+                <div class="mx-auto w-full max-w-7xl space-y-6">
+                    <slot />
+                </div>
+            </main>
         </AppContent>
-        <Toaster />
+        <Toaster rich-colors close-button position="top-right" />
     </AppShell>
 </template>

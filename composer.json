@@ -1,15 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/vue-starter-kit",
+    "name": "dasti/sistema-redirecciones",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Administración de enlaces dinámicos para códigos QR y tarjetas NFC de DASTI.",
     "keywords": [
         "laravel",
         "framework"
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
+        "endroid/qr-code": "^6.0",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/chisel": "^0.1.0",
         "laravel/fortify": "^1.37.2",
@@ -19,6 +20,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
+        "khanamiryan/qrcode-detector-decoder": "^2.0",
         "larastan/larastan": "^3.9",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
@@ -79,7 +81,6 @@
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan install:features --ansi",
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
         ],
         "post-root-package-install": [
@@ -99,7 +100,6 @@
             "dont-discover": [],
             "installer": {
                 "post-create-project": [
-                    "@php artisan install:features --ansi"
                 ]
             }
         }
