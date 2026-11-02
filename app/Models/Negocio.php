@@ -82,12 +82,14 @@ class Negocio extends Model
      */
     public function scopeConResumen(Builder $query): Builder
     {
+        // Productos físicos: los enlaces secundarios (reverso QR de un
+        // combinado independiente) no son unidades vendidas.
         return $query->withCount([
-            'productos',
+            'productos' => fn (Builder $q) => $q->whereNull('producto_principal_id'),
             'usuarios',
-            'productos as productos_qr_count' => fn (Builder $q) => $q->whereIn('tipo', [TipoProducto::Qr, TipoProducto::Combinado]),
-            'productos as productos_nfc_count' => fn (Builder $q) => $q->whereIn('tipo', [TipoProducto::Nfc, TipoProducto::Combinado]),
-            'productos as productos_activos_count' => fn (Builder $q) => $q->where('estado', EstadoProducto::Activo),
+            'productos as productos_qr_count' => fn (Builder $q) => $q->whereNull('producto_principal_id')->whereIn('tipo', [TipoProducto::Qr, TipoProducto::Combinado]),
+            'productos as productos_nfc_count' => fn (Builder $q) => $q->whereNull('producto_principal_id')->whereIn('tipo', [TipoProducto::Nfc, TipoProducto::Combinado]),
+            'productos as productos_activos_count' => fn (Builder $q) => $q->whereNull('producto_principal_id')->where('estado', EstadoProducto::Activo),
         ])->withMax('productos as ultima_actividad', 'ultimo_acceso_en');
     }
 }

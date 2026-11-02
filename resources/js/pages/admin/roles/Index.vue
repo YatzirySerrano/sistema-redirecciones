@@ -11,7 +11,8 @@ import {
     UsersRound,
 } from '@lucide/vue';
 import { computed } from 'vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
+import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import EstadoVacio from '@/components/comun/EstadoVacio.vue';
@@ -47,6 +48,31 @@ const { puede, esSuperadministrador } = usePermisos();
 const hayFiltros = computed(
     () => filtros.buscar !== '' || filtros.ambito !== '',
 );
+
+const acciones = (rol: Rol): AccionRegistro[] => [
+    {
+        clave: 'ver',
+        etiqueta: 'Ver',
+        icono: Eye,
+        href: show(rol.id),
+        principal: true,
+    },
+    {
+        clave: 'editar',
+        etiqueta: 'Editar',
+        icono: Pencil,
+        href: edit(rol.id),
+        principal: true,
+        visible: puedeEditar(rol),
+    },
+    {
+        clave: 'usuarios',
+        etiqueta: 'Ver usuarios con este rol',
+        icono: UsersRound,
+        href: usuarios({ query: { rol_id: rol.id } }),
+        visible: puede('usuarios.ver'),
+    },
+];
 
 const puedeEditar = (rol: Rol) =>
     puede('roles.editar') && (!rol.protegido || esSuperadministrador.value);
@@ -125,7 +151,7 @@ const puedeEditar = (rol: Rol) =>
                             </th>
                             <th
                                 scope="col"
-                                class="hidden h-10 px-3 font-medium lg:table-cell"
+                                class="hidden h-10 px-3 font-medium xl:table-cell"
                             >
                                 Modificado
                             </th>
@@ -187,39 +213,15 @@ const puedeEditar = (rol: Rol) =>
                                 >
                             </td>
                             <td
-                                class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground lg:table-cell"
+                                class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground xl:table-cell"
                             >
                                 {{ fechaCorta(rol.updated_at) }}
                             </td>
                             <td class="px-2 py-2">
-                                <div
-                                    class="flex flex-wrap items-center justify-end gap-0.5"
-                                >
-                                    <AccionFila
-                                        etiqueta="Ver"
-                                        :icono="Eye"
-                                        :href="show(rol.id)"
-                                        compacta
-                                    />
-                                    <AccionFila
-                                        v-if="puedeEditar(rol)"
-                                        etiqueta="Editar"
-                                        :icono="Pencil"
-                                        :href="edit(rol.id)"
-                                        compacta
-                                    />
-                                    <AccionFila
-                                        v-if="puede('usuarios.ver')"
-                                        etiqueta="Usuarios"
-                                        :icono="UsersRound"
-                                        :href="
-                                            usuarios({
-                                                query: { rol_id: rol.id },
-                                            })
-                                        "
-                                        compacta
-                                    />
-                                </div>
+                                <AccionesRegistro
+                                    :acciones="acciones(rol)"
+                                    :nombre="rol.nombre"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -228,13 +230,13 @@ const puedeEditar = (rol: Rol) =>
 
             <ul
                 v-else
-                class="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
+                class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
                 aria-label="Listado de roles"
             >
                 <li
                     v-for="rol in roles.data"
                     :key="rol.id"
-                    class="flex flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
+                    class="flex min-w-0 flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -292,19 +294,11 @@ const puedeEditar = (rol: Rol) =>
                             </dd>
                         </div>
                     </dl>
-                    <div
-                        class="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2"
-                    >
-                        <AccionFila
-                            etiqueta="Ver"
-                            :icono="Eye"
-                            :href="show(rol.id)"
-                        />
-                        <AccionFila
-                            v-if="puedeEditar(rol)"
-                            etiqueta="Editar"
-                            :icono="Pencil"
-                            :href="edit(rol.id)"
+                    <div class="mt-auto flex justify-end border-t pt-2.5">
+                        <AccionesRegistro
+                            :acciones="acciones(rol)"
+                            :nombre="rol.nombre"
+                            variante="tarjeta"
                         />
                     </div>
                 </li>

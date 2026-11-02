@@ -2,7 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { Download, Eye, PackageOpen, PencilLine, SearchX } from '@lucide/vue';
 import TarjetaProducto from '@/components/cliente/TarjetaProducto.vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
+import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import EstadoVacio from '@/components/comun/EstadoVacio.vue';
@@ -33,6 +34,29 @@ const props = defineProps<{
 
 const { filtros, limpiar } = useFiltros(index().url, { ...props.filtros });
 const { vista } = useVistaListado('cliente_productos');
+
+const acciones = (p: Producto): AccionRegistro[] => {
+    const qr = p.enlaces_secundarios?.[0] ?? p;
+
+    return [
+        {
+            clave: 'ver',
+            etiqueta: p.permisos.cambiar_destino ? 'Cambiar destino' : 'Ver',
+            icono: p.permisos.cambiar_destino ? PencilLine : Eye,
+            href: show(p.id),
+            principal: true,
+        },
+        {
+            clave: 'qr',
+            etiqueta: 'Descargar QR',
+            icono: Download,
+            href: descarga(qr),
+            externo: true,
+            principal: true,
+            visible: qr.permisos.descargar_qr && p.tipo !== 'nfc',
+        },
+    ];
+};
 
 const descarga = (p: Producto) =>
     qrShow.url(p.id, { query: { formato: 'png', descargar: 1 } });
@@ -180,32 +204,10 @@ const descarga = (p: Producto) =>
                                 }}
                             </td>
                             <td class="px-2 py-2">
-                                <div
-                                    class="flex flex-wrap items-center justify-end gap-0.5"
-                                >
-                                    <AccionFila
-                                        :etiqueta="
-                                            producto.permisos.cambiar_destino
-                                                ? 'Cambiar destino'
-                                                : 'Ver'
-                                        "
-                                        :icono="
-                                            producto.permisos.cambiar_destino
-                                                ? PencilLine
-                                                : Eye
-                                        "
-                                        :href="show(producto.id)"
-                                        compacta
-                                    />
-                                    <AccionFila
-                                        v-if="producto.permisos.descargar_qr"
-                                        etiqueta="Descargar QR"
-                                        :icono="Download"
-                                        :href="descarga(producto)"
-                                        externo
-                                        compacta
-                                    />
-                                </div>
+                                <AccionesRegistro
+                                    :acciones="acciones(producto)"
+                                    :nombre="producto.nombre"
+                                />
                             </td>
                         </tr>
                     </tbody>

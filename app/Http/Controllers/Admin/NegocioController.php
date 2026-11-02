@@ -110,7 +110,7 @@ class NegocioController extends Controller
             'negocio' => new NegocioResource($negocio),
             'usuarios' => UsuarioResource::collection($negocio->usuarios()->with('negocio')->orderBy('name')->get()),
             'productos' => ProductoResource::collection(
-                $negocio->productos()->with('negocio')->orderBy('nombre')->get()
+                $negocio->productos()->principales()->with(['negocio', 'enlacesSecundarios'])->orderBy('nombre')->get()
             ),
             'estadisticas' => [
                 'totales' => $estadisticas->totales($filtro),

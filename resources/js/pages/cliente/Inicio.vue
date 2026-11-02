@@ -2,27 +2,43 @@
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowRight,
-    ChartColumnBig,
-    CircleCheck,
+    CircleAlert,
+    Gift,
+    HeartHandshake,
     MousePointerClick,
     Nfc,
-    PackageOpen,
-    TrendingUp,
+    Repeat,
+    Stamp,
+    UsersRound,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import EstadoVacio from '@/components/comun/EstadoVacio.vue';
-import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
 import Panel from '@/components/comun/Panel.vue';
 import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
+import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import { Button } from '@/components/ui/button';
-import { dominio, numero } from '@/lib/formato';
+import { usePermisos } from '@/composables/usePermisos';
+import { numero, variacion, visitantes } from '@/lib/formato';
 import { inicio } from '@/routes/cliente';
 import { index as estadisticas } from '@/routes/cliente/estadisticas';
-import { index as productosIndex, show } from '@/routes/cliente/productos';
-import type { CambioDestino, Coleccion, Producto, PuntoSerie } from '@/types';
+import {
+    inicio as fidelidadInicio,
+    mostrador,
+} from '@/routes/cliente/fidelidad';
+import {
+    index as productos,
+    show as producto,
+} from '@/routes/cliente/productos';
+import type {
+    Barra,
+    CambioDestino,
+    Coleccion,
+    ProductoTop,
+    PuntoSerie,
+    TotalesEstadisticas,
+} from '@/types';
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Inicio', href: inicio() }] },
@@ -33,24 +49,57 @@ const props = defineProps<{
     indicadores: {
         productos: number;
         productos_activos: number;
-        accesos_totales: number | null;
-        accesos_30_dias: number | null;
+        enlaces_sin_destino: number;
+        accesos_30_dias: TotalesEstadisticas | null;
+        accesos_previos: number | null;
     };
     serie: PuntoSerie[] | null;
-    productos: Coleccion<Producto>;
+    productos_top: ProductoTop[];
+    alertas: {
+        clave: string;
+        titulo: string;
+        descripcion: string;
+        producto_id: number | null;
+    }[];
     actividad: Coleccion<CambioDestino>;
+    fidelidad: {
+        consumidores: number;
+        visitas_periodo: number;
+        dias_periodo: number;
+        recurrentes: number;
+        recompensas_disponibles: number;
+        recompensas_canjeadas_periodo: number;
+        proximos_a_meta: {
+            consumidor_id: number;
+            nombre: string;
+            campana: string;
+            visitas: number;
+            meta: number;
+            faltan: number;
+        }[];
+    } | null;
 }>();
 
 const page = usePage();
+const { puede } = usePermisos();
 const nombre = computed(() => page.props.auth.user.name.split(' ')[0]);
-const verEstadisticas = computed(
-    () => page.props.auth.permisos.ver_estadisticas,
-);
 const saludo = computed(() => {
     const h = new Date().getHours();
 
     return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
 });
+
+const accesos = computed(() => props.indicadores.accesos_30_dias);
+
+const barras = computed<Barra[]>(() =>
+    props.productos_top.map((p) => ({
+        clave: p.id,
+        etiqueta: p.nombre,
+        detalle: p.tipo,
+        total: p.total,
+        href: producto.url(p.id),
+    })),
+);
 </script>
 
 <template>
@@ -58,129 +107,199 @@ const saludo = computed(() => {
 
     <EncabezadoPagina
         :titulo="`${saludo}, ${nombre}`"
-        :descripcion="`Administra los QR y tarjetas NFC de ${props.negocio.nombre_comercial}.`"
+        :descripcion="`Así van los productos de ${negocio.nombre_comercial}.`"
     >
-        <template #acciones>
+        <template v-if="puede('productos.ver')" #acciones>
             <Button as-child>
-                <Link :href="productosIndex()"
-                    >Ver mis productos <ArrowRight
-                /></Link>
+                <Link :href="productos()"><Nfc /> Mis productos</Link>
             </Button>
         </template>
     </EncabezadoPagina>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <TarjetaIndicador
-            etiqueta="Productos adquiridos"
-            :valor="numero(indicadores.productos)"
-            :icono="Nfc"
-        />
+    <!-- Alertas importantes -->
+    <div v-if="alertas.length > 0" class="space-y-2">
+        <component
+            :is="a.producto_id ? Link : 'div'"
+            v-for="a in alertas"
+            :key="a.clave"
+            :href="a.producto_id ? producto(a.producto_id) : undefined"
+            class="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning-soft p-4 text-warning"
+            role="status"
+        >
+            <CircleAlert class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+            <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold">{{ a.titulo }}</span>
+                <span class="block text-sm opacity-90">{{
+                    a.descripcion
+                }}</span>
+            </span>
+            <ArrowRight
+                v-if="a.producto_id"
+                class="mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+            />
+        </component>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <TarjetaIndicador
             etiqueta="Productos activos"
             :valor="numero(indicadores.productos_activos)"
-            :icono="CircleCheck"
+            :detalle="`de ${numero(indicadores.productos)} productos`"
+            :icono="Nfc"
+            :href="puede('productos.ver') ? productos() : undefined"
         />
-        <TarjetaIndicador
-            v-if="indicadores.accesos_totales !== null"
-            etiqueta="Accesos registrados"
-            :valor="numero(indicadores.accesos_totales)"
-            :icono="MousePointerClick"
-            detalle="Desde que tienes tus productos"
-        />
-        <TarjetaIndicador
-            v-if="indicadores.accesos_30_dias !== null"
-            etiqueta="Accesos (30 días)"
-            :valor="numero(indicadores.accesos_30_dias)"
-            :icono="TrendingUp"
-        />
+        <template v-if="accesos">
+            <TarjetaIndicador
+                etiqueta="Visitas · 30 días"
+                :valor="numero(accesos.total)"
+                :detalle="
+                    variacion(accesos.total, indicadores.accesos_previos ?? 0)
+                "
+                :icono="MousePointerClick"
+                ayuda="Veces que alguien escaneó tus QR o acercó tus tarjetas NFC, sin contar bots identificados."
+            />
+            <TarjetaIndicador
+                etiqueta="Visitantes estimados"
+                :valor="visitantes(accesos)"
+                detalle="Personas distintas por día (aproximado)"
+                :icono="UsersRound"
+                ayuda="Es una estimación anónima: no identifica personas y puede variar si alguien usa varios dispositivos."
+            />
+            <TarjetaIndicador
+                etiqueta="Promedio diario"
+                :valor="numero(accesos.promedio_diario)"
+                detalle="Visitas por día en 30 días"
+                :href="estadisticas()"
+            />
+        </template>
     </div>
 
-    <Panel
-        v-if="serie"
-        titulo="Accesos de los últimos 30 días"
-        descripcion="Escaneos y lecturas de todos tus productos."
-    >
-        <template v-if="verEstadisticas" #acciones>
-            <Button variant="ghost" size="sm" as-child>
-                <Link :href="estadisticas()"
-                    ><ChartColumnBig /> Ver estadísticas</Link
-                >
-            </Button>
-        </template>
-        <GraficaArea :serie="serie" etiqueta="Accesos" />
-    </Panel>
-
     <div
-        class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
+        v-if="serie"
+        class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
     >
         <Panel
-            :titulo="
-                indicadores.accesos_totales !== null
-                    ? 'Tus productos más usados'
-                    : 'Tus productos'
-            "
-            sin-relleno
+            titulo="Evolución de visitas"
+            descripcion="Visitas por día en los últimos 30 días."
         >
             <template #acciones>
                 <Button variant="ghost" size="sm" as-child>
-                    <Link :href="productosIndex()">Ver todos</Link>
+                    <Link :href="estadisticas()">Ver más <ArrowRight /></Link>
                 </Button>
             </template>
-            <EstadoVacio
-                v-if="productos.data.length === 0"
-                :icono="PackageOpen"
-                titulo="Aún no tienes productos asignados"
-                descripcion="Cuando DASTI registre tus QR o tarjetas NFC aparecerán aquí."
-            />
-            <ul v-else class="divide-y" role="list">
-                <li v-for="p in productos.data" :key="p.id">
-                    <Link
-                        :href="show(p.id)"
-                        class="flex items-center gap-4 px-5 py-3.5 transition hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-                    >
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="truncate font-medium">{{
-                                    p.nombre
-                                }}</span>
-                                <InsigniaTipo
-                                    :tipo="p.tipo"
-                                    :etiqueta="p.tipo_etiqueta"
-                                />
-                            </div>
-                            <p
-                                class="mt-0.5 truncate text-xs text-muted-foreground"
-                            >
-                                {{
-                                    p.url_destino
-                                        ? dominio(p.url_destino)
-                                        : 'Sin destino'
-                                }}
-                            </p>
-                        </div>
-                        <div
-                            v-if="p.total_accesos !== null"
-                            class="shrink-0 text-right"
-                        >
-                            <p class="font-semibold tabular-nums">
-                                {{ numero(p.total_accesos) }}
-                            </p>
-                            <p class="text-xs text-muted-foreground">accesos</p>
-                        </div>
-                        <ArrowRight
-                            class="size-4 shrink-0 text-muted-foreground"
-                            aria-hidden="true"
-                        />
-                    </Link>
-                </li>
-            </ul>
+            <GraficaArea :serie="serie" etiqueta="Visitas" />
         </Panel>
-
-        <Panel
-            titulo="Actividad reciente"
-            descripcion="Últimos cambios de destino."
-        >
-            <HistorialDestinos :cambios="actividad.data" mostrar-producto />
+        <Panel titulo="Productos más usados" descripcion="Visitas en 30 días.">
+            <GraficaBarras
+                :barras="barras"
+                unidad="visitas"
+                vacio="Aún no hay visitas en este periodo."
+            />
         </Panel>
     </div>
+
+    <!-- Fidelidad (si el negocio la contrató) -->
+    <Panel
+        v-if="fidelidad"
+        titulo="Programa de fidelidad"
+        :descripcion="`Últimos ${fidelidad.dias_periodo} días. Las visitas solo cuentan cuando tu personal las confirma.`"
+    >
+        <template #acciones>
+            <Button v-if="puede('fidelidad.visitas')" size="sm" as-child>
+                <Link :href="mostrador()"><Stamp /> Registrar visita</Link>
+            </Button>
+            <Button variant="ghost" size="sm" as-child>
+                <Link :href="fidelidadInicio()"
+                    >Ver programa <ArrowRight
+                /></Link>
+            </Button>
+        </template>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div
+                v-for="d in [
+                    {
+                        e: 'Consumidores inscritos',
+                        v: fidelidad.consumidores,
+                        i: UsersRound,
+                    },
+                    {
+                        e: 'Visitas válidas',
+                        v: fidelidad.visitas_periodo,
+                        i: Stamp,
+                    },
+                    {
+                        e: 'Clientes recurrentes',
+                        v: fidelidad.recurrentes,
+                        i: Repeat,
+                    },
+                    {
+                        e: 'Recompensas disponibles',
+                        v: fidelidad.recompensas_disponibles,
+                        i: Gift,
+                    },
+                    {
+                        e: 'Recompensas canjeadas',
+                        v: fidelidad.recompensas_canjeadas_periodo,
+                        i: HeartHandshake,
+                    },
+                ]"
+                :key="d.e"
+                class="rounded-lg bg-muted/40 p-3"
+            >
+                <p
+                    class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                >
+                    <component :is="d.i" class="size-3.5" aria-hidden="true" />
+                    {{ d.e }}
+                </p>
+                <p class="mt-1 text-xl font-semibold tabular-nums">
+                    {{ numero(d.v) }}
+                </p>
+            </div>
+        </div>
+        <div v-if="fidelidad.proximos_a_meta.length > 0" class="mt-5">
+            <p class="mb-2 text-xs font-medium text-muted-foreground">
+                Próximos a completar su meta
+            </p>
+            <ul class="divide-y rounded-lg border">
+                <li
+                    v-for="c in fidelidad.proximos_a_meta"
+                    :key="`${c.consumidor_id}-${c.campana}`"
+                    class="flex items-center gap-3 px-3 py-2 text-sm"
+                >
+                    <span class="min-w-0 flex-1 truncate font-medium">{{
+                        c.nombre
+                    }}</span>
+                    <span
+                        class="hidden truncate text-xs text-muted-foreground sm:inline"
+                        >{{ c.campana }}</span
+                    >
+                    <span class="w-28 shrink-0">
+                        <span
+                            class="block h-1.5 overflow-hidden rounded-full bg-muted"
+                        >
+                            <span
+                                class="block h-full rounded-full bg-primary"
+                                :style="{
+                                    width: `${Math.min(100, (c.visitas / c.meta) * 100)}%`,
+                                }"
+                            />
+                        </span>
+                    </span>
+                    <span
+                        class="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums"
+                        >faltan {{ c.faltan }}</span
+                    >
+                </li>
+            </ul>
+        </div>
+    </Panel>
+
+    <Panel
+        titulo="Cambios de destino recientes"
+        descripcion="Cada cambio queda registrado con quién lo hizo."
+    >
+        <HistorialDestinos :cambios="actividad.data" mostrar-producto />
+    </Panel>
 </template>

@@ -39,8 +39,10 @@ class EnlaceController extends Controller
 
         $negocioActivo = fn (Builder $q) => $q->where('estado', EstadoCuenta::Activo);
 
+        // Vista centrada en enlaces: incluye el reverso QR de los combinados
+        // con destinos independientes (cada uno con su medio).
         $enlaces = Producto::query()
-            ->with('negocio')
+            ->with(['negocio', 'principal'])
             ->buscar($filtros['buscar'] ?? null)
             ->when($filtros['negocio_id'] ?? null, fn (Builder $q, int|string $id) => $q->where('negocio_id', (int) $id))
             ->when($filtros['situacion'] ?? null, function (Builder $q, string $situacion) use ($negocioActivo) {

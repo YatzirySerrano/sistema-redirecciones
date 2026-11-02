@@ -154,3 +154,31 @@ export function pendienteDeAcceso(
 
     return null;
 }
+
+/**
+ * Cambio respecto al periodo anterior, solo cuando hay datos con qué
+ * comparar (sin datos previos no se inventa un porcentaje).
+ */
+export function variacion(actual: number, previo: number): string {
+    if (previo === 0) {
+        return actual === 0
+            ? 'Sin accesos en los 60 días'
+            : 'Sin accesos en los 30 días previos';
+    }
+
+    const cambio = Math.round(((actual - previo) / previo) * 100);
+
+    if (cambio === 0) {
+        return 'Igual que los 30 días previos';
+    }
+
+    return `${cambio > 0 ? '+' : ''}${cambio} % frente a los 30 días previos`;
+}
+
+/** Importe en centavos a pesos mexicanos. */
+export function pesos(centavos: number): string {
+    return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+    }).format(centavos / 100);
+}

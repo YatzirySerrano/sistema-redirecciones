@@ -23,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             // Enlaces permanentes: sin el grupo "web" (sin sesión ni cookies).
             Route::middleware([])->group(base_path('routes/redirecciones.php'));
+
+            // Webhooks firmados (Stripe): sin sesión ni CSRF.
+            Route::middleware([])->group(base_path('routes/webhooks.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

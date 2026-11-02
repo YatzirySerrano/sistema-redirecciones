@@ -42,6 +42,7 @@ class CambioDestinoResource extends JsonResource
                 'id' => $this->producto->id,
                 'nombre' => $this->producto->nombre,
                 'codigo' => $this->producto->codigo,
+                'medio' => $this->producto->medio?->etiqueta(),
             ]),
             'created_at' => $this->created_at->toIso8601String(),
         ];

@@ -2,6 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     Building2,
+    CirclePause,
+    CirclePlay,
     Eye,
     Mail,
     PackagePlus,
@@ -10,8 +12,9 @@ import {
     Plus,
     SearchX,
 } from '@lucide/vue';
-import { computed } from 'vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import { computed, ref } from 'vue';
+import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
+import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
 import CambiarEstadoRegistro from '@/components/comun/CambiarEstadoRegistro.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
 import EncabezadoOrdenable from '@/components/comun/EncabezadoOrdenable.vue';
@@ -58,6 +61,48 @@ const hayFiltros = computed(
 const limpiarFiltros = () => {
     filtros.buscar = '';
     filtros.estado = '';
+};
+
+const acciones = (negocio: Negocio): AccionRegistro[] => [
+    {
+        clave: 'ver',
+        etiqueta: 'Ver',
+        icono: Eye,
+        href: show(negocio.id),
+        principal: true,
+    },
+    {
+        clave: 'editar',
+        etiqueta: 'Editar',
+        icono: Pencil,
+        href: edit(negocio.id),
+        principal: true,
+        visible: puede('negocios.editar'),
+    },
+    {
+        clave: 'producto',
+        etiqueta: 'Agregar producto',
+        icono: PackagePlus,
+        href: crearProducto({ query: { negocio_id: negocio.id } }),
+        visible: puede('productos.crear') && negocio.estado === 'activo',
+    },
+    {
+        clave: 'estado',
+        etiqueta: negocio.estado === 'activo' ? 'Suspender' : 'Reactivar',
+        icono: negocio.estado === 'activo' ? CirclePause : CirclePlay,
+        destructiva: negocio.estado === 'activo',
+        visible: puedeCambiarEstado(negocio),
+    },
+];
+
+// Un solo diálogo de suspensión/reactivación para el registro elegido.
+const seleccionado = ref<Negocio | null>(null);
+const abiertoEstado = ref(false);
+const abrir = (registro: Negocio, clave: string) => {
+    if (clave === 'estado') {
+        seleccionado.value = registro;
+        abiertoEstado.value = true;
+    }
 };
 
 const puedeCambiarEstado = (negocio: Negocio) =>
@@ -129,7 +174,7 @@ const puedeCambiarEstado = (negocio: Negocio) =>
                             >
                             <th
                                 scope="col"
-                                class="hidden h-10 px-3 text-left font-medium text-muted-foreground lg:table-cell"
+                                class="hidden h-10 px-3 text-left font-medium text-muted-foreground xl:table-cell"
                             >
                                 Contacto
                             </th>
@@ -183,7 +228,7 @@ const puedeCambiarEstado = (negocio: Negocio) =>
                                     >{{ negocio.nombre_comercial }}</Link
                                 >
                                 <p
-                                    class="text-xs text-muted-foreground lg:hidden"
+                                    class="text-xs text-muted-foreground xl:hidden"
                                 >
                                     {{
                                         negocio.responsable ??
@@ -192,7 +237,7 @@ const puedeCambiarEstado = (negocio: Negocio) =>
                                     }}
                                 </p>
                             </td>
-                            <td class="hidden px-3 py-3 lg:table-cell">
+                            <td class="hidden px-3 py-3 xl:table-cell">
                                 <p>{{ negocio.responsable ?? '—' }}</p>
                                 <p class="text-xs text-muted-foreground">
                                     {{ negocio.email_contacto ?? 'Sin correo' }}
@@ -238,47 +283,11 @@ const puedeCambiarEstado = (negocio: Negocio) =>
                                 <span v-else>Sin accesos</span>
                             </td>
                             <td class="px-2 py-2">
-                                <div
-                                    class="flex flex-wrap items-center justify-end gap-0.5"
-                                >
-                                    <AccionFila
-                                        etiqueta="Ver"
-                                        :icono="Eye"
-                                        :href="show(negocio.id)"
-                                        compacta
-                                    />
-                                    <AccionFila
-                                        v-if="puede('negocios.editar')"
-                                        etiqueta="Editar"
-                                        :icono="Pencil"
-                                        :href="edit(negocio.id)"
-                                        compacta
-                                    />
-                                    <AccionFila
-                                        v-if="
-                                            puede('productos.crear') &&
-                                            negocio.estado === 'activo'
-                                        "
-                                        etiqueta="Agregar producto"
-                                        :icono="PackagePlus"
-                                        :href="
-                                            crearProducto({
-                                                query: {
-                                                    negocio_id: negocio.id,
-                                                },
-                                            })
-                                        "
-                                        compacta
-                                    />
-                                    <CambiarEstadoRegistro
-                                        v-if="puedeCambiarEstado(negocio)"
-                                        :url="estado.url(negocio.id)"
-                                        :estado="negocio.estado"
-                                        :nombre="negocio.nombre_comercial"
-                                        tipo="negocio"
-                                        compacto
-                                    />
-                                </div>
+                                <AccionesRegistro
+                                    :acciones="acciones(negocio)"
+                                    :nombre="negocio.nombre_comercial"
+                                    @accion="abrir(negocio, $event)"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -288,13 +297,13 @@ const puedeCambiarEstado = (negocio: Negocio) =>
             <!-- Vista de tarjetas -->
             <ul
                 v-else
-                class="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
+                class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
                 aria-label="Listado de negocios"
             >
                 <li
                     v-for="negocio in negocios.data"
                     :key="negocio.id"
-                    class="flex flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
+                    class="flex min-w-0 flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -370,27 +379,12 @@ const puedeCambiarEstado = (negocio: Negocio) =>
                             }}
                         </p>
                     </div>
-                    <div
-                        class="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2"
-                    >
-                        <AccionFila
-                            etiqueta="Ver"
-                            :icono="Eye"
-                            :href="show(negocio.id)"
-                        />
-                        <AccionFila
-                            v-if="puede('negocios.editar')"
-                            etiqueta="Editar"
-                            :icono="Pencil"
-                            :href="edit(negocio.id)"
-                        />
-                        <CambiarEstadoRegistro
-                            v-if="puedeCambiarEstado(negocio)"
-                            :url="estado.url(negocio.id)"
-                            :estado="negocio.estado"
+                    <div class="mt-auto flex justify-end border-t pt-2.5">
+                        <AccionesRegistro
+                            :acciones="acciones(negocio)"
                             :nombre="negocio.nombre_comercial"
-                            tipo="negocio"
-                            compacto
+                            variante="tarjeta"
+                            @accion="abrir(negocio, $event)"
                         />
                     </div>
                 </li>
@@ -422,4 +416,14 @@ const puedeCambiarEstado = (negocio: Negocio) =>
 
         <Paginacion :meta="negocios.meta" nombre="negocios" />
     </section>
+    <CambiarEstadoRegistro
+        v-if="seleccionado"
+        :key="seleccionado.id"
+        v-model:open="abiertoEstado"
+        :url="estado.url(seleccionado.id)"
+        :estado="seleccionado.estado"
+        :nombre="seleccionado.nombre_comercial"
+        tipo="negocio"
+        sin-disparador
+    />
 </template>

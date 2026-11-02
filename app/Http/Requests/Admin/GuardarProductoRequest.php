@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\EstadoPreparacion;
+use App\Enums\ModalidadDestino;
 use App\Enums\TipoProducto;
 use App\Models\Negocio;
+use App\Models\Producto;
 use App\Rules\UrlDestinoSegura;
 use Illuminate\Validation\Rule;
 
@@ -27,15 +29,34 @@ class GuardarProductoRequest extends SolicitudAdministrativa
         ];
 
         if (! $esAlta) {
+            /** @var Producto|null $producto */
+            $producto = $this->route('producto');
+
+            // Un combinado con destinos independientes tiene dos enlaces
+            // físicos: no puede convertirse en otro tipo.
+            if ($producto?->tieneDestinosIndependientes()) {
+                $reglas['tipo'][] = Rule::in([TipoProducto::Combinado->value]);
+            }
+
             return $reglas;
         }
 
         return [
             ...$reglas,
             'negocio_id' => ['required', 'integer', Rule::exists(Negocio::class, 'id')],
+            'modalidad_destino' => ['exclude_unless:tipo,combinado', 'nullable', Rule::enum(ModalidadDestino::class)], // sin valor: compartido
             'url_destino' => ['nullable', 'string', new UrlDestinoSegura],
+            'url_destino_qr' => ['exclude_unless:modalidad_destino,independiente', 'nullable', 'string', new UrlDestinoSegura],
             'cantidad' => ['required', 'integer', 'min:1', 'max:50'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['tipo.in' => 'Este producto tiene destinos independientes para NFC y QR; su tipo debe seguir siendo «QR + NFC».'];
     }
 
     /**
@@ -46,6 +67,8 @@ class GuardarProductoRequest extends SolicitudAdministrativa
         return [
             'negocio_id' => 'negocio',
             'url_destino' => 'URL de destino',
+            'url_destino_qr' => 'destino del QR',
+            'modalidad_destino' => 'modalidad de destino',
             'estado_preparacion' => 'estado de preparación',
             'fecha_entrega' => 'fecha de entrega',
             'referencia_comercial' => 'referencia comercial',

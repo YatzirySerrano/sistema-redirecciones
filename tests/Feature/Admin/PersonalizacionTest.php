@@ -145,4 +145,35 @@ class PersonalizacionTest extends TestCase
         $svg = $this->actingAs($admin)->get(route('productos.qr.show', [$producto, 'formato' => 'svg']))->assertOk()->getContent();
         $this->assertStringNotContainsString('0f766e', strtolower((string) $svg));
     }
+
+    /**
+     * Defecto corregido en la fase 4: la hoja de app.css se cargaba después
+     * de la personalizada y la anulaba (misma especificidad). La etiqueta va
+     * después de @vite y usa selectores más específicos que `:root`/`.dark`.
+     */
+    public function test_la_hoja_personalizada_gana_a_app_css_sin_depender_del_orden(): void
+    {
+        $admin = User::factory()->create();
+        $this->actingAs($admin)->put(route('admin.personalizacion.update'), $this->colores(['principal' => '#0f766e']));
+
+        $html = (string) $this->actingAs($admin)->get(route('admin.panel'))->getContent();
+
+        $this->assertStringContainsString('html:root:not(.dark){', $html);
+        $this->assertStringContainsString('html:root.dark{', $html);
+
+        $posTema = strpos($html, 'id="tema-personalizado"');
+        $posCss = strpos($html, 'app.css');
+        $this->assertNotFalse($posTema);
+        $this->assertNotFalse($posCss);
+        $this->assertGreaterThan($posCss, $posTema, 'El tema debe declararse después de app.css.');
+    }
+
+    public function test_el_modo_oscuro_solo_recibe_colores_de_marca_con_contraste(): void
+    {
+        $tokens = TemaVisual::calcularTokens($this->colores(['principal' => '#1e3a8a', 'enlaces' => '#1e3a8a', 'botones' => '#1e3a8a']));
+
+        $this->assertArrayNotHasKey('--background', $tokens['oscuro']);
+        $this->assertArrayNotHasKey('--sidebar', $tokens['oscuro']);
+        $this->assertGreaterThanOrEqual(4.5, Color::contraste($tokens['oscuro']['--primary'], '#0f0d17'));
+    }
 }

@@ -5,11 +5,14 @@ namespace App\Models;
 use App\Enums\EstadoCuenta;
 use App\Enums\EstadoPreparacion;
 use App\Enums\EstadoProducto;
+use App\Enums\MedioEnlace;
+use App\Enums\ModalidadDestino;
 use App\Enums\TipoProducto;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProductoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,9 +26,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $id
  * @property int $negocio_id
+ * @property int|null $producto_principal_id
  * @property string $codigo
  * @property string $nombre
  * @property TipoProducto $tipo
+ * @property ModalidadDestino $modalidad_destino
+ * @property MedioEnlace|null $medio
  * @property string|null $url_destino
  * @property EstadoProducto $estado
  * @property EstadoPreparacion $estado_preparacion
@@ -41,6 +47,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $updated_at
  * @property-read string $url_permanente
  * @property-read Negocio $negocio
+ * @property-read Producto|null $principal
+ * @property-read Collection<int, Producto> $enlacesSecundarios
  */
 #[Fillable(['nombre', 'tipo', 'estado_preparacion', 'fecha_entrega', 'referencia_comercial', 'notas_internas'])]
 class Producto extends Model
@@ -51,12 +59,21 @@ class Producto extends Model
     protected $table = 'productos';
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'modalidad_destino' => 'compartido',
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
             'tipo' => TipoProducto::class,
+            'modalidad_destino' => ModalidadDestino::class,
+            'medio' => MedioEnlace::class,
             'estado' => EstadoProducto::class,
             'estado_preparacion' => EstadoPreparacion::class,
             'fecha_entrega' => 'date',
@@ -74,6 +91,47 @@ class Producto extends Model
     public function negocio(): BelongsTo
     {
         return $this->belongsTo(Negocio::class);
+    }
+
+    /**
+     * Producto físico al que pertenece un enlace secundario (reverso QR de
+     * un combinado con destinos independientes).
+     *
+     * @return BelongsTo<Producto, $this>
+     */
+    public function principal(): BelongsTo
+    {
+        return $this->belongsTo(Producto::class, 'producto_principal_id');
+    }
+
+    /**
+     * @return HasMany<Producto, $this>
+     */
+    public function enlacesSecundarios(): HasMany
+    {
+        return $this->hasMany(Producto::class, 'producto_principal_id')->orderBy('id');
+    }
+
+    public function esEnlaceSecundario(): bool
+    {
+        return $this->producto_principal_id !== null;
+    }
+
+    public function tieneDestinosIndependientes(): bool
+    {
+        return $this->modalidad_destino === ModalidadDestino::Independiente;
+    }
+
+    /**
+     * Productos físicos (excluye los enlaces secundarios, que no son
+     * unidades vendidas).
+     *
+     * @param  Builder<Producto>  $query
+     * @return Builder<Producto>
+     */
+    public function scopePrincipales(Builder $query): Builder
+    {
+        return $query->whereNull('producto_principal_id');
     }
 
     /**

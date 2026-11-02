@@ -10,6 +10,7 @@ use App\Actions\Productos\EliminarProducto;
 use App\Actions\Productos\TransferirProducto;
 use App\Enums\EstadoPreparacion;
 use App\Enums\EstadoProducto;
+use App\Enums\ModalidadDestino;
 use App\Enums\TipoProducto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CambiarEstadoRequest;
@@ -19,6 +20,7 @@ use App\Http\Requests\CambiarDestinoRequest;
 use App\Http\Resources\CambioDestinoResource;
 use App\Http\Resources\ProductoResource;
 use App\Http\Resources\RegistroAuditoriaResource;
+use App\Models\CambioDestino;
 use App\Models\Negocio;
 use App\Models\Producto;
 use App\Models\RegistroAuditoria;
@@ -62,8 +64,10 @@ class ProductoController extends Controller
         $direccion = $filtros['direccion'] ?? ($orden === 'nombre' ? 'asc' : 'desc');
 
         $productos = Producto::query()
-            ->with('negocio')
-            ->buscar($filtros['buscar'] ?? null)
+            ->principales()
+            ->with(['negocio', 'enlacesSecundarios'])
+            ->where(fn (Builder $q) => $q->buscar($filtros['buscar'] ?? null)
+                ->when(trim((string) ($filtros['buscar'] ?? '')) !== '', fn (Builder $w) => $w->orWhereHas('enlacesSecundarios', fn (Builder $e) => $e->buscar($filtros['buscar'] ?? null))))
             ->when($filtros['negocio_id'] ?? null, fn (Builder $q, int|string $id) => $q->where('negocio_id', (int) $id))
             ->when($filtros['tipo'] ?? null, fn (Builder $q, string $v) => $q->where('tipo', $v))
             ->when($filtros['estado'] ?? null, fn (Builder $q, string $v) => $q->where('estado', $v))
@@ -107,7 +111,7 @@ class ProductoController extends Controller
     public function store(GuardarProductoRequest $request, CrearProducto $accion): RedirectResponse
     {
         $negocio = Negocio::query()->findOrFail($request->integer('negocio_id'));
-        /** @var array{nombre: string, tipo: string, url_destino?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null} $datos */
+        /** @var array{nombre: string, tipo: string, modalidad_destino?: string|null, url_destino?: string|null, url_destino_qr?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null} $datos */
         $datos = $request->safe()->except(['negocio_id', 'cantidad']);
         $productos = $accion->ejecutar($negocio, $datos, $request->user(), $request->integer('cantidad', 1));
 
@@ -122,9 +126,14 @@ class ProductoController extends Controller
         return redirect()->route('admin.negocios.show', $negocio);
     }
 
-    public function show(Producto $producto, ConsultasEstadisticas $estadisticas): Response
+    public function show(Producto $producto, ConsultasEstadisticas $estadisticas): Response|RedirectResponse
     {
-        $producto->load('negocio');
+        // El reverso QR se administra desde la ficha del producto físico.
+        if ($producto->esEnlaceSecundario()) {
+            return redirect()->route('admin.productos.show', $producto->producto_principal_id);
+        }
+
+        $producto->load(['negocio', 'enlacesSecundarios.negocio']);
         $filtro = new FiltroEstadisticas(
             FiltroEstadisticas::ultimosDias(30)->desde,
             FiltroEstadisticas::ultimosDias(30)->hasta,
@@ -133,15 +142,27 @@ class ProductoController extends Controller
 
         return Inertia::render('admin/productos/Show', [
             'producto' => new ProductoResource($producto),
-            'opciones_qr' => OpcionesQr::desdeArreglo($producto->opciones_qr)->aArreglo(),
+            // El diseño corresponde al enlace que lleva el QR: el reverso en
+            // los combinados con destinos independientes.
+            'opciones_qr' => OpcionesQr::desdeArreglo(($producto->enlacesSecundarios->first() ?? $producto)->opciones_qr)->aArreglo(),
             'puede_eliminarse' => EliminarProducto::puedeEliminarse($producto),
+            // Combinado con destinos independientes: accesos de cada medio.
+            'estadisticas_medios' => $producto->tieneDestinosIndependientes()
+                ? array_map(fn (Producto $enlace) => [
+                    'id' => $enlace->id,
+                    'medio' => $enlace->medio?->etiqueta(),
+                    'totales' => $estadisticas->totales(new FiltroEstadisticas($filtro->desde, $filtro->hasta, productoId: $enlace->id)),
+                ], [$producto, ...$producto->enlacesSecundarios->all()])
+                : [],
             'estadisticas' => [
                 'totales' => $estadisticas->totales($filtro),
                 'serie' => $estadisticas->serieDiaria($filtro),
                 'dispositivos' => $estadisticas->dispositivos($filtro),
             ],
             'cambios' => CambioDestinoResource::collection(
-                $producto->cambiosDestino()->with(['usuario', 'producto'])->latest('created_at')->latest('id')->limit(20)->get()
+                CambioDestino::query()->with(['usuario', 'producto'])
+                    ->whereIn('producto_id', [$producto->id, ...$producto->enlacesSecundarios->pluck('id')->all()])
+                    ->latest('created_at')->latest('id')->limit(20)->get()
             ),
             'auditoria' => RegistroAuditoriaResource::collection(
                 RegistroAuditoria::query()->with(['usuario', 'negocio'])
@@ -151,8 +172,12 @@ class ProductoController extends Controller
         ]);
     }
 
-    public function edit(Producto $producto): Response
+    public function edit(Producto $producto): Response|RedirectResponse
     {
+        if ($producto->esEnlaceSecundario()) {
+            return redirect()->route('admin.productos.edit', $producto->producto_principal_id);
+        }
+
         return Inertia::render('admin/productos/Edit', [
             'producto' => new ProductoResource($producto->load('negocio')),
             ...$this->catalogos(),
@@ -217,6 +242,7 @@ class ProductoController extends Controller
     {
         return [
             'tipos' => TipoProducto::opciones(),
+            'modalidades' => ModalidadDestino::opciones(),
             'preparaciones' => EstadoPreparacion::opciones(),
         ];
     }

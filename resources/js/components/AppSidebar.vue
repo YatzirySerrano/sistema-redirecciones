@@ -8,7 +8,12 @@ import {
     LayoutDashboard,
     Link2,
     Nfc,
+    CreditCard,
+    Gift,
+    HeartHandshake,
     Palette,
+    Stamp,
+    UserCog,
     Settings2,
     ShieldCheck,
     UsersRound,
@@ -34,11 +39,21 @@ import { index as enlaces } from '@/routes/admin/enlaces';
 import { index as estadisticasAdmin } from '@/routes/admin/estadisticas';
 import { index as negocios } from '@/routes/admin/negocios';
 import { edit as apariencia } from '@/routes/admin/personalizacion';
+import { index as pagos } from '@/routes/admin/pagos';
 import { index as productosAdmin } from '@/routes/admin/productos';
 import { index as roles } from '@/routes/admin/roles';
+import { index as servicios } from '@/routes/admin/servicios';
 import { index as usuarios } from '@/routes/admin/usuarios';
 import { inicio as inicioCliente } from '@/routes/cliente';
 import { index as estadisticasCliente } from '@/routes/cliente/estadisticas';
+import {
+    contratacion,
+    inicio as fidelidadInicio,
+    mostrador,
+} from '@/routes/cliente/fidelidad';
+import { index as campanas } from '@/routes/cliente/fidelidad/campanas';
+import { index as consumidores } from '@/routes/cliente/fidelidad/consumidores';
+import { index as personal } from '@/routes/cliente/fidelidad/personal';
 import { index as productosCliente } from '@/routes/cliente/productos';
 import { usePermisos } from '@/composables/usePermisos';
 import type { NavItem } from '@/types';
@@ -94,6 +109,23 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                         href: enlaces(),
                         icon: Link2,
                         permiso: 'redirecciones.ver',
+                    },
+                ]),
+            },
+            {
+                titulo: 'Servicios',
+                items: filtrar([
+                    {
+                        title: 'Contrataciones',
+                        href: servicios(),
+                        icon: HeartHandshake,
+                        permiso: 'servicios.ver',
+                    },
+                    {
+                        title: 'Pagos',
+                        href: pagos(),
+                        icon: CreditCard,
+                        permiso: 'pagos.ver',
                     },
                 ]),
             },
@@ -159,7 +191,60 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
         });
     }
 
-    return [{ titulo: negocio.value?.nombre_comercial ?? 'Mi negocio', items }];
+    const secciones = [{ titulo: 'Redirecciones', items }];
+    const fidelidad = page.props.servicios?.fidelidad;
+
+    if (fidelidad && (fidelidad.activo || fidelidad.solo_lectura)) {
+        secciones.push({
+            titulo: 'Fidelidad',
+            items: filtrar([
+                {
+                    title: 'Resumen',
+                    href: fidelidadInicio(),
+                    icon: HeartHandshake,
+                    exact: true,
+                    permiso: 'fidelidad.ver',
+                },
+                {
+                    title: 'Registrar visita',
+                    href: mostrador(),
+                    icon: Stamp,
+                    permiso: 'fidelidad.visitas',
+                },
+                {
+                    title: 'Consumidores',
+                    href: consumidores(),
+                    icon: UsersRound,
+                    permiso: 'fidelidad.consumidores',
+                },
+                {
+                    title: 'Campañas',
+                    href: campanas(),
+                    icon: Gift,
+                    permiso: 'fidelidad.campanas',
+                },
+                {
+                    title: 'Personal',
+                    href: personal(),
+                    icon: UserCog,
+                    permiso: 'fidelidad.personal',
+                },
+            ]),
+        });
+    } else if (puede('servicios.contratar')) {
+        secciones.push({
+            titulo: 'Servicios',
+            items: [
+                {
+                    title: 'Contratar Fidelidad',
+                    href: contratacion(),
+                    icon: HeartHandshake,
+                },
+            ],
+        });
+    }
+
+    return secciones.filter((s) => s.items.length > 0);
 });
 </script>
 
@@ -179,6 +264,23 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
+            <!-- Contexto: dónde estoy y con qué rol (se oculta al colapsar). -->
+            <div
+                class="mx-2 mt-2 rounded-lg border border-sidebar-border bg-sidebar-accent/50 px-3 py-2 group-data-[collapsible=icon]:hidden"
+            >
+                <p
+                    class="truncate text-xs font-medium text-sidebar-accent-foreground"
+                >
+                    {{
+                        permisos.administrar
+                            ? 'Administración DASTI'
+                            : (negocio?.nombre_comercial ?? 'Mi negocio')
+                    }}
+                </p>
+                <p class="truncate text-[11px] text-sidebar-foreground">
+                    {{ page.props.auth.user.rol_nombre ?? 'Sin rol asignado' }}
+                </p>
+            </div>
         </SidebarHeader>
 
         <SidebarContent>

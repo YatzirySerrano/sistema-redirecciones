@@ -16,6 +16,7 @@ import CambiarEstadoProducto from '@/components/admin-productos/CambiarEstadoPro
 import EliminarProducto from '@/components/admin-productos/EliminarProducto.vue';
 import TransferirProducto from '@/components/admin-productos/TransferirProducto.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
+import Ayuda from '@/components/comun/Ayuda.vue';
 import EnlacePermanente from '@/components/comun/EnlacePermanente.vue';
 import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
 import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
@@ -25,6 +26,7 @@ import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
 import DisenadorQr from '@/components/productos/DisenadorQr.vue';
+import EnlacesPorMedio from '@/components/productos/EnlacesPorMedio.vue';
 import FormularioDestino from '@/components/productos/FormularioDestino.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import InstruccionesNfc from '@/components/productos/InstruccionesNfc.vue';
@@ -45,6 +47,7 @@ import type {
     CambioDestino,
     Coleccion,
     ElementoDesglose,
+    EstadisticaMedio,
     OpcionesQr,
     Producto,
     PuntoSerie,
@@ -75,9 +78,17 @@ const props = defineProps<{
     };
     cambios: Coleccion<CambioDestino>;
     auditoria: Coleccion<RegistroAuditoria>;
+    estadisticas_medios: EstadisticaMedio[];
 }>();
 
 const producto = computed(() => props.producto.data);
+const independiente = computed(
+    () => producto.value.modalidad_destino === 'independiente',
+);
+/** Enlace que lleva el QR: el reverso en los combinados independientes. */
+const productoQr = computed(
+    () => producto.value.enlaces_secundarios?.[0] ?? producto.value,
+);
 const negocioSuspendido = computed(
     () => producto.value.negocio?.estado === 'suspendido',
 );
@@ -131,6 +142,15 @@ const barrasDispositivos = computed(() =>
                     :tipo="producto.tipo"
                     :etiqueta="producto.tipo_etiqueta"
                 />
+                <span
+                    v-if="producto.tipo === 'combinado'"
+                    class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                    >{{
+                        independiente
+                            ? 'Destinos independientes'
+                            : 'Destino compartido'
+                    }}</span
+                >
                 <InsigniaEstado
                     :estado="producto.estado"
                     :etiqueta="producto.estado_etiqueta"
@@ -205,45 +225,58 @@ const barrasDispositivos = computed(() =>
             </TabsList>
 
             <TabsContent value="enlace" class="space-y-6">
-                <Panel
-                    titulo="Enlace permanente"
-                    descripcion="Es la URL impresa en el QR o grabada en el NFC. Nunca cambia."
-                >
-                    <EnlacePermanente :url="producto.url_permanente" />
-                    <div
-                        class="mt-3 flex items-center gap-2 text-xs text-muted-foreground"
+                <EnlacesPorMedio
+                    v-if="independiente"
+                    :producto="producto"
+                    :accion-destino="(id: number) => destino.url(id)"
+                    :estadisticas="estadisticas_medios"
+                />
+                <template v-else>
+                    <Panel
+                        titulo="Enlace permanente"
+                        descripcion="Es la URL impresa en el QR o grabada en el NFC. Nunca cambia."
                     >
-                        <InsigniaEstado :estado="situacion.clave" />
-                        <span>{{ situacion.texto }}</span>
-                    </div>
-                </Panel>
-                <Panel
-                    titulo="Destino actual"
-                    descripcion="A dónde lleva hoy el enlace permanente."
-                >
-                    <p
-                        class="mb-4 rounded-lg bg-muted/50 px-3 py-2 font-mono text-sm break-all"
+                        <template #acciones>
+                            <Ayuda
+                                texto="Es la dirección grabada en tu tarjeta NFC o código QR. Puedes modificar su destino sin cambiar esta dirección."
+                            />
+                        </template>
+                        <EnlacePermanente :url="producto.url_permanente" />
+                        <div
+                            class="mt-3 flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                            <InsigniaEstado :estado="situacion.clave" />
+                            <span>{{ situacion.texto }}</span>
+                        </div>
+                    </Panel>
+                    <Panel
+                        titulo="Destino actual"
+                        descripcion="A dónde lleva hoy el enlace permanente."
                     >
-                        <a
-                            v-if="producto.url_destino"
-                            :href="producto.url_destino"
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            class="hover:text-primary hover:underline"
-                            >{{ producto.url_destino }}</a
+                        <p
+                            class="mb-4 rounded-lg bg-muted/50 px-3 py-2 font-mono text-sm break-all"
                         >
-                        <span v-else class="text-muted-foreground italic"
-                            >Sin destino configurado</span
-                        >
-                    </p>
-                    <FormularioDestino
-                        v-if="producto.permisos.cambiar_destino"
-                        :key="producto.url_destino ?? ''"
-                        :producto="producto"
-                        :accion="destino.url(producto.id)"
-                        :obligatorio="false"
-                    />
-                </Panel>
+                            <a
+                                v-if="producto.url_destino"
+                                :href="producto.url_destino"
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                class="hover:text-primary hover:underline"
+                                >{{ producto.url_destino }}</a
+                            >
+                            <span v-else class="text-muted-foreground italic"
+                                >Sin destino configurado</span
+                            >
+                        </p>
+                        <FormularioDestino
+                            v-if="producto.permisos.cambiar_destino"
+                            :key="producto.url_destino ?? ''"
+                            :producto="producto"
+                            :accion="destino.url(producto.id)"
+                            :obligatorio="false"
+                        />
+                    </Panel>
+                </template>
             </TabsContent>
 
             <TabsContent value="qr">
@@ -255,7 +288,18 @@ const barrasDispositivos = computed(() =>
                             : 'Producto NFC: el QR es opcional (por ejemplo, para un respaldo impreso).'
                     "
                 >
-                    <DisenadorQr :producto="producto" :opciones="opciones_qr" />
+                    <p
+                        v-if="independiente"
+                        class="mb-4 rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground"
+                    >
+                        Este QR corresponde al reverso de la tarjeta y lleva a
+                        su propio destino (/r/{{ productoQr.codigo }}).
+                    </p>
+                    <DisenadorQr
+                        :key="productoQr.id"
+                        :producto="productoQr"
+                        :opciones="opciones_qr"
+                    />
                 </Panel>
             </TabsContent>
 

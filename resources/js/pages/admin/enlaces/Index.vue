@@ -11,7 +11,8 @@ import Paginacion from '@/components/comun/Paginacion.vue';
 import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
 import SelectorVista from '@/components/comun/SelectorVista.vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
+import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
 import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import FormularioDestino from '@/components/productos/FormularioDestino.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
@@ -70,6 +71,29 @@ const situacion = (p: Producto) => {
     return p.url_destino ? 'redirigiendo' : 'sin_destino';
 };
 
+const acciones = (enlace: Producto): AccionRegistro[] => [
+    {
+        clave: 'destino',
+        etiqueta: 'Cambiar destino',
+        icono: Pencil,
+        principal: true,
+        visible: enlace.permisos.cambiar_destino,
+    },
+    {
+        clave: 'ver',
+        etiqueta: 'Ver producto',
+        icono: Eye,
+        href: productoShow(enlace.producto_principal_id ?? enlace.id),
+        principal: true,
+        visible: puede('productos.ver'),
+    },
+];
+const abrir = (enlace: Producto, clave: string) => {
+    if (clave === 'destino') {
+        editandoId.value = enlace.id;
+    }
+};
+
 const editandoId = ref<number | null>(null);
 const editando = computed(
     () => props.enlaces.data.find((p) => p.id === editandoId.value) ?? null,
@@ -92,7 +116,7 @@ const dialogoAbierto = computed({
         descripcion="Enlaces permanentes y su destino efectivo. Cambiar el destino no altera el QR impreso ni la tarjeta NFC."
     />
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <section
             class="min-w-0 overflow-hidden rounded-xl border bg-card shadow-xs"
         >
@@ -169,7 +193,7 @@ const dialogoAbierto = computed({
                             </th>
                             <th
                                 scope="col"
-                                class="hidden h-10 px-3 font-medium lg:table-cell"
+                                class="hidden h-10 px-3 font-medium xl:table-cell"
                             >
                                 Destino
                             </th>
@@ -178,7 +202,7 @@ const dialogoAbierto = computed({
                             </th>
                             <th
                                 scope="col"
-                                class="hidden h-10 px-3 font-medium sm:table-cell"
+                                class="hidden h-10 px-3 font-medium xl:table-cell"
                             >
                                 Último cambio
                             </th>
@@ -236,7 +260,7 @@ const dialogoAbierto = computed({
                                     >{{ enlace.negocio.nombre_comercial }}</Link
                                 >
                             </td>
-                            <td class="hidden max-w-60 px-3 py-3 lg:table-cell">
+                            <td class="hidden max-w-60 px-3 py-3 xl:table-cell">
                                 <a
                                     v-if="enlace.url_destino"
                                     :href="enlace.url_destino"
@@ -256,7 +280,7 @@ const dialogoAbierto = computed({
                                 <InsigniaEstado :estado="situacion(enlace)" />
                             </td>
                             <td
-                                class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground sm:table-cell"
+                                class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground xl:table-cell"
                             >
                                 <time
                                     v-if="enlace.destino_actualizado_en"
@@ -276,24 +300,11 @@ const dialogoAbierto = computed({
                                 {{ numero(enlace.total_accesos) }}
                             </td>
                             <td class="px-2 py-2">
-                                <div
-                                    class="flex flex-wrap items-center justify-end gap-0.5"
-                                >
-                                    <AccionFila
-                                        v-if="puede('productos.ver')"
-                                        etiqueta="Ver"
-                                        :icono="Eye"
-                                        :href="productoShow(enlace.id)"
-                                        compacta
-                                    />
-                                    <AccionFila
-                                        v-if="enlace.permisos.cambiar_destino"
-                                        :etiqueta="`Cambiar destino`"
-                                        :icono="Pencil"
-                                        compacta
-                                        @click="editandoId = enlace.id"
-                                    />
-                                </div>
+                                <AccionesRegistro
+                                    :acciones="acciones(enlace)"
+                                    :nombre="enlace.nombre"
+                                    @accion="abrir(enlace, $event)"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -302,13 +313,13 @@ const dialogoAbierto = computed({
 
             <ul
                 v-else
-                class="grid gap-3 p-4 sm:grid-cols-2"
+                class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2"
                 aria-label="Enlaces permanentes"
             >
                 <li
                     v-for="enlace in enlaces.data"
                     :key="enlace.id"
-                    class="flex flex-col rounded-xl border bg-background p-4 shadow-xs"
+                    class="flex min-w-0 flex-col rounded-xl border bg-background p-4 shadow-xs"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -354,20 +365,12 @@ const dialogoAbierto = computed({
                                 : 'sin registrar'
                         }}
                     </p>
-                    <div
-                        class="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2"
-                    >
-                        <AccionFila
-                            v-if="puede('productos.ver')"
-                            etiqueta="Ver"
-                            :icono="Eye"
-                            :href="productoShow(enlace.id)"
-                        />
-                        <AccionFila
-                            v-if="enlace.permisos.cambiar_destino"
-                            etiqueta="Cambiar destino"
-                            :icono="Pencil"
-                            @click="editandoId = enlace.id"
+                    <div class="mt-auto flex justify-end border-t pt-2.5">
+                        <AccionesRegistro
+                            :acciones="acciones(enlace)"
+                            :nombre="enlace.nombre"
+                            variante="tarjeta"
+                            @accion="abrir(enlace, $event)"
                         />
                     </div>
                 </li>

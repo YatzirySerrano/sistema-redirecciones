@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { CirclePause, CirclePlay } from '@lucide/vue';
-import { computed, ref } from 'vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import { computed } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import { Button } from '@/components/ui/button';
@@ -11,11 +10,12 @@ import { estado as rutaEstado } from '@/routes/admin/productos';
 import type { Producto } from '@/types';
 
 const props = withDefaults(
-    defineProps<{ producto: Producto; compacto?: boolean }>(),
-    { compacto: false },
+    defineProps<{ producto: Producto; sinDisparador?: boolean }>(),
+    { sinDisparador: false },
 );
 
-const abierto = ref(false);
+/** Abierto: controlable desde fuera (menú de acciones). */
+const abierto = defineModel<boolean>('open', { default: false });
 const suspender = computed(() => props.producto.estado === 'activo');
 
 const form = useForm({ estado: '', motivo: '' });
@@ -53,15 +53,8 @@ const confirmar = () => {
         :procesando="form.processing"
         @confirmar="confirmar"
     >
-        <template #disparador>
-            <AccionFila
-                v-if="compacto"
-                :etiqueta="suspender ? 'Suspender' : 'Reactivar'"
-                :icono="suspender ? CirclePause : CirclePlay"
-                :destructiva="suspender"
-                compacta
-            />
-            <Button v-else :variant="suspender ? 'outline' : 'default'">
+        <template v-if="!sinDisparador" #disparador>
+            <Button :variant="suspender ? 'outline' : 'default'">
                 <CirclePause v-if="suspender" />
                 <CirclePlay v-else />
                 {{ suspender ? 'Suspender' : 'Reactivar' }}

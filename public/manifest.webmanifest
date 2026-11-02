@@ -1,0 +1,42 @@
+{
+    "id": "/",
+    "name": "DASTI · Redirecciones QR y NFC",
+    "short_name": "DASTI",
+    "description": "Administra los destinos de tus códigos QR y tarjetas NFC, y tu programa de fidelidad.",
+    "lang": "es-MX",
+    "dir": "ltr",
+    "start_url": "/inicio?origen=app",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone"],
+    "orientation": "any",
+    "background_color": "#f9f9fb",
+    "theme_color": "#13101e",
+    "categories": ["business", "productivity"],
+    "icons": [
+        {
+            "src": "/iconos/icono-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/iconos/icono-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/iconos/icono-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/iconos/icono.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ]
+}

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Services\Apariencia\TemaVisual;
+use App\Services\Servicios\AccesoServicios;
 use App\Services\Usuarios\PreferenciasUsuario;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -74,6 +75,10 @@ class HandleInertiaRequests extends Middleware
                         && $usuario->two_factor_confirmed_at === null,
                 ],
             ],
+            // Servicios adicionales del negocio del cliente (navegación).
+            'servicios' => fn () => $usuario !== null && $usuario->esCliente() && $usuario->negocio !== null
+                ? ['fidelidad' => (fn (array $e) => ['activo' => $e['activo'], 'solo_lectura' => $e['solo_lectura'], 'estado' => $e['estado']])(app(AccesoServicios::class)->fidelidad($usuario->negocio))]
+                : null,
             'preferencias' => [
                 'vistas' => $usuario === null ? (object) [] : (object) PreferenciasUsuario::vistas($usuario),
             ],

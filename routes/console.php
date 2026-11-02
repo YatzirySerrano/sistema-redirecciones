@@ -13,3 +13,4 @@ use Illuminate\Support\Facades\Schedule;
 */
 
 Schedule::command('dasti:depurar-eventos')->dailyAt('03:30')->withoutOverlapping();
+Schedule::command('dasti:vencer-contrataciones')->hourly()->withoutOverlapping();

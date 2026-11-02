@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CambiarDestinoRequest;
 use App\Http\Resources\CambioDestinoResource;
 use App\Http\Resources\ProductoResource;
+use App\Models\CambioDestino;
 use App\Models\Producto;
 use App\Models\User;
 use App\Services\Configuracion\AjustesPlataforma;
@@ -44,7 +45,8 @@ class ProductoController extends Controller
 
         $productos = Producto::query()
             ->deNegocio($negocioId)
-            ->with('negocio')
+            ->principales()
+            ->with(['negocio', 'enlacesSecundarios'])
             ->buscar($filtros['buscar'] ?? null, incluirInternos: false)
             ->when($filtros['tipo'] ?? null, fn (Builder $q, string $v) => $q->where('tipo', $v))
             ->when($filtros['estado'] ?? null, fn (Builder $q, string $v) => $q->where('estado', $v))
@@ -53,7 +55,10 @@ class ProductoController extends Controller
             ->withQueryString();
 
         $accesos = $estadisticas->totalesHistoricosPorProducto($negocioId);
-        $productos->getCollection()->each(fn (Producto $p) => $p->total_accesos = $accesos[$p->id] ?? 0);
+        $productos->getCollection()->each(function (Producto $p) use ($accesos) {
+            $p->total_accesos = $accesos[$p->id] ?? 0;
+            $p->enlacesSecundarios->each(fn (Producto $e) => $e->total_accesos = $accesos[$e->id] ?? 0);
+        });
 
         return Inertia::render('cliente/productos/Index', [
             'productos' => ProductoResource::collection($productos),
@@ -64,18 +69,23 @@ class ProductoController extends Controller
             ],
             'tipos' => TipoProducto::opciones(),
             'estados' => EstadoProducto::opciones(),
-            'total_productos' => Producto::query()->deNegocio($negocioId)->count(),
+            'total_productos' => Producto::query()->deNegocio($negocioId)->principales()->count(),
         ]);
     }
 
-    public function show(Request $request, Producto $producto, ConsultasEstadisticas $estadisticas, AjustesPlataforma $ajustes): Response
+    public function show(Request $request, Producto $producto, ConsultasEstadisticas $estadisticas, AjustesPlataforma $ajustes): Response|RedirectResponse
     {
         Gate::authorize('ver', $producto);
+
+        // El reverso QR se administra desde la ficha del producto físico.
+        if ($producto->esEnlaceSecundario()) {
+            return redirect()->route('cliente.productos.show', $producto->producto_principal_id);
+        }
 
         /** @var User $usuario */
         $usuario = $request->user();
         $negocioId = (int) $usuario->negocio_id;
-        $producto->load('negocio');
+        $producto->load(['negocio', 'enlacesSecundarios.negocio']);
 
         $filtro = new FiltroEstadisticas(
             FiltroEstadisticas::ultimosDias(30)->desde,
@@ -84,18 +94,30 @@ class ProductoController extends Controller
             productoId: $producto->id,
             soloProductosVigentes: true,
         );
-        $producto->total_accesos = $estadisticas->totalesHistoricosPorProducto($negocioId)[$producto->id] ?? 0;
+        $historicos = $estadisticas->totalesHistoricosPorProducto($negocioId);
+        $producto->total_accesos = $historicos[$producto->id] ?? 0;
+        $producto->enlacesSecundarios->each(fn (Producto $e) => $e->total_accesos = $historicos[$e->id] ?? 0);
         $verEstadisticas = $ajustes->booleano('clientes_ven_estadisticas');
 
         return Inertia::render('cliente/productos/Show', [
             'producto' => new ProductoResource($producto),
-            'opciones_qr' => OpcionesQr::desdeArreglo($producto->opciones_qr)->aArreglo(),
+            // El diseño corresponde al enlace que lleva el QR: el reverso en
+            // los combinados con destinos independientes.
+            'opciones_qr' => OpcionesQr::desdeArreglo(($producto->enlacesSecundarios->first() ?? $producto)->opciones_qr)->aArreglo(),
             'estadisticas' => $verEstadisticas ? [
                 'totales' => $estadisticas->totales($filtro),
                 'serie' => $estadisticas->serieDiaria($filtro),
             ] : null,
+            'estadisticas_medios' => $verEstadisticas && $producto->tieneDestinosIndependientes()
+                ? array_map(fn (Producto $enlace) => [
+                    'id' => $enlace->id,
+                    'medio' => $enlace->medio?->etiqueta(),
+                    'totales' => $estadisticas->totales(new FiltroEstadisticas($filtro->desde, $filtro->hasta, negocioId: $negocioId, productoId: $enlace->id, soloProductosVigentes: true)),
+                ], [$producto, ...$producto->enlacesSecundarios->all()])
+                : [],
             'cambios' => CambioDestinoResource::collection(
-                $producto->cambiosDestino()->with(['usuario', 'producto'])
+                CambioDestino::query()->with(['usuario', 'producto'])
+                    ->whereIn('producto_id', [$producto->id, ...$producto->enlacesSecundarios->pluck('id')->all()])
                     ->where('negocio_id', $negocioId)
                     ->latest('created_at')->latest('id')->limit(10)->get()
             ),

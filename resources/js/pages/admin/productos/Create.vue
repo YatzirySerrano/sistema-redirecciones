@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Info, Link2 } from '@lucide/vue';
 import { computed, toRef } from 'vue';
+import Ayuda from '@/components/comun/Ayuda.vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import Panel from '@/components/comun/Panel.vue';
@@ -32,6 +33,7 @@ const props = defineProps<{
     url_publica_base: string;
     negocio_inicial: Opcion | null;
     tipos: Opcion[];
+    modalidades: Opcion[];
     preparaciones: Opcion[];
 }>();
 
@@ -41,6 +43,8 @@ const form = useForm({
     tipo: 'nfc',
     cantidad: 1,
     url_destino: '',
+    modalidad_destino: 'compartido' as 'compartido' | 'independiente',
+    url_destino_qr: '',
     estado_preparacion: 'pendiente',
     fecha_entrega: '',
     referencia_comercial: '',
@@ -48,6 +52,19 @@ const form = useForm({
 });
 
 const { resultado } = useValidacionDestino(toRef(form, 'url_destino'));
+const { resultado: resultadoQr } = useValidacionDestino(
+    toRef(form, 'url_destino_qr'),
+);
+const independiente = computed(
+    () =>
+        form.tipo === 'combinado' && form.modalidad_destino === 'independiente',
+);
+const DESCRIPCION_MODALIDAD: Record<string, string> = {
+    compartido:
+        'Un solo enlace permanente: el chip NFC y el QR llevan al mismo lugar.',
+    independiente:
+        'Dos enlaces permanentes en la misma tarjeta: el NFC del frente y el QR del reverso llevan a destinos distintos, con estadísticas separadas.',
+};
 const cantidad = computed(() =>
     Math.max(1, Math.min(50, Number(form.cantidad) || 1)),
 );
@@ -60,6 +77,11 @@ const guardar = () => {
         ...datos,
         cantidad: cantidad.value,
         url_destino: datos.url_destino.trim() || null,
+        modalidad_destino:
+            datos.tipo === 'combinado' ? datos.modalidad_destino : null,
+        url_destino_qr: independiente.value
+            ? datos.url_destino_qr.trim() || null
+            : null,
         fecha_entrega: datos.fecha_entrega || null,
         referencia_comercial: datos.referencia_comercial.trim() || null,
         notas_internas: datos.notas_internas.trim() || null,
@@ -175,31 +197,114 @@ const guardar = () => {
                 titulo="Destino inicial"
                 descripcion="Opcional. El cliente podrá cambiarlo después desde su panel."
             >
-                <CampoFormulario
-                    etiqueta="URL de destino"
-                    para="url_destino"
-                    :error="form.errors.url_destino"
-                    opcional
+                <fieldset v-if="form.tipo === 'combinado'" class="mb-5">
+                    <legend
+                        class="mb-2 flex items-center gap-1.5 text-sm font-medium"
+                    >
+                        ¿A dónde llevan el NFC y el QR?
+                        <Ayuda
+                            texto="Elige «independientes» si el frente (NFC) y el reverso (QR) de la misma tarjeta deben abrir páginas distintas, por ejemplo TikTok e Instagram. Se cobra como una sola tarjeta."
+                        />
+                    </legend>
+                    <div class="grid gap-2 sm:grid-cols-2" role="radiogroup">
+                        <label
+                            v-for="m in modalidades"
+                            :key="m.value"
+                            class="flex cursor-pointer gap-3 rounded-xl border p-3 text-sm transition has-checked:border-primary has-checked:bg-primary/5 has-checked:ring-1 has-checked:ring-primary/30"
+                        >
+                            <input
+                                v-model="form.modalidad_destino"
+                                type="radio"
+                                name="modalidad_destino"
+                                :value="m.value"
+                                class="mt-0.5 accent-[var(--primary)]"
+                            />
+                            <span>
+                                <span class="block font-medium">{{
+                                    m.label
+                                }}</span>
+                                <span
+                                    class="block text-xs text-muted-foreground"
+                                    >{{ DESCRIPCION_MODALIDAD[m.value] }}</span
+                                >
+                            </span>
+                        </label>
+                    </div>
+                    <p
+                        v-if="form.errors.modalidad_destino"
+                        class="mt-1 text-sm text-destructive"
+                    >
+                        {{ form.errors.modalidad_destino }}
+                    </p>
+                </fieldset>
+
+                <div
+                    class="grid gap-5"
+                    :class="independiente && 'lg:grid-cols-2'"
                 >
-                    <Input
-                        id="url_destino"
-                        v-model="form.url_destino"
-                        type="url"
-                        inputmode="url"
-                        spellcheck="false"
-                        maxlength="2048"
-                        placeholder="https://www.instagram.com/negocio"
-                        class="font-mono text-sm"
-                        :aria-invalid="!!form.errors.url_destino || undefined"
-                        aria-describedby="ayuda-url-destino"
-                    />
-                </CampoFormulario>
-                <EstadoValidacionDestino
-                    id="ayuda-url-destino"
-                    class="mt-2"
-                    :resultado="resultado"
-                    texto-vacio="Sin destino, el enlace mostrará «no disponible» hasta configurarlo."
-                />
+                    <div>
+                        <CampoFormulario
+                            :etiqueta="
+                                independiente
+                                    ? 'Destino del NFC (frente)'
+                                    : 'URL de destino'
+                            "
+                            para="url_destino"
+                            :error="form.errors.url_destino"
+                            opcional
+                        >
+                            <Input
+                                id="url_destino"
+                                v-model="form.url_destino"
+                                type="url"
+                                inputmode="url"
+                                spellcheck="false"
+                                maxlength="2048"
+                                placeholder="https://www.instagram.com/negocio"
+                                class="font-mono text-sm"
+                                :aria-invalid="
+                                    !!form.errors.url_destino || undefined
+                                "
+                                aria-describedby="ayuda-url-destino"
+                            />
+                        </CampoFormulario>
+                        <EstadoValidacionDestino
+                            id="ayuda-url-destino"
+                            class="mt-2"
+                            :resultado="resultado"
+                            texto-vacio="Sin destino, el enlace mostrará «no disponible» hasta configurarlo."
+                        />
+                    </div>
+                    <div v-if="independiente">
+                        <CampoFormulario
+                            etiqueta="Destino del QR (reverso)"
+                            para="url_destino_qr"
+                            :error="form.errors.url_destino_qr"
+                            opcional
+                        >
+                            <Input
+                                id="url_destino_qr"
+                                v-model="form.url_destino_qr"
+                                type="url"
+                                inputmode="url"
+                                spellcheck="false"
+                                maxlength="2048"
+                                placeholder="https://www.tiktok.com/@negocio"
+                                class="font-mono text-sm"
+                                :aria-invalid="
+                                    !!form.errors.url_destino_qr || undefined
+                                "
+                                aria-describedby="ayuda-url-destino-qr"
+                            />
+                        </CampoFormulario>
+                        <EstadoValidacionDestino
+                            id="ayuda-url-destino-qr"
+                            class="mt-2"
+                            :resultado="resultadoQr"
+                            texto-vacio="Sin destino, el QR mostrará «no disponible» hasta configurarlo."
+                        />
+                    </div>
+                </div>
             </Panel>
 
             <Panel

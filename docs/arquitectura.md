@@ -101,3 +101,14 @@ La interfaz oculta lo que no corresponde, pero la seguridad se aplica siempre en
 - Con «Clientes ven estadísticas» desactivado, el cliente tampoco recibe los contadores de accesos.
 - QR y NFC que comparten enlace (tipo «combinado») **no** se pueden distinguir. Si hace falta, registra dos productos.
 - `dasti:depurar-eventos` (programada a diario) anonimiza las huellas y borra los eventos más antiguos que la retención configurada. Los totales diarios se conservan.
+
+## Productos QR + NFC: destino compartido o independiente
+
+- **Compartido** (comportamiento original y valor de todos los productos existentes): un único enlace permanente para el chip NFC y el QR.
+- **Independiente**: el producto físico (fila principal de `productos`, `medio = nfc`, frente) tiene un **enlace secundario** (otra fila con `producto_principal_id`, `medio = qr`, reverso). Cada enlace tiene su código, destino, historial y estadísticas; el motor `/r/{codigo}` no cambia.
+- Los enlaces secundarios no son unidades vendidas: los listados de productos y los contadores usan `Producto::principales()`. Redirecciones y estadísticas los muestran con su medio.
+- Estado, transferencia, datos de preparación y eliminación se aplican al producto físico completo. La modalidad se elige al crear el producto (no se convierten productos existentes).
+
+## Aplicación web progresiva
+
+`public/manifest.webmanifest`, `public/sw.js`, `public/offline.html`, `resources/js/lib/pwa.ts`. El Service Worker solo guarda recursos públicos (página sin conexión, íconos y `/build/assets/*`); las navegaciones siempre van a la red y nunca intercepta `/r/`, `/f/`, `/mi-fidelidad`, `/stripe`, autenticación ni métodos distintos de GET. Las versiones nuevas esperan a que el usuario pulse «Actualizar».

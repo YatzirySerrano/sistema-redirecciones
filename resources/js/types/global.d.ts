@@ -22,6 +22,13 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             preferencias: { vistas: Record<string, 'tabla' | 'tarjetas'> };
             tema: import('@/lib/tema').TokensTema;
+            servicios: {
+                fidelidad: {
+                    activo: boolean;
+                    solo_lectura: boolean;
+                    estado: string | null;
+                };
+            } | null;
             [key: string]: unknown;
         };
     }

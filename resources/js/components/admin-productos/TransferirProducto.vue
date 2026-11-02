@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { ArrowRightLeft, TriangleAlert } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
 import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,11 +21,12 @@ import { transferir } from '@/routes/admin/productos';
 import type { Producto } from '@/types';
 
 const props = withDefaults(
-    defineProps<{ producto: Producto; compacto?: boolean }>(),
-    { compacto: false },
+    defineProps<{ producto: Producto; sinDisparador?: boolean }>(),
+    { sinDisparador: false },
 );
 
-const abierto = ref(false);
+/** Abierto: controlable desde fuera (menú de acciones). */
+const abierto = defineModel<boolean>('open', { default: false });
 const excluir = computed(() =>
     props.producto.negocio ? [String(props.producto.negocio.id)] : [],
 );
@@ -50,16 +50,8 @@ const enviar = () => {
 
 <template>
     <Dialog v-model:open="abierto">
-        <DialogTrigger as-child>
-            <AccionFila
-                v-if="compacto"
-                etiqueta="Transferir"
-                :icono="ArrowRightLeft"
-                compacta
-            />
-            <Button v-else variant="outline"
-                ><ArrowRightLeft /> Transferir</Button
-            >
+        <DialogTrigger v-if="!sinDisparador" as-child>
+            <Button variant="outline"><ArrowRightLeft /> Transferir</Button>
         </DialogTrigger>
         <DialogContent class="sm:max-w-lg">
             <form class="space-y-5" novalidate @submit.prevent="enviar">

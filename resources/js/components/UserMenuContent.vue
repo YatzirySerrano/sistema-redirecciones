@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, UserRound } from '@lucide/vue';
+import { Download, LogOut, UserRound } from '@lucide/vue';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -8,6 +8,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
+import { instalable, instalar, limpiarCacheAlSalir } from '@/lib/pwa';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
@@ -18,6 +19,7 @@ type Props = {
 
 const handleLogout = () => {
     router.flushAll();
+    limpiarCacheAlSalir();
 };
 
 defineProps<Props>();
@@ -36,6 +38,10 @@ defineProps<Props>();
                 <UserRound class="mr-2 h-4 w-4" />
                 Mi cuenta
             </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem v-if="instalable" @select="instalar">
+            <Download class="mr-2 h-4 w-4" />
+            Instalar aplicación
         </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />

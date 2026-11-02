@@ -27,7 +27,8 @@ export function hojaDeEstilo(tokens: TokensTema): string {
         return '';
     }
 
-    return `:root{${bloque(tokens.claro)}}.dark{${bloque(tokens.oscuro)}}`;
+    // Mismo selector que TemaVisual::hojaDeEstilo (ver explicación allí).
+    return `html:root:not(.dark){${bloque(tokens.claro)}}html:root.dark{${bloque(tokens.oscuro)}}`;
 }
 
 export function aplicarTema(tokens: TokensTema): void {

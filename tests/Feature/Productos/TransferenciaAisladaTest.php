@@ -104,8 +104,8 @@ class TransferenciaAisladaTest extends TestCase
 
         $this->actingAs($this->clienteDestino)->get(route('cliente.inicio'))
             ->assertInertia(fn (AssertableInertia $pagina) => $pagina
-                ->where('indicadores.accesos_totales', 0)
-                ->where('indicadores.accesos_30_dias', 0)
+                ->where('indicadores.accesos_30_dias.total', 0)
+                ->where('productos_top', [])
                 ->has('actividad.data', 0));
 
         $this->actingAs($this->clienteDestino)->get(route('cliente.estadisticas.index', ['producto_id' => $this->producto->id]))
@@ -142,8 +142,8 @@ class TransferenciaAisladaTest extends TestCase
         $this->actingAs($this->clienteOrigen)->get(route('cliente.inicio'))
             ->assertInertia(fn (AssertableInertia $pagina) => $pagina
                 ->where('indicadores.productos', 0)
-                ->where('indicadores.accesos_totales', 0)
-                ->where('indicadores.accesos_30_dias', 0));
+                ->where('indicadores.accesos_30_dias.total', 0)
+                ->where('productos_top', []));
 
         // El registro del retiro del destino pertenece al periodo del origen.
         $retiro = CambioDestino::query()->whereNull('url_nueva')->sole();

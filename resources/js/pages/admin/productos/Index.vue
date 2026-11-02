@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Download, Eye, FilterX, Nfc, Pencil, Plus } from '@lucide/vue';
-import { computed } from 'vue';
+import {
+    ArrowRightLeft,
+    CirclePause,
+    CirclePlay,
+    Download,
+    Eye,
+    FilterX,
+    Link2,
+    Nfc,
+    Pencil,
+    Plus,
+    QrCode,
+    Trash2,
+} from '@lucide/vue';
+import { computed, ref } from 'vue';
 import CambiarEstadoProducto from '@/components/admin-productos/CambiarEstadoProducto.vue';
 import EliminarProducto from '@/components/admin-productos/EliminarProducto.vue';
 import TransferirProducto from '@/components/admin-productos/TransferirProducto.vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
+import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
 import EncabezadoOrdenable from '@/components/comun/EncabezadoOrdenable.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
@@ -78,20 +92,88 @@ const limpiarFiltros = () => {
     filtros.direccion = direccion;
 };
 
-const puedeCambiarEstado = (p: Producto) =>
-    puede(
-        p.estado === 'activo' ? 'productos.suspender' : 'productos.reactivar',
-    );
+/** Enlace que lleva el QR (el reverso si los destinos son independientes). */
+const enlaceQr = (p: Producto) => p.enlaces_secundarios?.[0] ?? p;
+const independiente = (p: Producto) => p.modalidad_destino === 'independiente';
 
-// Eliminación física solo para productos pendientes sin accesos (el
-// servidor vuelve a comprobarlo); el resto se suspende.
-const puedeEliminarse = (p: Producto) =>
-    puede('productos.eliminar') &&
-    p.estado_preparacion === 'pendiente' &&
-    (p.total_accesos ?? 0) === 0;
+const acciones = (p: Producto): AccionRegistro[] => [
+    {
+        clave: 'ver',
+        etiqueta: 'Ver',
+        icono: Eye,
+        href: show(p.id),
+        principal: true,
+    },
+    {
+        clave: 'editar',
+        etiqueta: 'Editar',
+        icono: Pencil,
+        href: edit(p.id),
+        principal: true,
+        visible: puede('productos.editar'),
+    },
+    {
+        clave: 'qr',
+        etiqueta: independiente(p) ? 'Descargar QR (reverso)' : 'Descargar QR',
+        icono: Download,
+        href: qrShow.url(enlaceQr(p).id, {
+            query: { formato: 'png', descargar: 1 },
+        }),
+        externo: true,
+        visible: enlaceQr(p).permisos.descargar_qr && p.tipo !== 'nfc',
+    },
+    {
+        clave: 'transferir',
+        etiqueta: 'Transferir',
+        icono: ArrowRightLeft,
+        visible: puede('productos.transferir'),
+    },
+    {
+        clave: 'estado',
+        etiqueta: p.estado === 'activo' ? 'Suspender' : 'Reactivar',
+        icono: p.estado === 'activo' ? CirclePause : CirclePlay,
+        destructiva: p.estado === 'activo',
+        visible: puede(
+            p.estado === 'activo'
+                ? 'productos.suspender'
+                : 'productos.reactivar',
+        ),
+    },
+    {
+        // Eliminación física solo para productos pendientes sin accesos (el
+        // servidor vuelve a comprobarlo); el resto se suspende.
+        clave: 'eliminar',
+        etiqueta: 'Eliminar',
+        icono: Trash2,
+        destructiva: true,
+        visible:
+            puede('productos.eliminar') &&
+            p.estado_preparacion === 'pendiente' &&
+            (p.total_accesos ?? 0) === 0,
+    },
+];
 
-const descarga = (p: Producto) =>
-    qrShow.url(p.id, { query: { formato: 'png', descargar: 1 } });
+// Un solo diálogo por tipo de acción, para el producto elegido.
+const seleccionado = ref<Producto | null>(null);
+const dialogo = ref<'transferir' | 'estado' | 'eliminar' | null>(null);
+const abrir = (p: Producto, clave: string) => {
+    if (clave === 'transferir' || clave === 'estado' || clave === 'eliminar') {
+        seleccionado.value = p;
+        dialogo.value = clave;
+    }
+};
+const dialogoAbierto = (clave: string) =>
+    computed({
+        get: () => dialogo.value === clave,
+        set: (v: boolean) => {
+            if (!v) {
+                dialogo.value = null;
+            }
+        },
+    });
+const abiertoTransferir = dialogoAbierto('transferir');
+const abiertoEstado = dialogoAbierto('estado');
+const abiertoEliminar = dialogoAbierto('eliminar');
 </script>
 
 <template>
@@ -99,7 +181,9 @@ const descarga = (p: Producto) =>
 
     <EncabezadoPagina
         titulo="Productos"
-        descripcion="Tarjetas NFC, códigos QR y productos combinados vendidos a cada negocio, con su enlace permanente."
+        descripcion="Tarjetas NFC, códigos QR y productos combinados de cada negocio, con su enlace permanente."
+        ayuda="Cada producto físico tiene un enlace permanente propio. El destino puede cambiar; el enlace grabado o impreso nunca."
+        :icono="Nfc"
     >
         <template #acciones>
             <Button v-if="puede('productos.crear')" as-child>
@@ -108,15 +192,15 @@ const descarga = (p: Producto) =>
         </template>
     </EncabezadoPagina>
 
-    <section class="overflow-hidden rounded-xl border bg-card shadow-xs">
-        <div class="space-y-3 border-b p-4">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+    <section class="rounded-xl border bg-card shadow-xs">
+        <div class="space-y-3 border-b p-3 sm:p-4">
+            <div class="flex flex-col gap-2 xl:flex-row xl:items-center">
                 <CampoBusqueda
                     v-model="filtros.buscar"
                     placeholder="Nombre, código, destino o referencia…"
                     etiqueta="Buscar productos"
                 />
-                <div class="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+                <div class="grid flex-1 grid-cols-2 gap-2 md:grid-cols-4">
                     <SelectorBuscable
                         v-model="filtros.negocio_id"
                         :url="opcionesNegocios.url()"
@@ -124,7 +208,7 @@ const descarga = (p: Producto) =>
                         vacio="Todos los negocios"
                         etiqueta="Filtrar por negocio"
                         placeholder-busqueda="Buscar negocio…"
-                        class="col-span-2 sm:col-span-1"
+                        class="col-span-2 md:col-span-1"
                     />
                     <SelectNativo
                         v-model="filtros.tipo"
@@ -143,12 +227,14 @@ const descarga = (p: Producto) =>
                         :opciones="preparaciones"
                         vacio="Toda preparación"
                         etiqueta="Filtrar por preparación"
-                        class="col-span-2 sm:col-span-1"
+                        class="col-span-2 md:col-span-1"
                     />
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-sm">
-                <span class="text-muted-foreground">Registrados entre</span>
+                <span class="text-xs text-muted-foreground"
+                    >Registrados entre</span
+                >
                 <label class="sr-only" for="filtro-desde"
                     >Registrados desde</label
                 >
@@ -157,9 +243,11 @@ const descarga = (p: Producto) =>
                     v-model="filtros.desde"
                     type="date"
                     :max="filtros.hasta || undefined"
-                    class="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+                    class="h-8 min-w-0 rounded-lg border border-input bg-background px-2 text-xs"
                 />
-                <span class="text-muted-foreground" aria-hidden="true">y</span>
+                <span class="text-xs text-muted-foreground" aria-hidden="true"
+                    >y</span
+                >
                 <label class="sr-only" for="filtro-hasta"
                     >Registrados hasta</label
                 >
@@ -168,7 +256,7 @@ const descarga = (p: Producto) =>
                     v-model="filtros.hasta"
                     type="date"
                     :min="filtros.desde || undefined"
-                    class="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+                    class="h-8 min-w-0 rounded-lg border border-input bg-background px-2 text-xs"
                 />
                 <div class="ml-auto flex items-center gap-2">
                     <Button
@@ -177,7 +265,7 @@ const descarga = (p: Producto) =>
                         size="sm"
                         @click="limpiarFiltros"
                     >
-                        <FilterX /> Limpiar filtros
+                        <FilterX /> Limpiar
                     </Button>
                     <SelectorVista v-model="vista" />
                 </div>
@@ -206,13 +294,15 @@ const descarga = (p: Producto) =>
             </Button>
         </EstadoVacio>
 
-        <!-- Vista de tabla -->
+        <!-- Tabla: lectura rápida y comparación de muchos productos. -->
         <div v-else-if="vista === 'tabla'" class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full min-w-[620px] text-sm">
                 <caption class="sr-only">
                     Listado de productos
                 </caption>
-                <thead class="bg-muted/40">
+                <thead
+                    class="bg-muted/40 text-left text-xs text-muted-foreground"
+                >
                     <tr>
                         <EncabezadoOrdenable
                             campo="nombre"
@@ -223,49 +313,29 @@ const descarga = (p: Producto) =>
                         >
                         <th
                             scope="col"
-                            class="hidden h-10 px-3 text-left font-medium text-muted-foreground md:table-cell"
-                        >
-                            Negocio
-                        </th>
-                        <th
-                            scope="col"
-                            class="h-10 px-3 text-left font-medium text-muted-foreground"
+                            class="hidden h-10 px-3 font-medium xl:table-cell"
                         >
                             Tipo
                         </th>
-                        <th
-                            scope="col"
-                            class="hidden h-10 px-3 text-left font-medium text-muted-foreground lg:table-cell"
-                        >
+                        <th scope="col" class="h-10 px-3 font-medium">
                             Destino
                         </th>
-                        <th
-                            scope="col"
-                            class="h-10 px-3 text-left font-medium text-muted-foreground"
-                        >
+                        <th scope="col" class="h-10 px-3 font-medium">
                             Estado
                         </th>
                         <EncabezadoOrdenable
                             campo="accesos"
                             :orden="filtros.orden"
                             :direccion="filtros.direccion"
-                            class="hidden sm:table-cell"
+                            class="text-right"
                             @ordenar="ordenarPor"
                             >Accesos</EncabezadoOrdenable
                         >
-                        <EncabezadoOrdenable
-                            campo="actividad"
-                            :orden="filtros.orden"
-                            :direccion="filtros.direccion"
-                            class="hidden 2xl:table-cell"
-                            @ordenar="ordenarPor"
-                            >Último acceso</EncabezadoOrdenable
-                        >
                         <th
                             scope="col"
-                            class="h-10 px-3 text-right font-medium text-muted-foreground"
+                            class="h-10 w-px px-3 text-right font-medium"
                         >
-                            Acciones
+                            <span class="sr-only">Acciones</span>
                         </th>
                     </tr>
                 </thead>
@@ -275,146 +345,158 @@ const descarga = (p: Producto) =>
                         :key="producto.id"
                         class="border-t transition-colors hover:bg-muted/30"
                     >
-                        <td class="max-w-64 px-3 py-3">
+                        <td class="max-w-52 px-3 py-2.5 xl:max-w-72">
                             <Link
                                 :href="show(producto.id)"
-                                class="block truncate font-medium hover:text-enlace hover:underline"
+                                class="block truncate font-medium hover:text-enlace"
                                 >{{ producto.nombre }}</Link
                             >
-                            <span
-                                class="font-mono text-xs text-muted-foreground"
-                                >{{ producto.codigo }}</span
+                            <p
+                                class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
                             >
-                            <span
-                                v-if="producto.negocio"
-                                class="block truncate text-xs text-muted-foreground md:hidden"
-                                >{{ producto.negocio.nombre_comercial }}</span
-                            >
+                                <span class="shrink-0 font-mono">{{
+                                    producto.codigo
+                                }}</span>
+                                <span class="shrink-0 xl:hidden"
+                                    >· {{ producto.tipo_etiqueta }}</span
+                                >
+                                <template v-if="producto.negocio">
+                                    <span aria-hidden="true">·</span>
+                                    <Link
+                                        v-if="puede('negocios.ver')"
+                                        :href="negocioShow(producto.negocio.id)"
+                                        class="truncate hover:text-enlace"
+                                        >{{
+                                            producto.negocio.nombre_comercial
+                                        }}</Link
+                                    >
+                                    <span v-else class="truncate">{{
+                                        producto.negocio.nombre_comercial
+                                    }}</span>
+                                </template>
+                            </p>
                         </td>
-                        <td class="hidden max-w-52 px-3 py-3 md:table-cell">
-                            <Link
-                                v-if="producto.negocio && puede('negocios.ver')"
-                                :href="negocioShow(producto.negocio.id)"
-                                class="block truncate hover:text-enlace hover:underline"
-                                >{{ producto.negocio.nombre_comercial }}</Link
-                            >
-                            <span v-else-if="producto.negocio">{{
-                                producto.negocio.nombre_comercial
-                            }}</span>
-                        </td>
-                        <td class="px-3 py-3">
+                        <td
+                            class="hidden px-3 py-2.5 whitespace-nowrap xl:table-cell"
+                        >
                             <InsigniaTipo
                                 :tipo="producto.tipo"
                                 :etiqueta="producto.tipo_etiqueta"
                             />
+                            <p
+                                v-if="independiente(producto)"
+                                class="mt-0.5 text-[11px] text-muted-foreground"
+                            >
+                                2 destinos
+                            </p>
                         </td>
-                        <td class="hidden max-w-56 px-3 py-3 lg:table-cell">
+                        <td class="max-w-40 px-3 py-2.5 xl:max-w-56">
+                            <template v-if="independiente(producto)">
+                                <p
+                                    class="truncate text-xs"
+                                    :title="producto.url_destino ?? undefined"
+                                >
+                                    <span class="text-muted-foreground"
+                                        >NFC:</span
+                                    >
+                                    {{
+                                        producto.url_destino
+                                            ? dominio(producto.url_destino)
+                                            : 'sin destino'
+                                    }}
+                                </p>
+                                <p
+                                    class="truncate text-xs"
+                                    :title="
+                                        enlaceQr(producto).url_destino ??
+                                        undefined
+                                    "
+                                >
+                                    <span class="text-muted-foreground"
+                                        >QR:</span
+                                    >
+                                    {{
+                                        enlaceQr(producto).url_destino
+                                            ? dominio(
+                                                  enlaceQr(producto)
+                                                      .url_destino!,
+                                              )
+                                            : 'sin destino'
+                                    }}
+                                </p>
+                            </template>
                             <span
-                                v-if="producto.url_destino"
+                                v-else-if="producto.url_destino"
                                 class="block truncate"
                                 :title="producto.url_destino"
                                 >{{ dominio(producto.url_destino) }}</span
                             >
-                            <span v-else class="text-muted-foreground italic"
-                                >Sin destino</span
-                            >
+                            <span v-else class="text-warning">Sin destino</span>
                         </td>
-                        <td class="px-3 py-3">
+                        <td class="px-3 py-2.5 whitespace-nowrap">
                             <InsigniaEstado
                                 :estado="producto.estado"
                                 :etiqueta="producto.estado_etiqueta"
                             />
-                            <span
+                            <p
                                 v-if="producto.estado_preparacion_etiqueta"
-                                class="mt-1 block text-xs text-muted-foreground"
-                                >{{
-                                    producto.estado_preparacion_etiqueta
-                                }}</span
+                                class="mt-0.5 text-[11px] text-muted-foreground"
                             >
+                                {{ producto.estado_preparacion_etiqueta }}
+                            </p>
                         </td>
                         <td
-                            class="hidden px-3 py-3 text-right tabular-nums sm:table-cell"
+                            class="px-3 py-2.5 text-right whitespace-nowrap tabular-nums"
                         >
                             {{ numero(producto.total_accesos) }}
-                        </td>
-                        <td
-                            class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground 2xl:table-cell"
-                        >
-                            <time
+                            <p
                                 v-if="producto.ultimo_acceso_en"
-                                :datetime="producto.ultimo_acceso_en"
+                                class="text-[11px] text-muted-foreground"
                                 :title="fechaHora(producto.ultimo_acceso_en)"
-                                >{{ relativo(producto.ultimo_acceso_en) }}</time
                             >
-                            <span v-else>—</span>
+                                {{ relativo(producto.ultimo_acceso_en) }}
+                            </p>
                         </td>
-                        <td class="px-2 py-2">
-                            <div
-                                class="flex flex-wrap items-center justify-end gap-0.5"
-                            >
-                                <AccionFila
-                                    etiqueta="Ver"
-                                    :icono="Eye"
-                                    :href="show(producto.id)"
-                                    compacta
-                                />
-                                <AccionFila
-                                    v-if="puede('productos.editar')"
-                                    etiqueta="Editar"
-                                    :icono="Pencil"
-                                    :href="edit(producto.id)"
-                                    compacta
-                                />
-                                <AccionFila
-                                    v-if="producto.permisos.descargar_qr"
-                                    etiqueta="Descargar QR"
-                                    :icono="Download"
-                                    :href="descarga(producto)"
-                                    externo
-                                    compacta
-                                />
-                                <TransferirProducto
-                                    v-if="puede('productos.transferir')"
-                                    :producto="producto"
-                                    compacto
-                                />
-                                <CambiarEstadoProducto
-                                    v-if="puedeCambiarEstado(producto)"
-                                    :producto="producto"
-                                    compacto
-                                />
-                                <EliminarProducto
-                                    v-if="puedeEliminarse(producto)"
-                                    :producto="producto"
-                                    compacto
-                                />
-                            </div>
+                        <td class="px-2 py-2.5">
+                            <AccionesRegistro
+                                :acciones="acciones(producto)"
+                                :nombre="producto.nombre"
+                                @accion="abrir(producto, $event)"
+                            />
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- Vista de tarjetas -->
+        <!-- Tarjetas: lo esencial de cada producto físico de un vistazo. -->
         <ul
             v-else
-            class="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
+            class="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3"
             aria-label="Listado de productos"
         >
             <li
                 v-for="producto in productos.data"
                 :key="producto.id"
-                class="flex flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
+                class="flex min-w-0 flex-col rounded-xl border bg-background transition hover:border-primary/40 hover:shadow-sm"
             >
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
+                <div class="flex items-start gap-3 p-4 pb-3">
+                    <span
+                        class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        aria-hidden="true"
+                    >
+                        <QrCode v-if="producto.tipo === 'qr'" class="size-5" />
+                        <Nfc v-else class="size-5" />
+                    </span>
+                    <div class="min-w-0 flex-1">
                         <Link
                             :href="show(producto.id)"
-                            class="block truncate font-semibold hover:text-enlace hover:underline"
+                            class="block truncate font-semibold hover:text-enlace"
                             >{{ producto.nombre }}</Link
                         >
-                        <p class="font-mono text-xs text-muted-foreground">
-                            {{ producto.codigo }}
+                        <p class="truncate text-xs text-muted-foreground">
+                            {{ producto.negocio?.nombre_comercial }} ·
+                            {{ producto.tipo_etiqueta }}
                         </p>
                     </div>
                     <InsigniaEstado
@@ -422,79 +504,49 @@ const descarga = (p: Producto) =>
                         :etiqueta="producto.estado_etiqueta"
                     />
                 </div>
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <InsigniaTipo
-                        :tipo="producto.tipo"
-                        :etiqueta="producto.tipo_etiqueta"
-                    />
-                    <span
-                        v-if="producto.negocio"
-                        class="truncate text-muted-foreground"
-                        >{{ producto.negocio.nombre_comercial }}</span
+                <div class="mx-4 space-y-1.5 rounded-lg bg-muted/40 p-2.5">
+                    <p
+                        v-for="enlace in independiente(producto)
+                            ? [producto, enlaceQr(producto)]
+                            : [producto]"
+                        :key="enlace.id"
+                        class="flex min-w-0 items-center gap-1.5 text-xs"
                     >
-                </div>
-                <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div class="min-w-0 rounded-lg bg-muted/40 p-2">
-                        <dt class="text-muted-foreground">Destino</dt>
-                        <dd
-                            class="truncate font-medium"
-                            :title="producto.url_destino ?? undefined"
+                        <Link2
+                            class="size-3.5 shrink-0 text-muted-foreground"
+                            aria-hidden="true"
+                        />
+                        <span
+                            v-if="independiente(producto)"
+                            class="shrink-0 text-muted-foreground"
+                            >{{ enlace.medio === 'qr' ? 'QR' : 'NFC' }}</span
                         >
-                            {{
-                                producto.url_destino
-                                    ? dominio(producto.url_destino)
+                        <span
+                            class="min-w-0 truncate font-medium"
+                            :class="!enlace.url_destino && 'text-warning'"
+                            :title="enlace.url_destino ?? undefined"
+                            >{{
+                                enlace.url_destino
+                                    ? dominio(enlace.url_destino)
                                     : 'Sin destino'
-                            }}
-                        </dd>
-                    </div>
-                    <div class="rounded-lg bg-muted/40 p-2">
-                        <dt class="text-muted-foreground">Accesos</dt>
-                        <dd class="font-medium tabular-nums">
-                            {{ numero(producto.total_accesos) }}
-                            <span
-                                v-if="producto.ultimo_acceso_en"
-                                class="font-normal text-muted-foreground"
-                                >·
-                                {{ relativo(producto.ultimo_acceso_en) }}</span
-                            >
-                        </dd>
-                    </div>
-                </dl>
+                            }}</span
+                        >
+                    </p>
+                </div>
                 <div
-                    class="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2"
+                    class="mt-auto flex items-center justify-between gap-2 px-4 pt-3 pb-3"
                 >
-                    <AccionFila
-                        etiqueta="Ver"
-                        :icono="Eye"
-                        :href="show(producto.id)"
-                    />
-                    <AccionFila
-                        v-if="puede('productos.editar')"
-                        etiqueta="Editar"
-                        :icono="Pencil"
-                        :href="edit(producto.id)"
-                    />
-                    <AccionFila
-                        v-if="producto.permisos.descargar_qr"
-                        etiqueta="QR"
-                        :icono="Download"
-                        :href="descarga(producto)"
-                        externo
-                    />
-                    <TransferirProducto
-                        v-if="puede('productos.transferir')"
-                        :producto="producto"
-                        compacto
-                    />
-                    <CambiarEstadoProducto
-                        v-if="puedeCambiarEstado(producto)"
-                        :producto="producto"
-                        compacto
-                    />
-                    <EliminarProducto
-                        v-if="puedeEliminarse(producto)"
-                        :producto="producto"
-                        compacto
+                    <p class="text-xs text-muted-foreground tabular-nums">
+                        <span class="font-semibold text-foreground">{{
+                            numero(producto.total_accesos)
+                        }}</span>
+                        accesos
+                    </p>
+                    <AccionesRegistro
+                        :acciones="acciones(producto)"
+                        :nombre="producto.nombre"
+                        variante="tarjeta"
+                        @accion="abrir(producto, $event)"
                     />
                 </div>
             </li>
@@ -502,4 +554,25 @@ const descarga = (p: Producto) =>
 
         <Paginacion :meta="productos.meta" nombre="productos" />
     </section>
+
+    <template v-if="seleccionado">
+        <TransferirProducto
+            :key="`t-${seleccionado.id}`"
+            v-model:open="abiertoTransferir"
+            :producto="seleccionado"
+            sin-disparador
+        />
+        <CambiarEstadoProducto
+            :key="`e-${seleccionado.id}`"
+            v-model:open="abiertoEstado"
+            :producto="seleccionado"
+            sin-disparador
+        />
+        <EliminarProducto
+            :key="`d-${seleccionado.id}`"
+            v-model:open="abiertoEliminar"
+            :producto="seleccionado"
+            sin-disparador
+        />
+    </template>
 </template>

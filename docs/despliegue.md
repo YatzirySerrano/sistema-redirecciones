@@ -170,3 +170,16 @@ El proyecto no incluye credenciales de correo. Configura en el `.env` del servid
 | `QUEUE_CONNECTION`  | `database` (con el worker activo)                         |
 
 Después: `php artisan config:cache && php artisan queue:restart`. Para comprobarlo sin escribir a clientes, crea un acceso de prueba con tu propio correo y usa «Enviar enlace de acceso», o solicita «¿Olvidaste tu contraseña?» con tu cuenta. Configura SPF, DKIM y DMARC del dominio remitente para evitar que los mensajes lleguen a spam. Los errores de envío aparecen en `storage/logs/laravel.log` y en la tabla `failed_jobs` (`php artisan queue:failed`).
+
+## PWA
+
+- Requiere HTTPS (los Service Workers solo funcionan en contextos seguros).
+- Servir `sw.js` sin caché para que las versiones nuevas se detecten:
+
+```nginx
+location = /sw.js { add_header Cache-Control "no-cache"; try_files $uri =404; }
+location = /manifest.webmanifest { default_type application/manifest+json; }
+```
+
+- Al publicar una versión con cambios en `public/sw.js`, incrementar `VERSION` dentro del archivo.
+- Sustituir los íconos temporales de `public/iconos/`, `public/favicon.*` y `public/apple-touch-icon.png` por los oficiales de DASTI.

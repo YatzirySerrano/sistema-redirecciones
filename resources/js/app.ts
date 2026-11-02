@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { initializePwa } from '@/lib/pwa';
 import { initializeTema } from '@/lib/tema';
 
 const appName = import.meta.env.VITE_APP_NAME || 'DASTI Redirecciones';
@@ -32,7 +33,7 @@ void createInertiaApp({
         });
     },
     progress: {
-        color: '#7c3aed',
+        color: 'var(--primary)',
         delay: 150,
     },
 });
@@ -45,3 +46,6 @@ initializeFlashToast();
 
 // Colores personalizados de la interfaz (se actualizan en vivo).
 initializeTema();
+
+// Aplicación instalable (Service Worker, actualización y conexión).
+initializePwa();

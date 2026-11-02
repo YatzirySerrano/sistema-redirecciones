@@ -118,11 +118,10 @@ class EstadisticasTest extends TestCase
 
         $this->actingAs($cliente)->get(route('cliente.inicio'))
             ->assertInertia(fn (AssertableInertia $pagina) => $pagina
-                ->where('indicadores.accesos_totales', null)
                 ->where('indicadores.accesos_30_dias', null)
+                ->where('indicadores.accesos_previos', null)
                 ->where('serie', null)
-                ->where('productos.data.0.total_accesos', null)
-                ->where('productos.data.0.ultimo_acceso_en', null));
+                ->where('productos_top', []));
 
         $this->actingAs($cliente)->get(route('cliente.productos.index'))
             ->assertInertia(fn (AssertableInertia $pagina) => $pagina->where('productos.data.0.total_accesos', null));

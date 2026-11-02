@@ -41,6 +41,12 @@ export type Producto = {
     nombre: string;
     tipo: TipoProducto;
     tipo_etiqueta: string;
+    modalidad_destino: 'compartido' | 'independiente';
+    medio: 'nfc' | 'qr' | null;
+    medio_etiqueta: string | null;
+    producto_principal_id: number | null;
+    /** Reverso QR de un combinado con destinos independientes. */
+    enlaces_secundarios?: Producto[];
     url_permanente: string;
     url_destino: string | null;
     estado: EstadoCuenta;
@@ -123,7 +129,12 @@ export type CambioDestino = {
     origen: 'admin' | 'cliente' | 'sistema';
     origen_etiqueta: string;
     autor: string;
-    producto?: { id: number; nombre: string; codigo: string };
+    producto?: {
+        id: number;
+        nombre: string;
+        codigo: string;
+        medio?: string | null;
+    };
     created_at: string;
 };
 
@@ -216,4 +227,10 @@ export type ModuloPermisos = {
     clave: string;
     etiqueta: string;
     permisos: PermisoCatalogo[];
+};
+
+export type EstadisticaMedio = {
+    id: number;
+    medio: string | null;
+    totales: { total: number };
 };

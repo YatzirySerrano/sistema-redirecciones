@@ -87,7 +87,7 @@ class RolesPermisosTest extends TestCase
         app(SincronizadorPermisos::class)->sincronizar();
 
         $this->assertNotContains('negocios.crear', $admin->fresh()?->load('permissions')->nombresPermisos());
-        $this->assertSame(3, Rol::query()->whereNotNull('clave')->count());
+        $this->assertSame(4, Rol::query()->whereNotNull('clave')->count()); // Superadministrador, Administrador, Cliente y Empleado
     }
 
     // ---- Módulo de roles ----

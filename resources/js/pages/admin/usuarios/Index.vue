@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
+    CirclePause,
+    CirclePlay,
     Eye,
     KeyRound,
     Pencil,
@@ -9,8 +11,9 @@ import {
     ShieldCheck,
     UsersRound,
 } from '@lucide/vue';
-import { computed } from 'vue';
-import AccionFila from '@/components/comun/AccionFila.vue';
+import { computed, ref } from 'vue';
+import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
+import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
 import CambiarEstadoRegistro from '@/components/comun/CambiarEstadoRegistro.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
@@ -58,6 +61,34 @@ const { puede } = usePermisos();
 const hayFiltros = computed(() => Object.values(filtros).some((v) => v !== ''));
 
 const puedeEditar = computed(() => puede('usuarios.editar'));
+const acciones = (u: Usuario): AccionRegistro[] => [
+    {
+        clave: 'editar',
+        etiqueta: puedeEditar.value ? 'Editar' : 'Ver',
+        icono: puedeEditar.value ? Pencil : Eye,
+        href: edit(u.id),
+        principal: true,
+    },
+    {
+        clave: 'estado',
+        etiqueta:
+            u.estado === 'activo' ? 'Suspender acceso' : 'Reactivar acceso',
+        icono: u.estado === 'activo' ? CirclePause : CirclePlay,
+        destructiva: u.estado === 'activo',
+        visible: puedeGestionar(u),
+    },
+];
+
+// Un solo diálogo de suspensión/reactivación para el registro elegido.
+const seleccionado = ref<Usuario | null>(null);
+const abiertoEstado = ref(false);
+const abrir = (registro: Usuario, clave: string) => {
+    if (clave === 'estado') {
+        seleccionado.value = registro;
+        abiertoEstado.value = true;
+    }
+};
+
 const puedeGestionar = (u: Usuario) =>
     puede('usuarios.gestionar_accesos') && !u.es_actual;
 </script>
@@ -78,7 +109,7 @@ const puedeGestionar = (u: Usuario) =>
 
     <section class="overflow-hidden rounded-xl border bg-card shadow-xs">
         <div class="space-y-3 border-b p-4">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
                 <CampoBusqueda
                     v-model="filtros.buscar"
                     placeholder="Buscar por nombre o correo…"
@@ -157,7 +188,7 @@ const puedeGestionar = (u: Usuario) =>
                             </th>
                             <th
                                 scope="col"
-                                class="hidden h-10 px-3 font-medium lg:table-cell"
+                                class="hidden h-10 px-3 font-medium xl:table-cell"
                             >
                                 Último acceso
                             </th>
@@ -187,7 +218,8 @@ const puedeGestionar = (u: Usuario) =>
                                     >(tú)</span
                                 >
                                 <p
-                                    class="text-xs break-all text-muted-foreground"
+                                    class="max-w-56 truncate text-xs text-muted-foreground"
+                                    :title="u.email"
                                 >
                                     {{ u.email }}
                                 </p>
@@ -208,11 +240,19 @@ const puedeGestionar = (u: Usuario) =>
                                     />
                                     {{ u.rol_asignado?.nombre ?? 'Sin rol' }}
                                 </span>
-                                <p class="text-xs text-muted-foreground">
+                                <p
+                                    v-if="
+                                        u.rol_asignado?.nombre !==
+                                        u.rol_etiqueta
+                                    "
+                                    class="text-xs text-muted-foreground"
+                                >
                                     {{ u.rol_etiqueta }}
                                 </p>
                             </td>
-                            <td class="hidden px-3 py-3 md:table-cell">
+                            <td
+                                class="hidden max-w-44 truncate px-3 py-3 md:table-cell"
+                            >
                                 <Link
                                     v-if="u.negocio && puede('negocios.ver')"
                                     :href="verNegocio(u.negocio.id)"
@@ -264,33 +304,18 @@ const puedeGestionar = (u: Usuario) =>
                                 </p>
                             </td>
                             <td
-                                class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground lg:table-cell"
+                                class="hidden px-3 py-3 whitespace-nowrap text-muted-foreground xl:table-cell"
                             >
                                 <span :title="fechaHora(u.ultimo_acceso_en)">{{
                                     relativo(u.ultimo_acceso_en)
                                 }}</span>
                             </td>
                             <td class="px-2 py-2">
-                                <div
-                                    class="flex flex-wrap items-center justify-end gap-0.5"
-                                >
-                                    <AccionFila
-                                        :etiqueta="
-                                            puedeEditar ? 'Editar' : 'Ver'
-                                        "
-                                        :icono="puedeEditar ? Pencil : Eye"
-                                        :href="edit(u.id)"
-                                        compacta
-                                    />
-                                    <CambiarEstadoRegistro
-                                        v-if="puedeGestionar(u)"
-                                        :url="estado.url(u.id)"
-                                        :estado="u.estado"
-                                        :nombre="u.name"
-                                        tipo="usuario"
-                                        compacto
-                                    />
-                                </div>
+                                <AccionesRegistro
+                                    :acciones="acciones(u)"
+                                    :nombre="u.name"
+                                    @accion="abrir(u, $event)"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -299,13 +324,13 @@ const puedeGestionar = (u: Usuario) =>
 
             <ul
                 v-else
-                class="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
+                class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3"
                 aria-label="Listado de usuarios"
             >
                 <li
                     v-for="u in usuarios.data"
                     :key="u.id"
-                    class="flex flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
+                    class="flex min-w-0 flex-col rounded-xl border bg-background p-4 shadow-xs transition hover:border-primary/40"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -358,21 +383,12 @@ const puedeGestionar = (u: Usuario) =>
                         <KeyRound class="size-3" aria-hidden="true" />
                         {{ pendienteDeAcceso(u)?.texto }}
                     </p>
-                    <div
-                        class="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2"
-                    >
-                        <AccionFila
-                            :etiqueta="puedeEditar ? 'Editar' : 'Ver'"
-                            :icono="puedeEditar ? Pencil : Eye"
-                            :href="edit(u.id)"
-                        />
-                        <CambiarEstadoRegistro
-                            v-if="puedeGestionar(u)"
-                            :url="estado.url(u.id)"
-                            :estado="u.estado"
+                    <div class="mt-auto flex justify-end border-t pt-2.5">
+                        <AccionesRegistro
+                            :acciones="acciones(u)"
                             :nombre="u.name"
-                            tipo="usuario"
-                            compacto
+                            variante="tarjeta"
+                            @accion="abrir(u, $event)"
                         />
                     </div>
                 </li>
@@ -398,4 +414,14 @@ const puedeGestionar = (u: Usuario) =>
 
         <Paginacion :meta="usuarios.meta" nombre="usuarios" />
     </section>
+    <CambiarEstadoRegistro
+        v-if="seleccionado"
+        :key="seleccionado.id"
+        v-model:open="abiertoEstado"
+        :url="estado.url(seleccionado.id)"
+        :estado="seleccionado.estado"
+        :nombre="seleccionado.name"
+        tipo="usuario"
+        sin-disparador
+    />
 </template>

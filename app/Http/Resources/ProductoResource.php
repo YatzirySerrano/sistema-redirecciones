@@ -34,6 +34,12 @@ class ProductoResource extends JsonResource
             'nombre' => $this->nombre,
             'tipo' => $this->tipo->value,
             'tipo_etiqueta' => $this->tipo->etiqueta(),
+            'modalidad_destino' => $this->modalidad_destino->value,
+            'medio' => $this->medio?->value,
+            'medio_etiqueta' => $this->medio?->etiqueta(),
+            'producto_principal_id' => $this->producto_principal_id,
+            // Reverso QR de un combinado con destinos independientes.
+            'enlaces_secundarios' => $this->whenLoaded('enlacesSecundarios', fn () => ProductoResource::collection($this->enlacesSecundarios)->resolve($request)),
             'url_permanente' => $this->url_permanente,
             'url_destino' => $this->url_destino,
             'estado' => $this->estado->value,

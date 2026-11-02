@@ -3,6 +3,7 @@
 namespace App\Services\Estadisticas;
 
 use App\Enums\CategoriaDispositivo;
+use App\Enums\MedioEnlace;
 use App\Enums\ResultadoAcceso;
 use App\Enums\TipoProducto;
 use Carbon\CarbonImmutable;
@@ -119,8 +120,8 @@ class ConsultasEstadisticas
     {
         return array_values($this->diarios($filtro)
             ->join('negocios as n', 'n.id', '=', 'p.negocio_id')
-            ->selectRaw('p.id, p.nombre, p.codigo, p.tipo, n.nombre_comercial as negocio, SUM(ad.total) as total')
-            ->groupBy('p.id', 'p.nombre', 'p.codigo', 'p.tipo', 'n.nombre_comercial')
+            ->selectRaw('p.id, p.nombre, p.codigo, p.tipo, p.medio, n.nombre_comercial as negocio, SUM(ad.total) as total')
+            ->groupBy('p.id', 'p.nombre', 'p.codigo', 'p.tipo', 'p.medio', 'n.nombre_comercial')
             ->havingRaw('SUM(ad.total) > 0')
             ->orderByDesc('total')
             ->limit($limite)
@@ -129,7 +130,8 @@ class ConsultasEstadisticas
                 'id' => (int) $f->id,
                 'nombre' => (string) $f->nombre,
                 'codigo' => (string) $f->codigo,
-                'tipo' => TipoProducto::from($f->tipo)->etiqueta(),
+                // En combinados independientes cada enlace es un medio.
+                'tipo' => $f->medio !== null ? MedioEnlace::from($f->medio)->etiqueta() : TipoProducto::from($f->tipo)->etiqueta(),
                 'negocio' => (string) $f->negocio,
                 'total' => (int) $f->total,
             ])
@@ -164,9 +166,12 @@ class ConsultasEstadisticas
      */
     public function porTipo(FiltroEstadisticas $filtro): array
     {
+        // Un enlace con medio propio (combinado con destinos independientes)
+        // cuenta en su medio; solo los combinados compartidos son «no
+        // distinguibles».
         $totales = $this->diarios($filtro)
-            ->selectRaw('p.tipo as tipo, SUM(ad.total) as total')
-            ->groupBy('p.tipo')
+            ->selectRaw('COALESCE(p.medio, p.tipo) as tipo, SUM(ad.total) as total')
+            ->groupByRaw('COALESCE(p.medio, p.tipo)')
             ->pluck('total', 'tipo');
 
         return array_map(fn (TipoProducto $tipo) => [

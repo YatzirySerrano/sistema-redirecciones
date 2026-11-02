@@ -28,6 +28,12 @@ class ActualizarProducto
         $anteriores = array_intersect_key($producto->getOriginal(), array_flip($cambios));
         $producto->save();
 
+        // El reverso QR de un combinado independiente comparte los datos del
+        // producto físico (nombre, preparación, entrega, referencias).
+        $producto->enlacesSecundarios()->each(fn (Producto $enlace) => $enlace->forceFill(
+            $producto->only(['nombre', 'estado_preparacion', 'fecha_entrega', 'referencia_comercial', 'notas_internas']),
+        )->save());
+
         $this->auditoria->registrar(
             accion: 'producto.actualizado',
             descripcion: "Actualización de datos de «{$producto->nombre}»",

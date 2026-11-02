@@ -3,6 +3,7 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import IndicadorConexion from '@/components/comun/IndicadorConexion.vue';
 import { Toaster } from '@/components/ui/sonner';
 import type { BreadcrumbItem } from '@/types';
 
@@ -22,6 +23,7 @@ withDefaults(defineProps<Props>(), {
             variant="sidebar"
             class="min-w-0 overflow-x-clip bg-background"
         >
+            <IndicadorConexion />
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <main
                 id="contenido"

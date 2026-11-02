@@ -9,12 +9,14 @@ import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
 import Panel from '@/components/comun/Panel.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import DisenadorQr from '@/components/productos/DisenadorQr.vue';
+import EnlacesPorMedio from '@/components/productos/EnlacesPorMedio.vue';
 import FormularioDestino from '@/components/productos/FormularioDestino.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import { Button } from '@/components/ui/button';
 import { numero, visitantes } from '@/lib/formato';
 import { destino, index, show } from '@/routes/cliente/productos';
 import type {
+    EstadisticaMedio,
     CambioDestino,
     Coleccion,
     OpcionesQr,
@@ -29,6 +31,7 @@ const props = defineProps<{
     opciones_qr: OpcionesQr;
     estadisticas: { totales: TotalesEstadisticas; serie: PuntoSerie[] } | null;
     cambios: Coleccion<CambioDestino>;
+    estadisticas_medios: EstadisticaMedio[];
 }>();
 
 defineOptions({
@@ -41,6 +44,11 @@ defineOptions({
 });
 
 const p = computed(() => props.producto.data);
+const independiente = computed(
+    () => p.value.modalidad_destino === 'independiente',
+);
+/** Enlace que lleva el QR: el reverso en los combinados independientes. */
+const productoQr = computed(() => p.value.enlaces_secundarios?.[0] ?? p.value);
 const muestraNfc = computed(
     () => p.value.tipo === 'nfc' || p.value.tipo === 'combinado',
 );
@@ -80,6 +88,18 @@ const muestraQr = computed(
     >
         <div class="min-w-0 space-y-6">
             <Panel
+                v-if="independiente"
+                titulo="Destinos de tu tarjeta"
+                descripcion="Tu tarjeta tiene dos enlaces: el NFC del frente y el QR del reverso. Cada uno puede llevar a una página distinta."
+            >
+                <EnlacesPorMedio
+                    :producto="p"
+                    :accion-destino="(id: number) => destino.url(id)"
+                    :estadisticas="estadisticas_medios"
+                />
+            </Panel>
+            <Panel
+                v-else
                 titulo="Destino"
                 descripcion="La página que se abre al usar este producto."
             >
@@ -130,11 +150,15 @@ const muestraQr = computed(
             </Panel>
 
             <Panel
-                v-if="p.permisos.descargar_qr && muestraQr"
-                titulo="Código QR"
+                v-if="productoQr.permisos.descargar_qr && muestraQr"
+                :titulo="independiente ? 'Código QR del reverso' : 'Código QR'"
                 descripcion="Descarga tu QR para imprimirlo. Contiene el enlace permanente, así que no cambia aunque modifiques el destino."
             >
-                <DisenadorQr :producto="p" :opciones="opciones_qr" />
+                <DisenadorQr
+                    :key="productoQr.id"
+                    :producto="productoQr"
+                    :opciones="opciones_qr"
+                />
             </Panel>
 
             <Panel titulo="Historial de cambios">
@@ -143,7 +167,7 @@ const muestraQr = computed(
         </div>
 
         <aside class="min-w-0 space-y-6">
-            <Panel titulo="Enlace permanente">
+            <Panel v-if="!independiente" titulo="Enlace permanente">
                 <div class="space-y-3">
                     <EnlacePermanente :url="p.url_permanente" />
                     <p class="flex gap-2 text-xs text-muted-foreground">

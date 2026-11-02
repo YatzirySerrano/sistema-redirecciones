@@ -4,7 +4,10 @@ namespace App\Actions\Productos;
 
 use App\Enums\EstadoPreparacion;
 use App\Enums\EstadoProducto;
+use App\Enums\MedioEnlace;
+use App\Enums\ModalidadDestino;
 use App\Enums\OrigenCambio;
+use App\Enums\TipoProducto;
 use App\Models\CambioDestino;
 use App\Models\Negocio;
 use App\Models\Producto;
@@ -35,7 +38,11 @@ class CrearProducto
     ) {}
 
     /**
-     * @param  array{nombre: string, tipo: string, url_destino?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null}  $datos
+     * Un combinado con `modalidad_destino` = independiente crea, por cada
+     * unidad, la fila principal (frente NFC, `url_destino`) y su enlace
+     * secundario (reverso QR, `url_destino_qr`), cada uno con su código.
+     *
+     * @param  array{nombre: string, tipo: string, modalidad_destino?: string|null, url_destino?: string|null, url_destino_qr?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null}  $datos
      * @return list<Producto>
      */
     public function ejecutar(Negocio $negocio, array $datos, User $actor, int $cantidad = 1): array
@@ -62,9 +69,54 @@ class CrearProducto
      */
     private function crearUno(Negocio $negocio, array $datos, User $actor): Producto
     {
-        $url = isset($datos['url_destino']) && $datos['url_destino'] !== ''
-            ? $this->validador->normalizar((string) $datos['url_destino'])
-            : null;
+        $independiente = $datos['tipo'] === TipoProducto::Combinado->value
+            && ($datos['modalidad_destino'] ?? null) === ModalidadDestino::Independiente->value;
+
+        $producto = $this->crearEnlace($negocio, $datos, $actor, $datos['url_destino'] ?? null, [
+            'modalidad_destino' => $independiente ? ModalidadDestino::Independiente : ModalidadDestino::Compartido,
+            'medio' => $independiente ? MedioEnlace::Nfc : null,
+        ]);
+
+        $secundario = null;
+
+        if ($independiente) {
+            $secundario = $this->crearEnlace($negocio, [...$datos, 'tipo' => TipoProducto::Qr->value], $actor, $datos['url_destino_qr'] ?? null, [
+                'producto_principal_id' => $producto->id,
+                'modalidad_destino' => ModalidadDestino::Independiente,
+                'medio' => MedioEnlace::Qr,
+            ]);
+        }
+
+        $this->auditoria->registrar(
+            accion: 'producto.creado',
+            descripcion: "Alta de «{$producto->nombre}» para «{$negocio->nombre_comercial}»",
+            recurso: $producto,
+            negocio: $negocio,
+            nuevos: array_filter([
+                'nombre' => $producto->nombre,
+                'tipo' => $producto->tipo,
+                'modalidad_destino' => $independiente ? ModalidadDestino::Independiente : null,
+                'codigo' => $producto->codigo,
+                'url_destino' => $producto->url_destino,
+                'codigo_qr_reverso' => $secundario?->codigo,
+                'url_destino_qr' => $secundario?->url_destino,
+            ], fn ($v) => $v !== null),
+            actor: $actor,
+        );
+
+        return $producto;
+    }
+
+    /**
+     * Crea una fila de `productos` con su código único y, si tiene destino,
+     * el primer registro de su historial.
+     *
+     * @param  array<string, mixed>  $datos
+     * @param  array<string, mixed>  $extra
+     */
+    private function crearEnlace(Negocio $negocio, array $datos, User $actor, mixed $destino, array $extra): Producto
+    {
+        $url = is_string($destino) && $destino !== '' ? $this->validador->normalizar($destino) : null;
 
         $producto = new Producto([
             'nombre' => $datos['nombre'],
@@ -75,6 +127,7 @@ class CrearProducto
             'notas_internas' => $datos['notas_internas'] ?? null,
         ]);
         $producto->forceFill([
+            ...$extra,
             'negocio_id' => $negocio->id,
             'estado' => EstadoProducto::Activo,
             'url_destino' => $url,
@@ -93,20 +146,6 @@ class CrearProducto
                 'url_nueva' => $url,
             ]);
         }
-
-        $this->auditoria->registrar(
-            accion: 'producto.creado',
-            descripcion: "Alta de «{$producto->nombre}» para «{$negocio->nombre_comercial}»",
-            recurso: $producto,
-            negocio: $negocio,
-            nuevos: [
-                'nombre' => $producto->nombre,
-                'tipo' => $producto->tipo,
-                'codigo' => $producto->codigo,
-                'url_destino' => $url,
-            ],
-            actor: $actor,
-        );
 
         return $producto;
     }

@@ -133,7 +133,11 @@ class TemaVisual
     {
         $bloque = fn (array $vars) => implode('', array_map(fn ($k, $v) => "{$k}:{$v};", array_keys($vars), $vars));
 
-        return ':root{'.$bloque($tokens['claro']).'}.dark{'.$bloque($tokens['oscuro']).'}';
+        // Especificidad (0,2,1): gana a `:root` y `.dark` de app.css sin
+        // depender del orden en que el navegador cargue las hojas (en
+        // desarrollo Vite inserta app.css después de esta etiqueta). El modo
+        // claro excluye `.dark` para no pisar la paleta oscura.
+        return 'html:root:not(.dark){'.$bloque($tokens['claro']).'}html:root.dark{'.$bloque($tokens['oscuro']).'}';
     }
 
     /**

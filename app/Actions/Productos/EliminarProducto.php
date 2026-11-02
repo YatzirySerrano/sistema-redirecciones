@@ -17,11 +17,20 @@ class EliminarProducto
 {
     public function __construct(private readonly RegistradorAuditoria $auditoria) {}
 
+    /**
+     * Se evalúa el producto físico completo (incluidos sus enlaces
+     * secundarios): ninguno puede tener accesos.
+     */
     public static function puedeEliminarse(Producto $producto): bool
     {
+        if ($producto->esEnlaceSecundario()) {
+            return false;
+        }
+
+        $enlaces = [$producto, ...$producto->enlacesSecundarios()->get()->all()];
+
         return $producto->estado_preparacion === EstadoPreparacion::Pendiente
-            && $producto->total_accesos === 0
-            && ! $producto->eventosAcceso()->exists();
+            && collect($enlaces)->every(fn (Producto $p) => $p->total_accesos === 0 && ! $p->eventosAcceso()->exists());
     }
 
     public function ejecutar(Producto $producto): void
@@ -41,6 +50,12 @@ class EliminarProducto
                 anteriores: $producto->only(['nombre', 'tipo', 'codigo', 'url_destino']),
             );
 
+            // Los enlaces secundarios no se borran solos (clave foránea
+            // restrictiva): se eliminan primero, junto con su historial.
+            $producto->enlacesSecundarios()->get()->each(function (Producto $enlace) {
+                $enlace->cambiosDestino()->delete();
+                $enlace->delete();
+            });
             $producto->delete();
         });
     }

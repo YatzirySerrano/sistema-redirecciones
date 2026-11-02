@@ -30,6 +30,10 @@ final class CatalogoPermisos
 
     public const ROL_CLIENTE = 'cliente';
 
+    public const ROL_EMPLEADO = 'empleado';
+
+    private const N = [self::AMBITO_NEGOCIO];
+
     private const P = [self::AMBITO_PLATAFORMA];
 
     private const PN = [self::AMBITO_PLATAFORMA, self::AMBITO_NEGOCIO];
@@ -115,6 +119,34 @@ final class CatalogoPermisos
                 'personalizacion.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Cambiar y restablecer los colores.', 'ambitos' => self::P],
             ],
         ],
+        'servicios' => [
+            'etiqueta' => 'Servicios contratados',
+            'permisos' => [
+                'servicios.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Servicios, contrataciones y su historial.', 'ambitos' => self::P],
+                'servicios.gestionar' => ['etiqueta' => 'Gestionar', 'descripcion' => 'Activar, suspender, registrar pagos fuera de línea y configurar precio y vigencia.', 'ambitos' => self::P],
+                'servicios.contratar' => ['etiqueta' => 'Contratar', 'descripcion' => 'Contratar servicios adicionales con pago en línea.', 'ambitos' => self::N],
+            ],
+        ],
+        'pagos' => [
+            'etiqueta' => 'Pagos',
+            'permisos' => [
+                'pagos.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Pagos, reembolsos y disputas.', 'ambitos' => self::P],
+            ],
+        ],
+        'fidelidad' => [
+            'etiqueta' => 'Fidelidad',
+            'permisos' => [
+                'fidelidad.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Resumen, buscar consumidores y consultar su progreso.', 'ambitos' => self::N],
+                'fidelidad.visitas' => ['etiqueta' => 'Registrar visitas', 'descripcion' => 'Confirmar visitas o compras válidas.', 'ambitos' => self::N],
+                'fidelidad.canjear' => ['etiqueta' => 'Canjear recompensas', 'descripcion' => 'Entregar recompensas disponibles.', 'ambitos' => self::N],
+                'fidelidad.consumidores' => ['etiqueta' => 'Administrar consumidores', 'descripcion' => 'Registrar y editar consumidores.', 'ambitos' => self::N],
+                'fidelidad.credenciales' => ['etiqueta' => 'Credenciales', 'descripcion' => 'Emitir, reemplazar y revocar tarjetas y enlaces; fusionar duplicados.', 'ambitos' => self::N],
+                'fidelidad.ajustes' => ['etiqueta' => 'Ajustes', 'descripcion' => 'Corregir o anular visitas y recompensas con motivo.', 'ambitos' => self::N],
+                'fidelidad.campanas' => ['etiqueta' => 'Campañas', 'descripcion' => 'Crear y modificar campañas y recompensas.', 'ambitos' => self::N],
+                'fidelidad.personal' => ['etiqueta' => 'Personal', 'descripcion' => 'Administrar empleados del negocio.', 'ambitos' => self::N],
+                'fidelidad.auditoria' => ['etiqueta' => 'Auditoría', 'descripcion' => 'Actividad del programa y visitas por empleado.', 'ambitos' => self::N],
+            ],
+        ],
         'roles' => [
             'etiqueta' => 'Roles y permisos',
             'permisos' => [
@@ -150,7 +182,17 @@ final class CatalogoPermisos
             'descripcion' => 'Usuarios de un negocio; solo acceden a los recursos de su negocio.',
             'ambito' => self::AMBITO_NEGOCIO,
         ],
+        self::ROL_EMPLEADO => [
+            'nombre' => 'Empleado',
+            'descripcion' => 'Personal de mostrador de un negocio: busca consumidores, registra visitas y canjea recompensas.',
+            'ambito' => self::AMBITO_NEGOCIO,
+        ],
     ];
+
+    /**
+     * Permisos del rol Empleado al crearse.
+     */
+    private const EMPLEADO = ['fidelidad.ver', 'fidelidad.visitas', 'fidelidad.canjear'];
 
     /**
      * Permisos que el rol Administrador NO recibe al crearse: la gestión de
@@ -215,6 +257,7 @@ final class CatalogoPermisos
             self::ROL_SUPERADMINISTRADOR => self::delAmbito(self::AMBITO_PLATAFORMA),
             self::ROL_ADMINISTRADOR => array_values(array_diff(self::delAmbito(self::AMBITO_PLATAFORMA), self::EXCLUIDOS_ADMINISTRADOR)),
             self::ROL_CLIENTE => self::delAmbito(self::AMBITO_NEGOCIO),
+            self::ROL_EMPLEADO => self::EMPLEADO,
             default => [],
         };
     }

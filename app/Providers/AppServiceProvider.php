@@ -3,13 +3,22 @@
 namespace App\Providers;
 
 use App\Listeners\AuditarEventosDeSeguridad;
+use App\Models\Contratacion;
+use App\Models\Fidelidad\Campana;
+use App\Models\Fidelidad\Consumidor;
+use App\Models\Fidelidad\Recompensa;
 use App\Models\Negocio;
+use App\Models\Pago;
 use App\Models\Producto;
 use App\Models\Rol;
+use App\Models\Servicio;
 use App\Models\User;
 use App\Services\Apariencia\TemaVisual;
 use App\Services\Autorizacion\CatalogoPermisos;
 use App\Services\Configuracion\AjustesPlataforma;
+use App\Services\Pagos\PasarelaPago;
+use App\Services\Pagos\PasarelaStripe;
+use App\Services\Servicios\AccesoServicios;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -34,6 +43,8 @@ class AppServiceProvider extends ServiceProvider
         // caché aunque se consulten en cada producto de un listado.
         $this->app->scoped(AjustesPlataforma::class);
         $this->app->scoped(TemaVisual::class);
+        $this->app->scoped(AccesoServicios::class);
+        $this->app->bind(PasarelaPago::class, PasarelaStripe::class);
     }
 
     /**
@@ -66,6 +77,12 @@ class AppServiceProvider extends ServiceProvider
             'producto' => Producto::class,
             'usuario' => User::class,
             'rol' => Rol::class,
+            'contratacion' => Contratacion::class,
+            'pago' => Pago::class,
+            'servicio' => Servicio::class,
+            'fidelidad_campana' => Campana::class,
+            'fidelidad_consumidor' => Consumidor::class,
+            'fidelidad_recompensa' => Recompensa::class,
         ]);
 
         if (app()->isProduction()) {

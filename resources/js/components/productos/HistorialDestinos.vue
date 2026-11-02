@@ -35,6 +35,9 @@ withDefaults(
                     <template v-if="mostrarProducto && cambio.producto">
                         · {{ cambio.producto.nombre }}</template
                     >
+                    <template v-if="cambio.producto?.medio">
+                        · {{ cambio.producto.medio }}</template
+                    >
                 </span>
                 <time
                     :datetime="cambio.created_at"

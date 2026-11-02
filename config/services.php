@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    /*
+    | Stripe (pagos en línea de servicios adicionales). Sin STRIPE_SECRET el
+    | checkout se deshabilita; sin STRIPE_WEBHOOK_SECRET los webhooks se
+    | rechazan. Usa claves de prueba (sk_test_…) hasta autorizar producción.
+    */
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        // Tolerancia (segundos) de la marca de tiempo de la firma.
+        'tolerancia_webhook' => (int) env('STRIPE_WEBHOOK_TOLERANCE', 300),
+    ],
+
 ];

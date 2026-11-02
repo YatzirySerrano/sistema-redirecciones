@@ -30,6 +30,7 @@ class InicioController extends Controller
     private const DESTINOS_NEGOCIO = [
         'panel.ver' => 'cliente.inicio',
         'productos.ver' => 'cliente.productos.index',
+        'fidelidad.ver' => 'cliente.fidelidad.inicio',
     ];
 
     public function __invoke(Request $request): RedirectResponse

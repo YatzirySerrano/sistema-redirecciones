@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex" />
+        <meta name="theme-color" content="#13101e" />
+        <title>Sin conexión · DASTI</title>
+        <style>
+            :root {
+                color-scheme: light dark;
+                --fondo: #f9f9fb;
+                --texto: #17141f;
+                --tenue: #64607a;
+                --tarjeta: #fff;
+                --borde: #e6e4ee;
+                --primario: #6d2cdd;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --fondo: #0f0d17;
+                    --texto: #eeedf3;
+                    --tenue: #a19db4;
+                    --tarjeta: #17141f;
+                    --borde: #2a2639;
+                    --primario: #9a6ff0;
+                }
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                min-height: 100dvh;
+                display: grid;
+                place-items: center;
+                padding: 24px;
+                background: var(--fondo);
+                color: var(--texto);
+                font:
+                    15px/1.55 system-ui,
+                    -apple-system,
+                    'Segoe UI',
+                    sans-serif;
+            }
+            main {
+                width: 100%;
+                max-width: 26rem;
+                background: var(--tarjeta);
+                border: 1px solid var(--borde);
+                border-radius: 18px;
+                padding: 28px;
+                box-shadow: 0 10px 30px rgb(0 0 0 / 0.06);
+            }
+            .marca {
+                font-weight: 800;
+                letter-spacing: 0.24em;
+                font-size: 13px;
+            }
+            h1 {
+                font-size: 22px;
+                margin: 18px 0 8px;
+                letter-spacing: -0.01em;
+            }
+            p {
+                margin: 0 0 12px;
+                color: var(--tenue);
+            }
+            ul {
+                margin: 0 0 20px;
+                padding-left: 18px;
+                color: var(--tenue);
+            }
+            button {
+                width: 100%;
+                height: 42px;
+                border: 0;
+                border-radius: 10px;
+                background: var(--primario);
+                color: #fff;
+                font: inherit;
+                font-weight: 600;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <main role="main">
+            <div class="marca">DASTI</div>
+            <h1>No hay conexión a internet</h1>
+            <p>
+                Esta pantalla no necesita datos de tu cuenta. En cuanto vuelvas
+                a estar en línea podrás continuar.
+            </p>
+            <ul>
+                <li>
+                    No se guardó ningún cambio mientras estabas sin conexión.
+                </li>
+                <li>Las visitas y canjes de Fidelidad requieren conexión.</li>
+                <li>
+                    Tus QR y tarjetas NFC siguen funcionando para tus clientes.
+                </li>
+            </ul>
+            <button type="button" onclick="location.reload()">
+                Reintentar
+            </button>
+        </main>
+    </body>
+</html>

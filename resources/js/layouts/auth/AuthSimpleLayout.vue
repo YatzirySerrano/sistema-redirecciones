@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { BarChart3, Link2, ShieldCheck } from '@lucide/vue';
+import { BarChart3, Link2, Nfc, QrCode, ShieldCheck } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
+import IndicadorConexion from '@/components/comun/IndicadorConexion.vue';
 import { Toaster } from '@/components/ui/sonner';
 
 /**
- * Pantallas de acceso (login, recuperación, 2FA, invitación): una sola
- * tarjeta centrada, con la propuesta de valor a la izquierda en pantallas
- * grandes y solo el formulario en móvil. Usa tokens de color para respetar
- * la personalización visual.
+ * Pantallas de acceso (login, recuperación, 2FA, invitación) a altura
+ * completa:
+ *
+ * - Escritorio: panel de marca a la izquierda (qué es la plataforma y una
+ *   representación del flujo enlace → destino) y el formulario centrado en
+ *   su columna, con anchura cómoda de lectura.
+ * - Móvil y tableta vertical: franja de marca compacta y el formulario.
+ *
+ * Solo usa tokens de color, para respetar la personalización visual. La
+ * identidad es tipográfica: no existe un logotipo oficial de DASTI.
  */
 defineProps<{
     title?: string;
@@ -17,13 +24,13 @@ defineProps<{
 const beneficios = [
     {
         icono: Link2,
-        titulo: 'Enlace permanente',
-        texto: 'Cambia el destino sin reimprimir el QR ni reprogramar la tarjeta.',
+        titulo: 'Un enlace que no cambia',
+        texto: 'Actualiza el destino sin reimprimir el QR ni reprogramar la tarjeta.',
     },
     {
         icono: BarChart3,
-        titulo: 'Estadísticas claras',
-        texto: 'Consulta cuántas veces se usan tus productos.',
+        titulo: 'Uso real de tus productos',
+        texto: 'Accesos por día, dispositivo y producto.',
     },
     {
         icono: ShieldCheck,
@@ -35,42 +42,90 @@ const beneficios = [
 
 <template>
     <div
-        class="relative flex min-h-svh items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 sm:py-12"
+        class="grid min-h-dvh grid-rows-1 bg-background lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
     >
-        <div
-            class="pointer-events-none absolute -top-40 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
-            aria-hidden="true"
-        />
-
-        <main
-            class="relative grid w-full max-w-[25rem] overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xl shadow-primary/5 lg:max-w-[58rem] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)]"
+        <!-- Marca (escritorio) -->
+        <aside
+            class="relative hidden overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col"
         >
-            <aside
-                class="relative hidden flex-col justify-between gap-10 overflow-hidden bg-sidebar p-9 text-sidebar-foreground lg:flex"
-            >
-                <div
-                    class="pointer-events-none absolute -right-24 -bottom-24 size-72 rounded-full bg-sidebar-primary/25 blur-3xl"
-                    aria-hidden="true"
-                />
-                <div class="relative flex">
-                    <AppLogo />
-                </div>
+            <div
+                class="pointer-events-none absolute -top-32 -left-24 size-[28rem] rounded-full bg-sidebar-primary/20 blur-3xl"
+                aria-hidden="true"
+            />
+            <div
+                class="pointer-events-none absolute -right-40 bottom-0 size-[30rem] rounded-full bg-sidebar-primary/15 blur-3xl"
+                aria-hidden="true"
+            />
+            <div
+                class="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:44px_44px] opacity-[0.07]"
+                aria-hidden="true"
+            />
 
-                <div class="relative space-y-6">
-                    <h2
-                        class="text-[1.65rem] leading-tight font-semibold tracking-tight text-sidebar-accent-foreground"
+            <div
+                class="relative flex flex-1 flex-col justify-between gap-12 px-10 py-10 xl:px-16 xl:py-14"
+            >
+                <div class="flex"><AppLogo /></div>
+
+                <div class="max-w-lg space-y-9">
+                    <div class="space-y-4">
+                        <p
+                            class="text-xs font-semibold tracking-[0.18em] text-sidebar-primary uppercase"
+                        >
+                            Plataforma de enlaces dinámicos
+                        </p>
+                        <h2
+                            class="text-3xl leading-[1.15] font-semibold tracking-tight text-balance text-sidebar-accent-foreground xl:text-[2.6rem]"
+                        >
+                            Tus QR y tarjetas NFC, siempre apuntando al lugar
+                            correcto.
+                        </h2>
+                    </div>
+
+                    <!-- Representación del flujo: medio físico → enlace → destino -->
+                    <div
+                        class="flex items-center gap-3 rounded-2xl border border-sidebar-border bg-sidebar-accent/60 p-4 backdrop-blur"
+                        aria-hidden="true"
                     >
-                        Tus QR y tarjetas NFC, siempre apuntando al lugar
-                        correcto.
-                    </h2>
-                    <ul class="space-y-4">
+                        <div class="flex -space-x-2">
+                            <span
+                                class="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground ring-4 ring-sidebar"
+                            >
+                                <Nfc class="size-5" />
+                            </span>
+                            <span
+                                class="flex size-10 items-center justify-center rounded-xl bg-sidebar-accent-foreground text-sidebar ring-4 ring-sidebar"
+                            >
+                                <QrCode class="size-5" />
+                            </span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p
+                                class="truncate font-mono text-xs text-sidebar-accent-foreground"
+                            >
+                                redireccion.dasti.cloud/r/abc123
+                            </p>
+                            <div
+                                class="mt-1.5 h-1 overflow-hidden rounded-full bg-sidebar-border"
+                            >
+                                <div
+                                    class="h-full w-2/3 rounded-full bg-sidebar-primary motion-safe:animate-pulse"
+                                />
+                            </div>
+                        </div>
+                        <span
+                            class="rounded-lg bg-sidebar px-2.5 py-1.5 text-xs font-medium text-sidebar-accent-foreground"
+                            >instagram.com</span
+                        >
+                    </div>
+
+                    <ul class="grid gap-5">
                         <li
                             v-for="b in beneficios"
                             :key="b.titulo"
-                            class="flex gap-3"
+                            class="flex gap-3.5"
                         >
                             <span
-                                class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-primary"
+                                class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-primary ring-1 ring-sidebar-border"
                                 aria-hidden="true"
                             >
                                 <component :is="b.icono" class="size-4" />
@@ -86,30 +141,62 @@ const beneficios = [
                     </ul>
                 </div>
 
-                <p class="relative text-xs text-sidebar-foreground/70">
+                <p class="text-xs text-sidebar-foreground/70">
                     Acceso exclusivo para clientes y personal de DASTI.
                 </p>
-            </aside>
+            </div>
+        </aside>
 
-            <section class="flex flex-col justify-center p-6 sm:p-9 lg:p-11">
-                <div class="mb-7 flex lg:hidden">
-                    <AppLogo invertido />
-                </div>
-                <header class="mb-7 space-y-1.5">
-                    <h1 class="text-2xl font-semibold tracking-tight">
-                        {{ title }}
-                    </h1>
+        <!-- Formulario -->
+        <div class="flex min-w-0 flex-col">
+            <div
+                class="relative overflow-hidden bg-sidebar px-5 pt-7 pb-16 text-sidebar-foreground sm:px-8 lg:hidden"
+            >
+                <div
+                    class="pointer-events-none absolute -top-20 -right-16 size-64 rounded-full bg-sidebar-primary/25 blur-3xl"
+                    aria-hidden="true"
+                />
+                <div class="relative">
+                    <div class="flex"><AppLogo /></div>
                     <p
-                        v-if="description"
-                        class="text-sm leading-relaxed text-muted-foreground"
+                        class="mt-5 max-w-sm text-lg leading-snug font-semibold text-sidebar-accent-foreground"
                     >
-                        {{ description }}
+                        Tus QR y tarjetas NFC, siempre apuntando al lugar
+                        correcto.
                     </p>
-                </header>
-                <slot />
-            </section>
-        </main>
+                </div>
+            </div>
 
-        <Toaster rich-colors position="top-center" />
+            <main
+                class="relative z-10 -mt-10 flex flex-1 items-start justify-center px-4 pb-10 sm:px-8 lg:mt-0 lg:items-center lg:px-12 lg:py-12"
+            >
+                <div
+                    class="w-full max-w-[26rem] rounded-2xl border bg-card p-6 text-card-foreground shadow-lg shadow-black/5 sm:p-8 lg:max-w-[28rem] lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+                >
+                    <header class="mb-7 space-y-2">
+                        <h1
+                            class="text-2xl font-semibold tracking-tight lg:text-[1.75rem]"
+                        >
+                            {{ title }}
+                        </h1>
+                        <p
+                            v-if="description"
+                            class="text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ description }}
+                        </p>
+                    </header>
+                    <slot />
+                </div>
+            </main>
+
+            <footer
+                class="px-6 pb-6 text-center text-xs text-muted-foreground lg:px-12 lg:text-left"
+            >
+                © DASTI · Plataforma de redirecciones QR y NFC
+            </footer>
+        </div>
     </div>
+    <IndicadorConexion class="fixed inset-x-0 top-0" />
+    <Toaster rich-colors position="top-center" />
 </template>
