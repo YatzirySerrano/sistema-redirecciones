@@ -46,7 +46,11 @@ php artisan serve
 npm run dev
 ```
 
-Los correos (invitaciones y recuperación de contraseña) se escriben en `storage/logs/laravel.log` mientras `MAIL_MAILER=log`. El enlace de invitación es una URL firmada `…/invitacion/{id}?expires=…&huella=…&signature=…`.
+Los correos (invitaciones y recuperación de contraseña) se envían **en cola**: `composer dev` ya arranca un worker; si usas `php artisan serve` por separado, ejecuta también `php artisan queue:work`. Con `MAIL_MAILER=log` se escriben en `storage/logs/laravel.log` (no salen del equipo). El enlace de invitación es una URL firmada `…/invitacion/{id}?expires=…&huella=…&signature=…`. Para probar con un SMTP real, configura las variables `MAIL_*` descritas en `docs/despliegue.md` y usa solo correos propios: nunca envíes pruebas a clientes.
+
+El idioma de la interfaz está fijado a español en `config/app.php` (no depende de `APP_LOCALE`).
+
+El servidor PHP de desarrollo usa los límites del `php.ini` (`upload_max_filesize`, `post_max_size`). El logotipo admite hasta 1 MB, por debajo del valor por defecto de 2 MB; en producción conviene `upload_max_filesize=2M` y `post_max_size=8M` como mínimo (y `client_max_body_size 8m` en Nginx).
 
 En desarrollo, el plugin `@inertiajs/vite` renderiza también en el servidor (SSR). En móvil, la consola muestra avisos de _hydration mismatch_ del sidebar del starter kit (el servidor no conoce el ancho de pantalla) y de los tiempos relativos («hace 1 minuto»). Son solo de desarrollo: en producción no se ejecuta el SSR.
 

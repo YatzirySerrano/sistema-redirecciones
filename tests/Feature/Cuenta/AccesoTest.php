@@ -4,7 +4,7 @@ namespace Tests\Feature\Cuenta;
 
 use App\Models\Negocio;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\RestablecerContrasena;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -64,7 +64,7 @@ class AccesoTest extends TestCase
 
         $this->post(route('password.email'), ['email' => $usuario->email]);
 
-        Notification::assertSentTo($usuario, ResetPassword::class, function (ResetPassword $notificacion) use ($usuario) {
+        Notification::assertSentTo($usuario, RestablecerContrasena::class, function (RestablecerContrasena $notificacion) use ($usuario) {
             $this->post(route('password.update'), [
                 'token' => $notificacion->token,
                 'email' => $usuario->email,

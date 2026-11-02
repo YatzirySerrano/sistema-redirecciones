@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { CircleAlert, Save, Server, UserRound } from '@lucide/vue';
+import { CircleAlert, Palette, Save, Server, UserRound } from '@lucide/vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import Panel from '@/components/comun/Panel.vue';
@@ -14,6 +14,8 @@ import {
     edit as configuracionEdit,
     update as configuracionUpdate,
 } from '@/routes/admin/configuracion';
+import { usePermisos } from '@/composables/usePermisos';
+import { edit as apariencia } from '@/routes/admin/personalizacion';
 import { edit as perfilEdit } from '@/routes/profile';
 
 defineOptions({
@@ -21,6 +23,8 @@ defineOptions({
         breadcrumbs: [{ title: 'Configuración', href: configuracionEdit() }],
     },
 });
+
+const { puede } = usePermisos();
 
 const props = defineProps<{
     ajustes: {
@@ -88,6 +92,15 @@ const INTERRUPTORES = [
         descripcion="Reglas que se aplican a todos los negocios y enlaces."
     >
         <template #acciones>
+            <Button
+                v-if="puede('personalizacion.ver')"
+                variant="outline"
+                as-child
+            >
+                <Link :href="apariencia()"
+                    ><Palette /> Apariencia y personalización</Link
+                >
+            </Button>
             <Button variant="outline" as-child>
                 <Link :href="perfilEdit()"><UserRound /> Mi cuenta</Link>
             </Button>
@@ -171,7 +184,7 @@ const INTERRUPTORES = [
                 </div>
             </Panel>
 
-            <div class="flex justify-end">
+            <div v-if="puede('configuracion.editar')" class="flex justify-end">
                 <Button
                     type="submit"
                     :disabled="form.processing || !form.isDirty"
@@ -181,6 +194,10 @@ const INTERRUPTORES = [
                     Guardar configuración
                 </Button>
             </div>
+            <p v-else class="text-right text-xs text-muted-foreground">
+                Puedes consultar la configuración, pero no tienes permiso para
+                modificarla.
+            </p>
         </form>
 
         <Panel

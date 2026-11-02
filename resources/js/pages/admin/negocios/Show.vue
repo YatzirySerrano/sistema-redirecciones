@@ -4,7 +4,6 @@ import {
     Activity,
     Ban,
     CircleCheck,
-    ImagePlus,
     Mail,
     Nfc,
     Package,
@@ -12,12 +11,11 @@ import {
     Phone,
     Plus,
     QrCode,
-    Trash2,
     UserRound,
     UserRoundPlus,
     UsersRound,
 } from '@lucide/vue';
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, ref } from 'vue';
 import BotonCopiar from '@/components/comun/BotonCopiar.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
@@ -29,10 +27,10 @@ import Panel from '@/components/comun/Panel.vue';
 import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import InputError from '@/components/InputError.vue';
+import LogoNegocio from '@/components/negocios/LogoNegocio.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import {
     coberturaVisitantes,
@@ -44,11 +42,8 @@ import {
     relativo,
     visitantes,
 } from '@/lib/formato';
+import { usePermisos } from '@/composables/usePermisos';
 import { edit, estado, index } from '@/routes/admin/negocios';
-import {
-    destroy as eliminarLogo,
-    store as subirLogo,
-} from '@/routes/admin/negocios/logo';
 import {
     create as crearProducto,
     show as verProducto,
@@ -77,6 +72,8 @@ defineOptions({
         ],
     },
 });
+
+const { puede } = usePermisos();
 
 const props = defineProps<{
     negocio: Recurso<Negocio>;
@@ -122,49 +119,6 @@ const cambiarEstado = () => {
         },
     );
 };
-
-// Logotipo
-const archivoLogo = useTemplateRef<HTMLInputElement>('archivoLogo');
-const subiendoLogo = ref(false);
-const errorLogo = ref<string | undefined>();
-const dialogoLogo = ref(false);
-const eliminandoLogo = ref(false);
-
-const alElegirLogo = (evento: Event) => {
-    const archivo = (evento.target as HTMLInputElement).files?.[0];
-
-    if (!archivo) {
-        return;
-    }
-
-    errorLogo.value = undefined;
-    router.post(
-        subirLogo.url(n.value.id),
-        { logo: archivo },
-        {
-            forceFormData: true,
-            preserveScroll: true,
-            onStart: () => (subiendoLogo.value = true),
-            onFinish: () => {
-                subiendoLogo.value = false;
-
-                if (archivoLogo.value) {
-                    archivoLogo.value.value = '';
-                }
-            },
-            onError: (errores) => (errorLogo.value = errores.logo),
-        },
-    );
-};
-
-const quitarLogo = () => {
-    router.delete(eliminarLogo.url(n.value.id), {
-        preserveScroll: true,
-        onStart: () => (eliminandoLogo.value = true),
-        onFinish: () => (eliminandoLogo.value = false),
-        onSuccess: () => (dialogoLogo.value = false),
-    });
-};
 </script>
 
 <template>
@@ -186,10 +140,17 @@ const quitarLogo = () => {
             </div>
         </template>
         <template #acciones>
-            <Button variant="outline" as-child>
+            <Button v-if="puede('negocios.editar')" variant="outline" as-child>
                 <Link :href="edit(n.id)"><Pencil /> Editar</Link>
             </Button>
             <Button
+                v-if="
+                    puede(
+                        suspendido
+                            ? 'negocios.reactivar'
+                            : 'negocios.suspender',
+                    )
+                "
                 :variant="suspendido ? 'default' : 'outline'"
                 :class="
                     !suspendido && 'text-destructive hover:text-destructive'
@@ -336,61 +297,10 @@ const quitarLogo = () => {
                 </div>
             </Panel>
 
-            <Panel
-                titulo="Logotipo del negocio"
-                descripcion="Opcional, para colocarlo al centro de sus QR."
-            >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-[repeating-conic-gradient(var(--muted)_0%_25%,transparent_0%_50%)] bg-[length:12px_12px]"
-                    >
-                        <img
-                            v-if="n.logo_url"
-                            :src="n.logo_url"
-                            :alt="`Logotipo de ${n.nombre_comercial}`"
-                            class="size-full object-contain"
-                        />
-                        <ImagePlus
-                            v-else
-                            class="size-6 text-muted-foreground"
-                            aria-hidden="true"
-                        />
-                    </div>
-                    <div class="space-y-2">
-                        <input
-                            ref="archivoLogo"
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            class="sr-only"
-                            :id="`logo-${n.id}`"
-                            @change="alElegirLogo"
-                        />
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            :disabled="subiendoLogo"
-                            @click="archivoLogo?.click()"
-                        >
-                            <Spinner v-if="subiendoLogo" />
-                            <ImagePlus v-else />
-                            {{ n.tiene_logo ? 'Reemplazar' : 'Subir logotipo' }}
-                        </Button>
-                        <Button
-                            v-if="n.tiene_logo"
-                            size="sm"
-                            variant="ghost"
-                            class="text-destructive hover:text-destructive"
-                            @click="dialogoLogo = true"
-                        >
-                            <Trash2 /> Quitar
-                        </Button>
-                        <p class="text-xs text-muted-foreground">
-                            PNG, JPG o WEBP, máx. 1 MB.
-                        </p>
-                    </div>
-                </div>
-                <InputError class="mt-2" :message="errorLogo" />
-            </Panel>
+            <LogoNegocio
+                :negocio="n"
+                :puede-editar="puede('negocios.editar')"
+            />
         </div>
     </div>
 
@@ -400,7 +310,7 @@ const quitarLogo = () => {
         sin-relleno
     >
         <template #acciones>
-            <Button size="sm" as-child>
+            <Button v-if="puede('productos.crear')" size="sm" as-child>
                 <Link :href="crearProducto({ query: { negocio_id: n.id } })"
                     ><Plus /> Registrar productos</Link
                 >
@@ -505,7 +415,7 @@ const quitarLogo = () => {
             titulo="Sin productos asignados"
             descripcion="Registra las tarjetas NFC o códigos QR que compró este negocio."
         >
-            <Button as-child
+            <Button v-if="puede('productos.crear')" as-child
                 ><Link :href="crearProducto({ query: { negocio_id: n.id } })"
                     ><Plus /> Registrar productos</Link
                 ></Button
@@ -519,7 +429,12 @@ const quitarLogo = () => {
             descripcion="Personas que administran los enlaces de este negocio."
         >
             <template #acciones>
-                <Button size="sm" variant="outline" as-child>
+                <Button
+                    v-if="puede('usuarios.crear')"
+                    size="sm"
+                    variant="outline"
+                    as-child
+                >
                     <Link :href="crearUsuario({ query: { negocio_id: n.id } })"
                         ><UserRoundPlus /> Agregar acceso</Link
                     >
@@ -570,7 +485,7 @@ const quitarLogo = () => {
                 titulo="Sin accesos"
                 descripcion="El negocio todavía no puede entrar al panel."
             >
-                <Button size="sm" as-child
+                <Button v-if="puede('usuarios.crear')" size="sm" as-child
                     ><Link :href="crearUsuario({ query: { negocio_id: n.id } })"
                         ><UserRoundPlus /> Crear acceso</Link
                     ></Button
@@ -624,14 +539,4 @@ const quitarLogo = () => {
             <InputError :message="errorEstado" />
         </div>
     </DialogoConfirmacion>
-
-    <DialogoConfirmacion
-        v-model:open="dialogoLogo"
-        titulo="¿Quitar el logotipo?"
-        descripcion="Los QR que lo incluían se generarán sin logotipo a partir de ahora."
-        confirmar="Quitar logotipo"
-        destructivo
-        :procesando="eliminandoLogo"
-        @confirmar="quitarLogo"
-    />
 </template>

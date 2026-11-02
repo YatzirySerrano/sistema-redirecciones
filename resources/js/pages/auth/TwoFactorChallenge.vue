@@ -82,14 +82,14 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     </div>
                     <InputError :message="errors.code" />
                 </div>
-                <Button type="submit" class="w-full" :disabled="processing"
+                <Button type="submit" class="h-11 w-full" :disabled="processing"
                     >Continuar</Button
                 >
                 <div class="text-center text-sm text-muted-foreground">
                     <span>o puedes </span>
                     <button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="font-medium text-enlace underline-offset-4 hover:underline"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}
@@ -113,7 +113,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     required
                 />
                 <InputError :message="errors.recovery_code" />
-                <Button type="submit" class="w-full" :disabled="processing"
+                <Button type="submit" class="h-11 w-full" :disabled="processing"
                     >Continuar</Button
                 >
 
@@ -121,7 +121,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     <span>o puedes </span>
                     <button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="font-medium text-enlace underline-offset-4 hover:underline"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import CampoCorreo from '@/components/formularios/CampoCorreo.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ defineProps<{ puedeCambiarEmail: boolean }>();
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const correo = ref(user.value.email);
 </script>
 
 <template>
@@ -52,15 +54,22 @@ const user = computed(() => page.props.auth.user);
 
             <div class="grid gap-2">
                 <Label for="email">Correo electrónico</Label>
+                <CampoCorreo
+                    v-if="puedeCambiarEmail"
+                    id="email"
+                    v-model="correo"
+                    name="email"
+                    autocomplete="username"
+                    verificar-duplicado
+                    :ignorar-id="user.id"
+                />
                 <Input
+                    v-else
                     id="email"
                     type="email"
-                    :name="puedeCambiarEmail ? 'email' : undefined"
                     :default-value="user.email"
-                    :readonly="!puedeCambiarEmail"
-                    :class="
-                        !puedeCambiarEmail && 'bg-muted text-muted-foreground'
-                    "
+                    readonly
+                    class="bg-muted text-muted-foreground"
                     autocomplete="username"
                     aria-describedby="ayuda-email"
                 />

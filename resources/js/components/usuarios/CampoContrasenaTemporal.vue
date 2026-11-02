@@ -2,6 +2,7 @@
 import { Eye, EyeOff, ShieldAlert, Wand2 } from '@lucide/vue';
 import { ref } from 'vue';
 import BotonCopiar from '@/components/comun/BotonCopiar.vue';
+import RequisitosContrasena from '@/components/formularios/RequisitosContrasena.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -104,9 +105,7 @@ const generar = () => {
                 />
             </div>
         </div>
-        <p v-if="reglas" class="text-xs text-muted-foreground">
-            Requisitos: {{ reglas }}
-        </p>
+        <RequisitosContrasena :valor="modelo" :reglas="reglas" />
         <p class="flex items-start gap-1.5 text-xs text-muted-foreground">
             <ShieldAlert class="mt-0.5 size-3.5 shrink-0 text-warning" />
             Compártela por un canal seguro. No se volverá a mostrar y el usuario

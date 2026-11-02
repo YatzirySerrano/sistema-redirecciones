@@ -39,6 +39,7 @@ class GuardarUsuarioRequest extends SolicitudAdministrativa
             ...$reglas,
             'rol' => ['required', Rule::enum(RolUsuario::class)],
             'negocio_id' => ['exclude_unless:rol,cliente', 'required', 'integer', Rule::exists(Negocio::class, 'id')->where('estado', EstadoCuenta::Activo->value)],
+            'rol_id' => ['nullable', 'integer', Rule::exists('roles', 'id')->where('ambito', $this->input('rol') === RolUsuario::Cliente->value ? 'negocio' : 'plataforma')],
             'metodo' => ['required', Rule::in(['invitacion', 'temporal'])],
             'password' => ['exclude_unless:metodo,temporal', 'required', 'string', Password::default()],
         ];
@@ -53,6 +54,8 @@ class GuardarUsuarioRequest extends SolicitudAdministrativa
             'name' => 'nombre',
             'email' => 'correo',
             'negocio_id' => 'negocio',
+            'rol' => 'tipo de cuenta',
+            'rol_id' => 'rol',
             'metodo' => 'método de acceso',
             'password' => 'contraseña temporal',
         ];
@@ -66,6 +69,7 @@ class GuardarUsuarioRequest extends SolicitudAdministrativa
         return [
             'email.unique' => 'Ya existe un usuario con ese correo.',
             'negocio_id.exists' => 'Selecciona un negocio activo.',
+            'rol_id.exists' => 'Selecciona un rol válido para el tipo de cuenta.',
         ];
     }
 }

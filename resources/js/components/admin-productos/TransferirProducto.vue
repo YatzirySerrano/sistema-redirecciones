@@ -3,7 +3,8 @@ import { useForm } from '@inertiajs/vue3';
 import { ArrowRightLeft, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
+import AccionFila from '@/components/comun/AccionFila.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -16,16 +17,18 @@ import {
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
 import { transferir } from '@/routes/admin/productos';
-import type { Opcion, Producto } from '@/types';
+import type { Producto } from '@/types';
 
-const props = defineProps<{ producto: Producto; negocios: Opcion[] }>();
+const props = withDefaults(
+    defineProps<{ producto: Producto; compacto?: boolean }>(),
+    { compacto: false },
+);
 
 const abierto = ref(false);
-const opciones = computed(() =>
-    props.negocios.filter(
-        (n) => n.value !== String(props.producto.negocio?.id),
-    ),
+const excluir = computed(() =>
+    props.producto.negocio ? [String(props.producto.negocio.id)] : [],
 );
 
 const form = useForm({ negocio_id: '', motivo: '', conservar_destino: false });
@@ -48,7 +51,15 @@ const enviar = () => {
 <template>
     <Dialog v-model:open="abierto">
         <DialogTrigger as-child>
-            <Button variant="outline"><ArrowRightLeft /> Transferir</Button>
+            <AccionFila
+                v-if="compacto"
+                etiqueta="Transferir"
+                :icono="ArrowRightLeft"
+                compacta
+            />
+            <Button v-else variant="outline"
+                ><ArrowRightLeft /> Transferir</Button
+            >
         </DialogTrigger>
         <DialogContent class="sm:max-w-lg">
             <form class="space-y-5" novalidate @submit.prevent="enviar">
@@ -82,11 +93,15 @@ const enviar = () => {
                     para="transferir-negocio"
                     :error="form.errors.negocio_id"
                 >
-                    <SelectNativo
+                    <SelectorBuscable
                         id="transferir-negocio"
                         v-model="form.negocio_id"
-                        :opciones="opciones"
-                        vacio="Selecciona un negocio"
+                        :url="opcionesNegocios.url()"
+                        :excluir="excluir"
+                        etiqueta="Negocio destino"
+                        placeholder="Busca y selecciona un negocio"
+                        placeholder-busqueda="Nombre, responsable o correo…"
+                        sin-resultados="Ningún negocio coincide con la búsqueda."
                         :invalido="!!form.errors.negocio_id"
                     />
                 </CampoFormulario>

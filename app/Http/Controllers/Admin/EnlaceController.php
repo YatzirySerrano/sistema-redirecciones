@@ -65,8 +65,10 @@ class EnlaceController extends Controller
                 'situacion' => $filtros['situacion'] ?? '',
             ],
             'situaciones' => array_map(fn ($v, $l) => ['value' => $v, 'label' => $l], array_keys(self::SITUACIONES), self::SITUACIONES),
-            'negocios' => Negocio::query()->orderBy('nombre_comercial')->get(['id', 'nombre_comercial'])
-                ->map(fn (Negocio $n) => ['value' => (string) $n->id, 'label' => $n->nombre_comercial])->values()->all(),
+            'negocio_filtro' => isset($filtros['negocio_id'])
+                ? Negocio::query()->whereKey((int) $filtros['negocio_id'])->get(['id', 'nombre_comercial'])
+                    ->map(fn (Negocio $n) => ['value' => (string) $n->id, 'label' => $n->nombre_comercial])->first()
+                : null,
             'cambios_recientes' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['producto', 'usuario'])->latest('created_at')->latest('id')->limit(10)->get()
             ),

@@ -30,6 +30,11 @@
             }
         </style>
 
+        {{-- Colores personalizados (Configuración › Apariencia). Solo contiene
+             variables CSS con valores #rrggbb validados; se actualiza en vivo
+             desde resources/js/lib/tema.ts al cambiar la prop "tema". --}}
+        <style id="tema-personalizado">{!! app(\App\Services\Apariencia\TemaVisual::class)->css() !!}</style>
+
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">

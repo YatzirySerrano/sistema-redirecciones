@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Save } from '@lucide/vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
+import CampoCorreo from '@/components/formularios/CampoCorreo.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
@@ -129,13 +130,12 @@ const guardar = () => {
                         :error="form.errors.acceso_email"
                         ayuda="Será su usuario para iniciar sesión."
                     >
-                        <Input
+                        <CampoCorreo
                             id="acceso_email"
                             v-model="form.acceso_email"
-                            type="email"
                             autocomplete="off"
-                            maxlength="255"
-                            @focus="sugerir"
+                            verificar-duplicado
+                            @focusin="sugerir"
                         />
                     </CampoFormulario>
                 </div>

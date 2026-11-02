@@ -2,12 +2,16 @@
 import { router } from '@inertiajs/vue3';
 import { Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
+import AccionFila from '@/components/comun/AccionFila.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import { Button } from '@/components/ui/button';
 import { destroy } from '@/routes/admin/productos';
 import type { Producto } from '@/types';
 
-const props = defineProps<{ producto: Producto }>();
+const props = withDefaults(
+    defineProps<{ producto: Producto; compacto?: boolean }>(),
+    { compacto: false },
+);
 
 const abierto = ref(false);
 const procesando = ref(false);
@@ -32,7 +36,15 @@ const eliminar = () => {
         @confirmar="eliminar"
     >
         <template #disparador>
+            <AccionFila
+                v-if="compacto"
+                etiqueta="Eliminar"
+                :icono="Trash2"
+                destructiva
+                compacta
+            />
             <Button
+                v-else
                 variant="ghost"
                 class="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 ><Trash2 /> Eliminar</Button

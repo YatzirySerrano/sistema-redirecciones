@@ -3,6 +3,7 @@
 use App\Http\Controllers\Cuenta\ContrasenaInicialController;
 use App\Http\Controllers\Cuenta\InvitacionController;
 use App\Http\Controllers\InicioController;
+use App\Http\Controllers\PreferenciaController;
 use App\Http\Controllers\QrController;
 use App\Http\Controllers\ValidacionDestinoController;
 use App\Http\Middleware\RequerirContrasenaDefinitiva;
@@ -51,9 +52,15 @@ Route::middleware(['auth', VerificarCuentaActiva::class])->group(function () {
         Route::put('productos/{producto}/qr', [QrController::class, 'update'])
             ->middleware('throttle:qr')
             ->name('productos.qr.update');
+
+        // Preferencia de vista (tabla o tarjetas) de cada listado.
+        Route::put('preferencias/vista', [PreferenciaController::class, 'vista'])
+            ->middleware('throttle:60,1')
+            ->name('preferencias.vista');
     });
 });
 
 require __DIR__.'/admin.php';
 require __DIR__.'/cliente.php';
 require __DIR__.'/settings.php';
+require __DIR__.'/validaciones.php';

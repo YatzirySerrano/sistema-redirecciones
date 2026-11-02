@@ -41,6 +41,19 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
     clientes_ven_estadisticas: 'Clientes ven estadísticas',
     dominios_bloqueados: 'Dominios bloqueados',
     dias_retencion_eventos: 'Días de retención',
+    ambito: 'Tipo de cuenta',
+    descripcion: 'Descripción',
+    permisos: 'Permisos',
+    permisos_agregados: 'Permisos agregados',
+    permisos_retirados: 'Permisos retirados',
+    rol_permisos: 'Rol',
+    principal: 'Color principal',
+    secundario: 'Color secundario',
+    acento: 'Color de acento',
+    botones: 'Color de botones',
+    enlaces: 'Color de enlaces',
+    navegacion: 'Navegación lateral',
+    fondo: 'Color de fondo',
 };
 
 const valor = (v: unknown): string => {

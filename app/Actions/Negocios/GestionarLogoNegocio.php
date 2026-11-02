@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Guarda o elimina el logotipo del negocio (usado opcionalmente al centro de
@@ -22,10 +23,13 @@ class GestionarLogoNegocio
 
     public function guardar(Negocio $negocio, UploadedFile $archivo): Negocio
     {
-        $imagen = @imagecreatefromstring((string) file_get_contents($archivo->getRealPath()));
+        $contenido = $archivo->getRealPath() !== false ? @file_get_contents($archivo->getRealPath()) : false;
+        $imagen = is_string($contenido) && $contenido !== '' ? @imagecreatefromstring($contenido) : false;
 
         if ($imagen === false) {
-            throw ValidationException::withMessages(['logo' => 'No fue posible leer la imagen.']);
+            throw ValidationException::withMessages([
+                'logo' => 'No pudimos leer la imagen: el archivo parece dañado. Prueba con otro PNG, JPG o WEBP.',
+            ]);
         }
 
         $imagen = $this->redimensionar($imagen);
@@ -36,7 +40,20 @@ class GestionarLogoNegocio
         imagedestroy($imagen);
 
         $ruta = 'logos/negocio-'.$negocio->id.'-'.Str::random(16).'.png';
-        Storage::disk('local')->put($ruta, $png);
+
+        // Si el disco falla, el negocio conserva su logotipo anterior.
+        try {
+            $guardado = $png !== '' && Storage::disk('local')->put($ruta, $png);
+        } catch (Throwable $e) {
+            report($e);
+            $guardado = false;
+        }
+
+        if (! $guardado) {
+            throw ValidationException::withMessages([
+                'logo' => 'No pudimos guardar la imagen en el servidor. Se conservó el logotipo anterior; inténtalo nuevamente.',
+            ]);
+        }
 
         $anterior = $negocio->logo_path;
         $negocio->logo_path = $ruta;

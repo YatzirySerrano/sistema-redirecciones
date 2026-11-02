@@ -26,11 +26,11 @@ defineOptions({
     >
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label for="password">Contraseña</Label>
                 <PasswordInput
                     id="password"
                     name="password"
-                    class="mt-1 block w-full"
+                    class="block w-full"
                     required
                     autocomplete="current-password"
                     autofocus
@@ -41,7 +41,7 @@ defineOptions({
 
             <div class="flex items-center">
                 <Button
-                    class="w-full"
+                    class="h-11 w-full"
                     :disabled="processing"
                     data-test="confirm-password-button"
                 >

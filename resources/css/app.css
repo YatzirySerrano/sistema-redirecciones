@@ -60,6 +60,10 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
+    --color-boton: var(--boton);
+    --color-boton-foreground: var(--boton-foreground);
+    --color-enlace: var(--enlace);
+
     --color-success: var(--success);
     --color-success-soft: var(--success-soft);
     --color-warning: var(--warning);
@@ -98,6 +102,11 @@
 /*
   Identidad visual: barra lateral oscura, contenido claro, acento morado y
   tarjetas blancas. El tema oscuro mantiene la misma jerarquía.
+
+  Esta es la apariencia ORIGINAL. Los colores personalizados desde
+  Configuración › Apariencia (App\Services\Apariencia\TemaVisual) se
+  inyectan como variables CSS en <style id="tema-personalizado"> y
+  sustituyen a estas sin recompilar.
 */
 :root {
     --background: hsl(240 20% 98%);
@@ -108,6 +117,9 @@
     --popover-foreground: hsl(250 24% 10%);
     --primary: hsl(262 72% 52%);
     --primary-foreground: hsl(0 0% 100%);
+    --boton: var(--primary);
+    --boton-foreground: var(--primary-foreground);
+    --enlace: var(--primary);
     --secondary: hsl(250 20% 95%);
     --secondary-foreground: hsl(250 24% 14%);
     --muted: hsl(250 18% 96%);
@@ -150,6 +162,9 @@
     --popover-foreground: hsl(250 15% 94%);
     --primary: hsl(262 85% 70%);
     --primary-foreground: hsl(252 30% 8%);
+    --boton: var(--primary);
+    --boton-foreground: var(--primary-foreground);
+    --enlace: var(--primary);
     --secondary: hsl(252 16% 15%);
     --secondary-foreground: hsl(250 15% 94%);
     --muted: hsl(252 16% 13%);

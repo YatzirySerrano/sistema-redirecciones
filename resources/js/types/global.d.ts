@@ -20,6 +20,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            preferencias: { vistas: Record<string, 'tabla' | 'tarjetas'> };
+            tema: import('@/lib/tema').TokensTema;
             [key: string]: unknown;
         };
     }

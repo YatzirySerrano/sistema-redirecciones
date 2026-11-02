@@ -33,7 +33,7 @@ const activo = (item: NavItem) =>
                     as-child
                     :is-active="activo(item)"
                     :tooltip="item.title"
-                    class="h-9 text-sidebar-foreground hover:bg-sidebar-accent hover:text-white data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground"
+                    class="h-9 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground"
                 >
                     <Link :href="item.href">
                         <component :is="item.icon" />

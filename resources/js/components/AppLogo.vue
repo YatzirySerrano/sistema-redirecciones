@@ -1,26 +1,28 @@
 <script setup lang="ts">
 /**
- * Tratamiento tipográfico provisional de la plataforma (no es el logotipo
- * oficial de DASTI, que no se ha proporcionado).
+ * Tratamiento tipográfico de la plataforma. No es el logotipo oficial de
+ * DASTI (no se ha proporcionado): solo texto, sin figuras ni iniciales
+ * encerradas. Usa tokens de color para respetar la personalización.
  */
 withDefaults(defineProps<{ invertido?: boolean }>(), { invertido: false });
 </script>
 
 <template>
-    <div
-        class="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-[13px] font-bold tracking-tight text-sidebar-primary-foreground"
-        aria-hidden="true"
-    >
-        D
-    </div>
-    <div class="ml-1 grid flex-1 text-left leading-tight">
+    <div class="grid min-w-0 flex-1 text-left leading-none">
         <span
-            class="truncate text-sm font-bold tracking-[0.18em]"
-            :class="invertido ? 'text-foreground' : 'text-white'"
-            >DASTI</span
+            class="flex items-baseline gap-1 truncate text-[15px] font-extrabold tracking-[0.24em]"
+            :class="
+                invertido ? 'text-foreground' : 'text-sidebar-accent-foreground'
+            "
         >
+            DASTI<span
+                class="size-1.5 shrink-0 rounded-full"
+                :class="invertido ? 'bg-primary' : 'bg-sidebar-primary'"
+                aria-hidden="true"
+            />
+        </span>
         <span
-            class="truncate text-[11px]"
+            class="mt-1 truncate text-[11px] font-medium tracking-wide group-data-[collapsible=icon]:hidden"
             :class="
                 invertido ? 'text-muted-foreground' : 'text-sidebar-foreground'
             "

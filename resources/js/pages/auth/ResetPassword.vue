@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import CoincidenciaContrasena from '@/components/formularios/CoincidenciaContrasena.vue';
+import RequisitosContrasena from '@/components/formularios/RequisitosContrasena.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,10 @@ const props = defineProps<{
 }>();
 
 const inputEmail = ref(props.email);
+
+// Valores para la retroalimentación en vivo (el envío lo hace <Form>).
+const nuevaContrasena = ref('');
+const confirmacionContrasena = ref('');
 </script>
 
 <template>
@@ -43,7 +49,7 @@ const inputEmail = ref(props.email);
                     name="email"
                     autocomplete="email"
                     v-model="inputEmail"
-                    class="mt-1 block w-full"
+                    class="block w-full"
                     readonly
                 />
                 <InputError :message="errors.email" class="mt-2" />
@@ -53,12 +59,17 @@ const inputEmail = ref(props.email);
                 <Label for="password">Nueva contraseña</Label>
                 <PasswordInput
                     id="password"
+                    v-model="nuevaContrasena"
                     name="password"
                     autocomplete="new-password"
-                    class="mt-1 block w-full"
+                    class="block w-full"
                     autofocus
                     placeholder="Nueva contraseña"
                     :passwordrules="passwordRules"
+                />
+                <RequisitosContrasena
+                    :valor="nuevaContrasena"
+                    :reglas="passwordRules"
                 />
                 <InputError :message="errors.password" />
             </div>
@@ -69,18 +80,23 @@ const inputEmail = ref(props.email);
                 >
                 <PasswordInput
                     id="password_confirmation"
+                    v-model="confirmacionContrasena"
                     name="password_confirmation"
                     autocomplete="new-password"
-                    class="mt-1 block w-full"
+                    class="block w-full"
                     placeholder="Repite la contraseña"
                     :passwordrules="passwordRules"
+                />
+                <CoincidenciaContrasena
+                    :contrasena="nuevaContrasena"
+                    :confirmacion="confirmacionContrasena"
                 />
                 <InputError :message="errors.password_confirmation" />
             </div>
 
             <Button
                 type="submit"
-                class="mt-4 w-full"
+                class="mt-2 h-11 w-full"
                 :disabled="processing"
                 data-test="reset-password-button"
             >

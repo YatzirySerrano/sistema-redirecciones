@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { ArrowRight, Info, LockKeyhole, Mail } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -13,9 +14,9 @@ import { request } from '@/routes/password';
 
 defineOptions({
     layout: {
-        title: 'Inicia sesión',
+        title: 'Bienvenido de nuevo',
         description:
-            'Administra los destinos de tus códigos QR y tarjetas NFC.',
+            'Inicia sesión para administrar los destinos de tus códigos QR y tarjetas NFC.',
     },
 });
 
@@ -30,21 +31,26 @@ defineProps<{
 
     <div
         v-if="status"
-        class="mb-6 rounded-lg border border-primary/20 bg-accent px-4 py-3 text-sm text-accent-foreground"
+        class="mb-6 flex gap-2.5 rounded-lg border border-primary/20 bg-accent px-3.5 py-3 text-sm text-accent-foreground"
         role="status"
     >
-        {{ status }}
+        <Info class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <p>{{ status }}</p>
     </div>
 
     <Form
         v-bind="store.form()"
         :reset-on-success="['password']"
         v-slot="{ errors, processing }"
-        class="flex flex-col gap-6"
+        class="grid gap-5"
     >
-        <div class="grid gap-5">
-            <div class="grid gap-2">
-                <Label for="email">Correo electrónico</Label>
+        <div class="grid gap-2">
+            <Label for="email">Correo electrónico</Label>
+            <div class="relative">
+                <Mail
+                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                />
                 <Input
                     id="email"
                     type="email"
@@ -52,52 +58,71 @@ defineProps<{
                     required
                     v-focus
                     autocomplete="email"
+                    inputmode="email"
+                    autocapitalize="none"
+                    spellcheck="false"
                     placeholder="nombre@negocio.com"
-                    class="h-10"
+                    class="h-11 pl-9"
+                    :aria-invalid="!!errors.email || undefined"
+                    aria-describedby="error-email"
                 />
-                <InputError :message="errors.email" />
             </div>
+            <InputError id="error-email" :message="errors.email" />
+        </div>
 
-            <div class="grid gap-2">
-                <div class="flex items-center justify-between">
-                    <Label for="password">Contraseña</Label>
-                    <TextLink
-                        v-if="canResetPassword"
-                        :href="request()"
-                        class="text-sm"
-                    >
-                        ¿Olvidaste tu contraseña?
-                    </TextLink>
-                </div>
+        <div class="grid gap-2">
+            <div class="flex items-center justify-between gap-2">
+                <Label for="password">Contraseña</Label>
+                <TextLink
+                    v-if="canResetPassword"
+                    :href="request()"
+                    class="text-sm text-enlace"
+                >
+                    ¿Olvidaste tu contraseña?
+                </TextLink>
+            </div>
+            <div class="relative">
+                <LockKeyhole
+                    class="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                />
                 <PasswordInput
                     id="password"
                     name="password"
                     required
                     autocomplete="current-password"
                     placeholder="Tu contraseña"
-                    class="h-10"
+                    class="h-11 pl-9"
+                    :aria-invalid="!!errors.password || undefined"
                 />
-                <InputError :message="errors.password" />
             </div>
-
-            <Label for="remember" class="flex items-center gap-3 font-normal">
-                <Checkbox id="remember" name="remember" />
-                <span>Mantener la sesión iniciada</span>
-            </Label>
-
-            <Button
-                type="submit"
-                class="mt-2 h-10 w-full"
-                :disabled="processing"
-                data-test="login-button"
-            >
-                <Spinner v-if="processing" />
-                Entrar
-            </Button>
+            <InputError :message="errors.password" />
         </div>
 
-        <p class="text-center text-xs text-muted-foreground">
-            ¿No tienes cuenta? Los accesos los proporciona DASTI al entregar tu
+        <Label
+            for="remember"
+            class="flex w-fit cursor-pointer items-center gap-2.5 font-normal text-muted-foreground"
+        >
+            <Checkbox id="remember" name="remember" />
+            <span>Mantener la sesión iniciada en este equipo</span>
+        </Label>
+
+        <Button
+            type="submit"
+            size="lg"
+            class="mt-1 h-11 w-full text-[15px]"
+            :disabled="processing"
+            data-test="login-button"
+        >
+            <Spinner v-if="processing" />
+            {{ processing ? 'Verificando…' : 'Iniciar sesión' }}
+            <ArrowRight v-if="!processing" />
+        </Button>
+
+        <p
+            class="border-t pt-5 text-center text-xs leading-relaxed text-muted-foreground"
+        >
+            ¿Aún no tienes acceso? DASTI te lo proporciona al entregar tu
             pedido.
         </p>
     </Form>

@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { CircleAlert, Save } from '@lucide/vue';
+import { computed, watch } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
+import CampoCorreo from '@/components/formularios/CampoCorreo.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import CampoContrasenaTemporal from '@/components/usuarios/CampoContrasenaTemporal.vue';
 import SelectorMetodoAcceso from '@/components/usuarios/SelectorMetodoAcceso.vue';
+import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
 import { create, index, store } from '@/routes/admin/usuarios';
 import type { Opcion } from '@/types';
 
@@ -23,20 +27,42 @@ defineOptions({
 });
 
 const props = defineProps<{
-    negocios: Opcion[];
     negocio_id: number | null;
-    roles: Opcion[];
+    negocio_inicial: Opcion | null;
+    tipos: Opcion[];
+    /** Roles que puedes asignar, por tipo de cuenta. */
+    roles: Record<'admin' | 'cliente', Opcion[]>;
+    roles_predeterminados: Record<'admin' | 'cliente', string>;
     passwordRules: string;
 }>();
+
+const rolInicial = (tipo: 'admin' | 'cliente') => {
+    const predeterminado = props.roles_predeterminados[tipo];
+
+    return props.roles[tipo].some((r) => r.value === predeterminado)
+        ? predeterminado
+        : (props.roles[tipo][0]?.value ?? '');
+};
 
 const form = useForm({
     name: '',
     email: '',
-    rol: 'cliente',
+    rol: 'cliente' as 'admin' | 'cliente',
+    rol_id: rolInicial('cliente'),
     negocio_id: props.negocio_id !== null ? String(props.negocio_id) : '',
     metodo: 'invitacion',
     password: '',
 });
+
+// Al cambiar el tipo de cuenta, el rol debe ser de ese tipo.
+watch(
+    () => form.rol,
+    (tipo) => {
+        form.rol_id = rolInicial(tipo);
+    },
+);
+
+const rolesDisponibles = computed(() => props.roles[form.rol] ?? []);
 
 const guardar = () => {
     form.transform((d) => ({
@@ -52,7 +78,7 @@ const guardar = () => {
 
     <EncabezadoPagina
         titulo="Nuevo acceso"
-        descripcion="Crea un usuario para un negocio cliente o un administrador de DASTI."
+        descripcion="Crea un usuario para un negocio cliente o para el personal de DASTI."
     />
 
     <form class="space-y-6" novalidate @submit.prevent="guardar">
@@ -69,32 +95,50 @@ const guardar = () => {
                         maxlength="255"
                         autocomplete="off"
                         required
+                        :aria-invalid="!!form.errors.name || undefined"
                     />
                 </CampoFormulario>
                 <CampoFormulario
                     etiqueta="Correo electrónico"
                     para="email"
-                    :error="form.errors.email"
                     ayuda="Será su usuario para iniciar sesión."
                 >
-                    <Input
+                    <CampoCorreo
                         id="email"
                         v-model="form.email"
-                        type="email"
-                        maxlength="255"
+                        :error="form.errors.email"
                         autocomplete="off"
-                        required
+                        verificar-duplicado
+                        requerido
                     />
                 </CampoFormulario>
                 <CampoFormulario
-                    etiqueta="Rol"
+                    etiqueta="Tipo de cuenta"
                     para="rol"
                     :error="form.errors.rol"
+                    ayuda="Define el alcance: todos los negocios o solo uno."
                 >
                     <SelectNativo
                         id="rol"
                         v-model="form.rol"
-                        :opciones="roles"
+                        :opciones="tipos"
+                    />
+                </CampoFormulario>
+                <CampoFormulario
+                    etiqueta="Rol"
+                    para="rol_id"
+                    :error="form.errors.rol_id"
+                    ayuda="Define qué acciones podrá realizar."
+                >
+                    <SelectorBuscable
+                        id="rol_id"
+                        v-model="form.rol_id"
+                        :opciones="rolesDisponibles"
+                        etiqueta="Rol"
+                        placeholder="Selecciona un rol"
+                        placeholder-busqueda="Buscar rol…"
+                        sin-resultados="No hay roles que puedas asignar con ese nombre."
+                        :invalido="!!form.errors.rol_id"
                     />
                 </CampoFormulario>
                 <CampoFormulario
@@ -102,12 +146,18 @@ const guardar = () => {
                     etiqueta="Negocio"
                     para="negocio_id"
                     :error="form.errors.negocio_id"
+                    class="sm:col-span-2"
                 >
-                    <SelectNativo
+                    <SelectorBuscable
                         id="negocio_id"
                         v-model="form.negocio_id"
-                        :opciones="negocios"
-                        vacio="Selecciona un negocio activo"
+                        :url="opcionesNegocios.url()"
+                        :parametros="{ solo_activos: true }"
+                        :seleccion-inicial="negocio_inicial"
+                        etiqueta="Negocio"
+                        placeholder="Busca y selecciona un negocio activo"
+                        placeholder-busqueda="Nombre, responsable o correo…"
+                        sin-resultados="Ningún negocio activo coincide con la búsqueda."
                         :invalido="!!form.errors.negocio_id"
                     />
                 </CampoFormulario>
@@ -117,8 +167,15 @@ const guardar = () => {
                 class="mt-4 flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-sm text-warning"
             >
                 <CircleAlert class="mt-0.5 size-4 shrink-0" />
-                Un administrador tiene control total de la plataforma: negocios,
-                productos, accesos y configuración.
+                El personal de DASTI opera sobre todos los negocios. Sus
+                acciones quedan limitadas a los permisos del rol elegido.
+            </p>
+            <p
+                v-if="rolesDisponibles.length === 0"
+                class="mt-4 text-sm text-destructive"
+                role="alert"
+            >
+                No tienes roles que puedas asignar a este tipo de cuenta.
             </p>
         </Panel>
 
@@ -139,7 +196,10 @@ const guardar = () => {
             <Button variant="outline" as-child
                 ><Link :href="index()">Cancelar</Link></Button
             >
-            <Button type="submit" :disabled="form.processing">
+            <Button
+                type="submit"
+                :disabled="form.processing || rolesDisponibles.length === 0"
+            >
                 <Spinner v-if="form.processing" />
                 <Save v-else />
                 Crear acceso

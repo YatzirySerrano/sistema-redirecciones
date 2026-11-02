@@ -52,10 +52,14 @@ class AuditoriaController extends Controller
                 'hasta' => $filtros['hasta'] ?? '',
             ],
             'acciones' => CatalogoAcciones::opciones(),
-            'negocios' => Negocio::query()->orderBy('nombre_comercial')->get(['id', 'nombre_comercial'])
-                ->map(fn (Negocio $n) => ['value' => (string) $n->id, 'label' => $n->nombre_comercial])->values()->all(),
-            'usuarios' => User::query()->orderBy('name')->get(['id', 'name', 'email'])
-                ->map(fn (User $u) => ['value' => (string) $u->id, 'label' => "{$u->name} ({$u->email})"])->values()->all(),
+            'negocio_filtro' => isset($filtros['negocio_id'])
+                ? Negocio::query()->whereKey((int) $filtros['negocio_id'])->get(['id', 'nombre_comercial'])
+                    ->map(fn (Negocio $n) => ['value' => (string) $n->id, 'label' => $n->nombre_comercial])->first()
+                : null,
+            'usuario_filtro' => isset($filtros['usuario_id'])
+                ? User::query()->whereKey((int) $filtros['usuario_id'])->get(['id', 'name', 'email'])
+                    ->map(fn (User $u) => ['value' => (string) $u->id, 'label' => $u->name, 'descripcion' => $u->email])->first()
+                : null,
         ]);
     }
 }

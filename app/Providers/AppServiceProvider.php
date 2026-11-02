@@ -5,15 +5,15 @@ namespace App\Providers;
 use App\Listeners\AuditarEventosDeSeguridad;
 use App\Models\Negocio;
 use App\Models\Producto;
+use App\Models\Rol;
 use App\Models\User;
+use App\Services\Apariencia\TemaVisual;
+use App\Services\Autorizacion\CatalogoPermisos;
 use App\Services\Configuracion\AjustesPlataforma;
 use Carbon\CarbonImmutable;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         // Una instancia por petición: los ajustes se leen una sola vez de la
         // caché aunque se consulten en cada producto de un listado.
         $this->app->scoped(AjustesPlataforma::class);
+        $this->app->scoped(TemaVisual::class);
     }
 
     /**
@@ -43,7 +44,6 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureAuthorization();
         $this->configureRateLimiting();
-        $this->configureNotifications();
 
         Event::subscribe(AuditarEventosDeSeguridad::class);
     }
@@ -65,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
             'negocio' => Negocio::class,
             'producto' => Producto::class,
             'usuario' => User::class,
+            'rol' => Rol::class,
         ]);
 
         if (app()->isProduction()) {
@@ -83,14 +84,31 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Gates por rol. La autorización fina sobre productos vive en
-     * App\Policies\ProductoPolicy (descubierta por convención).
+     * Autorización.
+     *
+     * - Permisos dinámicos (CatalogoPermisos, roles en MariaDB): cualquier
+     *   habilidad con nombre de permiso («negocios.ver», …) se resuelve aquí
+     *   con User::tienePermiso, que respeta el ámbito de la cuenta. Se
+     *   devuelve true/false explícito para que nada más lo amplíe.
+     * - Gates de ámbito: administrar-plataforma (personal de DASTI) y
+     *   usar-panel-cliente (usuario de un negocio).
+     * - La autorización sobre productos concretos (propiedad) vive en
+     *   App\Policies\ProductoPolicy.
      */
     protected function configureAuthorization(): void
     {
+        Gate::before(function (User $usuario, string $habilidad): ?bool {
+            if (! CatalogoPermisos::existe($habilidad)) {
+                return null;
+            }
+
+            return $usuario->tienePermiso($habilidad);
+        });
+
         Gate::define('administrar-plataforma', fn (User $usuario) => $usuario->esAdministrador());
         Gate::define('usar-panel-cliente', fn (User $usuario) => $usuario->esCliente() && $usuario->negocio_id !== null);
         Gate::define('ver-estadisticas-cliente', fn (User $usuario) => $usuario->esCliente()
+            && $usuario->tienePermiso('estadisticas.ver')
             && app(AjustesPlataforma::class)->booleano('clientes_ven_estadisticas'));
     }
 
@@ -104,20 +122,5 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('qr', fn (Request $request) => Limit::perMinute(90)
             ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
-    }
-
-    protected function configureNotifications(): void
-    {
-        ResetPassword::toMailUsing(function (CanResetPassword $notifiable, string $token): MailMessage {
-            $url = route('password.reset', ['token' => $token, 'email' => $notifiable->getEmailForPasswordReset()]);
-            $minutos = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
-
-            return (new MailMessage)
-                ->subject('Restablecer contraseña')
-                ->line('Recibimos una solicitud para restablecer la contraseña de tu cuenta.')
-                ->action('Restablecer contraseña', $url)
-                ->line("Este enlace caduca en {$minutos} minutos.")
-                ->line('Si no solicitaste el cambio, no es necesario hacer nada.');
-        });
     }
 }

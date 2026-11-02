@@ -40,6 +40,14 @@ class AjustesPlataforma
     private ?array $resueltos = null;
 
     /**
+     * Todos los registros de `configuraciones` (una sola lectura por
+     * petición, compartida con otros servicios como TemaVisual).
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $guardados = null;
+
+    /**
      * @return array<string, mixed>
      */
     public function todos(): array
@@ -48,12 +56,44 @@ class AjustesPlataforma
             return $this->resueltos;
         }
 
+        return $this->resueltos = array_merge(self::PREDETERMINADOS, array_intersect_key($this->guardados(), self::PREDETERMINADOS));
+    }
+
+    /**
+     * Valor guardado de cualquier clave de `configuraciones` (sin
+     * predeterminados), p. ej. los colores de la interfaz.
+     */
+    public function guardado(string $clave): mixed
+    {
+        return $this->guardados()[$clave] ?? null;
+    }
+
+    /**
+     * Descarta la caché tras escribir en `configuraciones` desde otro
+     * servicio.
+     */
+    public function olvidar(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+        $this->resueltos = null;
+        $this->guardados = null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function guardados(): array
+    {
+        if ($this->guardados !== null) {
+            return $this->guardados;
+        }
+
         /** @var array<string, mixed> $guardados */
         $guardados = Cache::rememberForever(self::CACHE_KEY, fn () => Configuracion::query()
             ->pluck('valor', 'clave')
             ->all());
 
-        return $this->resueltos = array_merge(self::PREDETERMINADOS, array_intersect_key($guardados, self::PREDETERMINADOS));
+        return $this->guardados = $guardados;
     }
 
     public function obtener(string $clave): mixed
@@ -99,8 +139,7 @@ class AjustesPlataforma
             $nuevos[$clave] = $valor;
         }
 
-        Cache::forget(self::CACHE_KEY);
-        $this->resueltos = null;
+        $this->olvidar();
 
         return ['anteriores' => $anteriores, 'nuevos' => $nuevos];
     }

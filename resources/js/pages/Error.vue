@@ -10,11 +10,19 @@ const page = usePage();
 const MENSAJES: Record<number, { titulo: string; texto: string }> = {
     403: {
         titulo: 'Acceso no permitido',
-        texto: 'Tu cuenta no tiene permiso para realizar esta acción.',
+        texto: 'No tienes permiso para realizar esta acción.',
     },
     404: {
         titulo: 'Página no encontrada',
         texto: 'La página que buscas no existe o no está disponible para tu cuenta.',
+    },
+    413: {
+        titulo: 'Archivo demasiado grande',
+        texto: 'El archivo supera el tamaño permitido. Elige uno más ligero e inténtalo nuevamente.',
+    },
+    419: {
+        titulo: 'La sesión expiró',
+        texto: 'Por seguridad, recarga la página e inténtalo nuevamente.',
     },
     429: {
         titulo: 'Demasiadas solicitudes',
@@ -22,7 +30,7 @@ const MENSAJES: Record<number, { titulo: string; texto: string }> = {
     },
     500: {
         titulo: 'Ocurrió un error',
-        texto: 'No pudimos completar la solicitud. Inténtalo de nuevo en unos minutos.',
+        texto: 'Ocurrió un problema al procesar la solicitud. Inténtalo nuevamente en unos minutos.',
     },
     503: {
         titulo: 'En mantenimiento',

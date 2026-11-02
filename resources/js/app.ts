@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { initializeTema } from '@/lib/tema';
 
 const appName = import.meta.env.VITE_APP_NAME || 'DASTI Redirecciones';
 
@@ -41,3 +42,6 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+// Colores personalizados de la interfaz (se actualizan en vivo).
+initializeTema();

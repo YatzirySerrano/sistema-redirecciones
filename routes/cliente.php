@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Todas las consultas parten del negocio del usuario autenticado; el acceso
-| a productos concretos se valida además con ProductoPolicy.
+| a productos concretos se valida además con ProductoPolicy. Cada ruta exige
+| también su permiso dinámico, que nunca amplía el alcance al negocio.
 |
 */
 
@@ -21,8 +22,8 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
     ->prefix('panel')
     ->name('cliente.')
     ->group(function () {
-        Route::get('/', InicioController::class)->name('inicio');
-        Route::get('productos', [ProductoController::class, 'index'])->name('productos.index');
+        Route::get('/', InicioController::class)->middleware('can:panel.ver')->name('inicio');
+        Route::get('productos', [ProductoController::class, 'index'])->middleware('can:productos.ver')->name('productos.index');
         Route::get('productos/{producto}', [ProductoController::class, 'show'])->name('productos.show');
         Route::put('productos/{producto}/destino', [ProductoController::class, 'destino'])
             ->middleware('throttle:cambios-destino')

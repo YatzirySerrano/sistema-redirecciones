@@ -5,8 +5,10 @@ namespace App\Actions\Usuarios;
 use App\Enums\EstadoCuenta;
 use App\Enums\RolUsuario;
 use App\Models\Negocio;
+use App\Models\Rol;
 use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
+use App\Services\Autorizacion\GuardianRoles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -25,12 +27,13 @@ class CrearUsuario
     public function __construct(
         private readonly RegistradorAuditoria $auditoria,
         private readonly EnviarInvitacion $enviarInvitacion,
+        private readonly GuardianRoles $guardian,
     ) {}
 
     /**
      * @param  array{name: string, email: string, password?: string|null}  $datos
      */
-    public function ejecutar(RolUsuario $rol, array $datos, ?Negocio $negocio = null): User
+    public function ejecutar(RolUsuario $rol, array $datos, ?Negocio $negocio = null, ?Rol $rolPermisos = null): User
     {
         if ($rol === RolUsuario::Cliente && $negocio === null) {
             throw new InvalidArgumentException('Un usuario cliente debe pertenecer a un negocio.');
@@ -52,6 +55,14 @@ class CrearUsuario
             'email_verified_at' => now(),
         ])->save();
 
+        // Rol de permisos: el indicado (ya autorizado por quien llama) o el
+        // predeterminado del ámbito de la cuenta.
+        $rolPermisos ??= $this->guardian->rolPredeterminado($usuario->ambito());
+
+        if ($rolPermisos !== null) {
+            AsignarRol::inicial($usuario, $rolPermisos);
+        }
+
         $this->auditoria->registrar(
             accion: 'usuario.creado',
             descripcion: "Alta del acceso de {$usuario->name} ({$usuario->email})",
@@ -61,6 +72,7 @@ class CrearUsuario
                 'nombre' => $usuario->name,
                 'email' => $usuario->email,
                 'rol' => $rol,
+                'rol_permisos' => $rolPermisos?->name,
                 'metodo_acceso' => $invitar ? 'invitacion_por_correo' : 'contrasena_temporal',
             ],
         );

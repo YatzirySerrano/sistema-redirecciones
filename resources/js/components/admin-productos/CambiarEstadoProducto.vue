@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { CirclePause, CirclePlay } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import AccionFila from '@/components/comun/AccionFila.vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { estado as rutaEstado } from '@/routes/admin/productos';
 import type { Producto } from '@/types';
 
-const props = defineProps<{ producto: Producto }>();
+const props = withDefaults(
+    defineProps<{ producto: Producto; compacto?: boolean }>(),
+    { compacto: false },
+);
 
 const abierto = ref(false);
 const suspender = computed(() => props.producto.estado === 'activo');
@@ -50,7 +54,14 @@ const confirmar = () => {
         @confirmar="confirmar"
     >
         <template #disparador>
-            <Button :variant="suspender ? 'outline' : 'default'">
+            <AccionFila
+                v-if="compacto"
+                :etiqueta="suspender ? 'Suspender' : 'Reactivar'"
+                :icono="suspender ? CirclePause : CirclePlay"
+                :destructiva="suspender"
+                compacta
+            />
+            <Button v-else :variant="suspender ? 'outline' : 'default'">
                 <CirclePause v-if="suspender" />
                 <CirclePlay v-else />
                 {{ suspender ? 'Suspender' : 'Reactivar' }}

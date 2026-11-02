@@ -38,13 +38,13 @@ import {
     relativo,
     visitantes,
 } from '@/lib/formato';
+import { usePermisos } from '@/composables/usePermisos';
 import { show as negocioShow } from '@/routes/admin/negocios';
 import { destino, edit, index } from '@/routes/admin/productos';
 import type {
     CambioDestino,
     Coleccion,
     ElementoDesglose,
-    Opcion,
     OpcionesQr,
     Producto,
     PuntoSerie,
@@ -62,6 +62,8 @@ defineOptions({
     },
 });
 
+const { puede } = usePermisos();
+
 const props = defineProps<{
     producto: Recurso<Producto>;
     opciones_qr: OpcionesQr;
@@ -73,7 +75,6 @@ const props = defineProps<{
     };
     cambios: Coleccion<CambioDestino>;
     auditoria: Coleccion<RegistroAuditoria>;
-    negocios: Opcion[];
 }>();
 
 const producto = computed(() => props.producto.data);
@@ -158,12 +159,27 @@ const barrasDispositivos = computed(() =>
             </p>
         </template>
         <template #acciones>
-            <Button variant="outline" as-child>
+            <Button v-if="puede('productos.editar')" variant="outline" as-child>
                 <Link :href="edit(producto.id)"><Pencil /> Editar</Link>
             </Button>
-            <TransferirProducto :producto="producto" :negocios="negocios" />
-            <CambiarEstadoProducto :producto="producto" />
-            <EliminarProducto v-if="puede_eliminarse" :producto="producto" />
+            <TransferirProducto
+                v-if="puede('productos.transferir')"
+                :producto="producto"
+            />
+            <CambiarEstadoProducto
+                v-if="
+                    puede(
+                        producto.estado === 'activo'
+                            ? 'productos.suspender'
+                            : 'productos.reactivar',
+                    )
+                "
+                :producto="producto"
+            />
+            <EliminarProducto
+                v-if="puede_eliminarse && puede('productos.eliminar')"
+                :producto="producto"
+            />
         </template>
     </EncabezadoPagina>
 
@@ -221,6 +237,7 @@ const barrasDispositivos = computed(() =>
                         >
                     </p>
                     <FormularioDestino
+                        v-if="producto.permisos.cambiar_destino"
                         :key="producto.url_destino ?? ''"
                         :producto="producto"
                         :accion="destino.url(producto.id)"

@@ -22,7 +22,7 @@ abstract class Controller
         }
 
         match ($usuario->estadoInvitacion()) {
-            'pendiente' => $this->notificar("{$prefijo} Se envió un enlace de acceso a {$usuario->email}."),
+            'pendiente' => $this->notificar("{$prefijo} Enviamos un enlace de acceso a {$usuario->email}; puede tardar unos minutos en llegar."),
             'fallida' => $this->notificar(
                 "{$prefijo} El correo a {$usuario->email} no pudo enviarse: revisa la configuración de correo y usa «Enviar enlace de acceso».",
                 'warning',

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { FilterX, Link2, Pencil } from '@lucide/vue';
+import { Eye, FilterX, Link2, Pencil } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import BotonCopiar from '@/components/comun/BotonCopiar.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
@@ -10,6 +10,9 @@ import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
 import Paginacion from '@/components/comun/Paginacion.vue';
 import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
+import SelectorVista from '@/components/comun/SelectorVista.vue';
+import AccionFila from '@/components/comun/AccionFila.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import FormularioDestino from '@/components/productos/FormularioDestino.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
 import { Button } from '@/components/ui/button';
@@ -21,9 +24,12 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useFiltros } from '@/composables/useFiltros';
+import { usePermisos } from '@/composables/usePermisos';
+import { useVistaListado } from '@/composables/useVistaListado';
 import { dominio, fechaHora, numero, relativo } from '@/lib/formato';
 import { index } from '@/routes/admin/enlaces';
 import { show as negocioShow } from '@/routes/admin/negocios';
+import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
 import { destino, show as productoShow } from '@/routes/admin/productos';
 import type {
     CambioDestino,
@@ -43,11 +49,13 @@ const props = defineProps<{
     enlaces: Paginado<Producto>;
     filtros: { buscar: string; negocio_id: string; situacion: string };
     situaciones: Opcion[];
-    negocios: Opcion[];
+    negocio_filtro: Opcion | null;
     cambios_recientes: Coleccion<CambioDestino>;
 }>();
 
 const { filtros, limpiar } = useFiltros(index.url(), { ...props.filtros });
+const { vista } = useVistaListado('enlaces');
+const { puede } = usePermisos();
 const hayFiltros = computed(() => Object.values(filtros).some((v) => v !== ''));
 
 const situacion = (p: Producto) => {
@@ -97,11 +105,13 @@ const dialogoAbierto = computed({
                     etiqueta="Buscar enlaces"
                 />
                 <div class="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-                    <SelectNativo
+                    <SelectorBuscable
                         v-model="filtros.negocio_id"
-                        :opciones="negocios"
+                        :url="opcionesNegocios.url()"
+                        :seleccion-inicial="negocio_filtro"
                         vacio="Todos los negocios"
                         etiqueta="Filtrar por negocio"
+                        placeholder-busqueda="Buscar negocio…"
                     />
                     <SelectNativo
                         v-model="filtros.situacion"
@@ -110,13 +120,16 @@ const dialogoAbierto = computed({
                         etiqueta="Filtrar por situación"
                     />
                 </div>
-                <Button
-                    v-if="hayFiltros"
-                    variant="ghost"
-                    size="sm"
-                    @click="limpiar"
-                    ><FilterX /> Limpiar</Button
-                >
+                <div class="flex items-center gap-2">
+                    <Button
+                        v-if="hayFiltros"
+                        variant="ghost"
+                        size="sm"
+                        @click="limpiar"
+                        ><FilterX /> Limpiar</Button
+                    >
+                    <SelectorVista v-model="vista" />
+                </div>
             </div>
 
             <EstadoVacio
@@ -138,7 +151,7 @@ const dialogoAbierto = computed({
                 >
             </EstadoVacio>
 
-            <div v-else class="overflow-x-auto">
+            <div v-else-if="vista === 'tabla'" class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <caption class="sr-only">
                         Enlaces permanentes
@@ -175,8 +188,11 @@ const dialogoAbierto = computed({
                             >
                                 Accesos
                             </th>
-                            <th scope="col" class="h-10 px-3">
-                                <span class="sr-only">Acciones</span>
+                            <th
+                                scope="col"
+                                class="h-10 px-3 text-right font-medium"
+                            >
+                                Acciones
                             </th>
                         </tr>
                     </thead>
@@ -212,7 +228,9 @@ const dialogoAbierto = computed({
                                     >{{ enlace.nombre }}</Link
                                 >
                                 <Link
-                                    v-if="enlace.negocio"
+                                    v-if="
+                                        enlace.negocio && puede('negocios.ver')
+                                    "
                                     :href="negocioShow(enlace.negocio.id)"
                                     class="block truncate text-xs text-muted-foreground hover:text-primary"
                                     >{{ enlace.negocio.nombre_comercial }}</Link
@@ -257,23 +275,103 @@ const dialogoAbierto = computed({
                             >
                                 {{ numero(enlace.total_accesos) }}
                             </td>
-                            <td class="px-3 py-3 text-right">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    :aria-label="`Editar destino de ${enlace.nombre}`"
-                                    @click="editandoId = enlace.id"
+                            <td class="px-2 py-2">
+                                <div
+                                    class="flex flex-wrap items-center justify-end gap-0.5"
                                 >
-                                    <Pencil />
-                                    <span class="hidden sm:inline"
-                                        >Destino</span
-                                    >
-                                </Button>
+                                    <AccionFila
+                                        v-if="puede('productos.ver')"
+                                        etiqueta="Ver"
+                                        :icono="Eye"
+                                        :href="productoShow(enlace.id)"
+                                        compacta
+                                    />
+                                    <AccionFila
+                                        v-if="enlace.permisos.cambiar_destino"
+                                        :etiqueta="`Cambiar destino`"
+                                        :icono="Pencil"
+                                        compacta
+                                        @click="editandoId = enlace.id"
+                                    />
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+
+            <ul
+                v-else
+                class="grid gap-3 p-4 sm:grid-cols-2"
+                aria-label="Enlaces permanentes"
+            >
+                <li
+                    v-for="enlace in enlaces.data"
+                    :key="enlace.id"
+                    class="flex flex-col rounded-xl border bg-background p-4 shadow-xs"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="truncate font-semibold">
+                                {{ enlace.nombre }}
+                            </p>
+                            <p
+                                v-if="enlace.negocio"
+                                class="truncate text-xs text-muted-foreground"
+                            >
+                                {{ enlace.negocio.nombre_comercial }}
+                            </p>
+                        </div>
+                        <InsigniaEstado :estado="situacion(enlace)" />
+                    </div>
+                    <div
+                        class="mt-3 flex items-center gap-1 rounded-lg bg-muted/40 px-2 py-1"
+                    >
+                        <code class="min-w-0 flex-1 truncate font-mono text-xs"
+                            >/r/{{ enlace.codigo }}</code
+                        >
+                        <BotonCopiar
+                            :texto="enlace.url_permanente"
+                            etiqueta="Copiar enlace permanente"
+                            mensaje="Enlace permanente copiado"
+                            solo-icono
+                            variante="ghost"
+                        />
+                    </div>
+                    <p class="mt-2 truncate text-xs">
+                        <span class="text-muted-foreground">Destino: </span>
+                        <span :title="enlace.url_destino ?? undefined">{{
+                            enlace.url_destino
+                                ? dominio(enlace.url_destino)
+                                : 'Sin destino'
+                        }}</span>
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        {{ numero(enlace.total_accesos) }} accesos · cambio
+                        {{
+                            enlace.destino_actualizado_en
+                                ? relativo(enlace.destino_actualizado_en)
+                                : 'sin registrar'
+                        }}
+                    </p>
+                    <div
+                        class="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2"
+                    >
+                        <AccionFila
+                            v-if="puede('productos.ver')"
+                            etiqueta="Ver"
+                            :icono="Eye"
+                            :href="productoShow(enlace.id)"
+                        />
+                        <AccionFila
+                            v-if="enlace.permisos.cambiar_destino"
+                            etiqueta="Cambiar destino"
+                            :icono="Pencil"
+                            @click="editandoId = enlace.id"
+                        />
+                    </div>
+                </li>
+            </ul>
 
             <Paginacion :meta="enlaces.meta" nombre="enlaces" />
         </section>

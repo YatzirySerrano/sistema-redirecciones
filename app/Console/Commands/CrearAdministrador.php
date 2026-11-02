@@ -2,10 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\Usuarios\AsignarRol;
 use App\Enums\EstadoCuenta;
 use App\Enums\RolUsuario;
+use App\Models\Rol;
 use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
+use App\Services\Autorizacion\CatalogoPermisos;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -72,11 +75,18 @@ class CrearAdministrador extends Command
             'debe_cambiar_password' => false,
         ])->save();
 
+        // Cuenta de arranque o de emergencia: control total.
+        $superadministrador = Rol::porClave(CatalogoPermisos::ROL_SUPERADMINISTRADOR);
+
+        if ($superadministrador !== null) {
+            AsignarRol::inicial($usuario, $superadministrador);
+        }
+
         $auditoria->registrar(
             accion: 'usuario.creado',
             descripcion: "Alta del administrador {$email} desde consola",
             recurso: $usuario,
-            nuevos: ['nombre' => $nombre, 'email' => $email, 'rol' => RolUsuario::Admin, 'metodo_acceso' => 'consola'],
+            nuevos: ['nombre' => $nombre, 'email' => $email, 'rol' => RolUsuario::Admin, 'rol_permisos' => 'Superadministrador', 'metodo_acceso' => 'consola'],
             actor: $usuario,
         );
 

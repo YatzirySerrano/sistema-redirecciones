@@ -36,7 +36,7 @@ SESSION_DRIVER=database
 SESSION_SECURE_COOKIE=true
 LOG_STACK=daily
 LOG_LEVEL=warning
-MAIL_MAILER=smtp    # + MAIL_HOST/PORT/USERNAME/PASSWORD/FROM_ADDRESS reales
+MAIL_MAILER=smtp    # ver «Correo electrónico» más abajo
 MAIL_TIMEOUT=10
 # DASTI_EXIGIR_2FA_ADMIN=true   # ya es el valor por defecto en production
 ```
@@ -107,7 +107,26 @@ Añade al cron del usuario de la aplicación:
 
 Ejecuta `dasti:depurar-eventos` a diario (03:30): aplica la política de conservación.
 
-No se necesita worker de colas mientras `DASTI_EVENTOS_EN_COLA=false`, porque los accesos se registran tras responder (`defer()` de Laravel con `fastcgi_finish_request`). Las invitaciones se envían de forma síncrona tras guardar el alta, con un tiempo máximo de `MAIL_TIMEOUT`; un fallo queda registrado y no revierte el alta. Con tráfico alto, actívalo y supervisa `php artisan queue:work --tries=3` con systemd o supervisor.
+Los correos (invitaciones y recuperación de contraseña) se envían **en cola** (`ShouldQueue`, 3 intentos con esperas de 1 y 5 minutos), así que en producción debe ejecutarse siempre un worker. Si los tres intentos fallan, la invitación queda marcada como «fallida» en la ficha del usuario y en la auditoría (`usuario.invitacion_fallida`), y se puede reenviar con «Enviar enlace de acceso». Los accesos a enlaces se registran tras responder (`defer()`), salvo con `DASTI_EVENTOS_EN_COLA=true`, que también usa el worker.
+
+Servicio de systemd de ejemplo (`/etc/systemd/system/dasti-cola.service`):
+
+```ini
+[Unit]
+Description=DASTI Redirecciones - cola
+After=network.target mariadb.service
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/sistema-redirecciones
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Tras cada despliegue: `php artisan queue:restart`.
 
 ## Seguridad
 
@@ -133,3 +152,21 @@ php artisan about --only=environment                    # production, Debug OFF
 ```
 
 Después, crea un producto de prueba, comprueba que `/r/{codigo}` responde **302** hacia su destino, y suspéndelo o elimínalo.
+
+## Correo electrónico
+
+El proyecto no incluye credenciales de correo. Configura en el `.env` del servidor los datos que entregue tu proveedor SMTP (el de tu dominio, Google Workspace, Microsoft 365, Amazon SES, etc.):
+
+| Variable            | Valor                                                     |
+| ------------------- | --------------------------------------------------------- |
+| `MAIL_MAILER`       | `smtp`                                                    |
+| `MAIL_HOST`         | Servidor SMTP del proveedor (p. ej. `smtp.tudominio.com`) |
+| `MAIL_PORT`         | `587` (STARTTLS) o `465` (TLS implícito)                  |
+| `MAIL_SCHEME`       | vacío para 587; `smtps` para 465                          |
+| `MAIL_USERNAME`     | Usuario de la cuenta SMTP                                 |
+| `MAIL_PASSWORD`     | Contraseña o clave de aplicación                          |
+| `MAIL_FROM_ADDRESS` | Remitente verificado, p. ej. `no-responder@dasti.cloud`   |
+| `MAIL_FROM_NAME`    | `"DASTI Redirecciones"`                                   |
+| `QUEUE_CONNECTION`  | `database` (con el worker activo)                         |
+
+Después: `php artisan config:cache && php artisan queue:restart`. Para comprobarlo sin escribir a clientes, crea un acceso de prueba con tu propio correo y usa «Enviar enlace de acceso», o solicita «¿Olvidaste tu contraseña?» con tu cuenta. Configura SPF, DKIM y DMARC del dominio remitente para evitar que los mensajes lleguen a spam. Los errores de envío aparecen en `storage/logs/laravel.log` y en la tabla `failed_jobs` (`php artisan queue:failed`).

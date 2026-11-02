@@ -47,10 +47,11 @@ class EstadisticaController extends Controller
             'dispositivos' => $estadisticas->dispositivos($filtro),
             'navegadores' => $estadisticas->desglose($filtro, 'navegador'),
             'sistemas' => $estadisticas->desglose($filtro, 'sistema_operativo'),
-            'negocios' => Negocio::query()->orderBy('nombre_comercial')->get(['id', 'nombre_comercial'])
-                ->map(fn (Negocio $n) => ['value' => (string) $n->id, 'label' => $n->nombre_comercial])->values()->all(),
-            'productos' => $negocioId === null ? [] : Producto::query()->where('negocio_id', $negocioId)->orderBy('nombre')->get(['id', 'nombre'])
-                ->map(fn (Producto $p) => ['value' => (string) $p->id, 'label' => $p->nombre])->values()->all(),
+            // Selectores con búsqueda remota: solo se envía lo ya elegido.
+            'negocio_filtro' => $negocioId === null ? null : Negocio::query()->whereKey($negocioId)->get(['id', 'nombre_comercial'])
+                ->map(fn (Negocio $n) => ['value' => (string) $n->id, 'label' => $n->nombre_comercial])->first(),
+            'producto_filtro' => $productoId === null ? null : Producto::query()->whereKey($productoId)->get(['id', 'nombre', 'codigo'])
+                ->map(fn (Producto $p) => ['value' => (string) $p->id, 'label' => $p->nombre, 'descripcion' => $p->codigo])->first(),
             'dias_conservacion_huella' => (int) config('dasti.dias_conservacion_huella'),
         ]);
     }

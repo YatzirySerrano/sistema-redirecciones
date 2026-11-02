@@ -41,6 +41,12 @@ final class CatalogoAcciones
         'producto.eliminado' => 'Producto eliminado',
         'producto.qr_actualizado' => 'Diseño de QR actualizado',
         'configuracion.actualizada' => 'Configuración actualizada',
+        'usuario.rol_cambiado' => 'Rol de usuario cambiado',
+        'rol.creado' => 'Alta de rol',
+        'rol.actualizado' => 'Rol actualizado',
+        'rol.eliminado' => 'Rol eliminado',
+        'apariencia.actualizada' => 'Apariencia actualizada',
+        'apariencia.restablecida' => 'Apariencia restablecida',
     ];
 
     public static function etiqueta(string $accion): string

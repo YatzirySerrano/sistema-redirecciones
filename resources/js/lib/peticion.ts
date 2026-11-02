@@ -27,11 +27,15 @@ async function mensajeDeError(respuesta: Response): Promise<string> {
     }
 
     if (respuesta.status === 403) {
-        return 'Tu cuenta no tiene permiso para realizar esta acción.';
+        return 'No tienes permiso para realizar esta acción.';
     }
 
     if (respuesta.status === 404) {
         return 'El recurso ya no está disponible.';
+    }
+
+    if (respuesta.status === 413) {
+        return 'El archivo supera el tamaño permitido. Elige uno más ligero.';
     }
 
     if (respuesta.status === 429) {
@@ -49,10 +53,10 @@ async function mensajeDeError(respuesta: Response): Promise<string> {
             // Respuesta sin JSON: se usa el mensaje genérico.
         }
 
-        return 'Los datos enviados no son válidos.';
+        return 'Revisa los datos capturados e inténtalo nuevamente.';
     }
 
-    return 'Ocurrió un error en el servidor. Inténtalo de nuevo en unos minutos.';
+    return 'Ocurrió un problema al guardar. Inténtalo nuevamente.';
 }
 
 /**
@@ -62,7 +66,7 @@ async function mensajeDeError(respuesta: Response): Promise<string> {
 export async function pedir(
     url: string,
     opciones: {
-        metodo?: 'GET' | 'POST';
+        metodo?: 'GET' | 'POST' | 'PUT';
         datos?: unknown;
         senal?: AbortSignal;
     } = {},

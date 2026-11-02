@@ -16,6 +16,8 @@ import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
 import ListaAuditoria from '@/components/comun/ListaAuditoria.vue';
 import Panel from '@/components/comun/Panel.vue';
+import CampoCorreo from '@/components/formularios/CampoCorreo.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,9 +37,16 @@ import {
     estado,
     index,
     invitacion,
+    rol as rutaRol,
     update,
 } from '@/routes/admin/usuarios';
-import type { Coleccion, Recurso, RegistroAuditoria, Usuario } from '@/types';
+import type {
+    Coleccion,
+    Opcion,
+    Recurso,
+    RegistroAuditoria,
+    Usuario,
+} from '@/types';
 
 defineOptions({
     layout: {
@@ -52,6 +61,17 @@ const props = defineProps<{
     usuario: Recurso<Usuario>;
     auditoria: Coleccion<RegistroAuditoria>;
     passwordRules: string;
+    rol: {
+        actual: {
+            id: number;
+            nombre: string;
+            descripcion: string | null;
+        } | null;
+        permisos_efectivos: { nombre: string; etiqueta: string }[];
+        opciones: Opcion[];
+        puede_cambiar: boolean;
+    };
+    puede: { editar: boolean; gestionar_accesos: boolean };
 }>();
 
 const u = computed(() => props.usuario.data);
@@ -114,6 +134,26 @@ const enviarInvitacion = () => {
     );
 };
 
+// Rol
+const formRol = useForm({ rol_id: String(props.rol.actual?.id ?? '') });
+const cambiarRol = () =>
+    formRol.put(rutaRol.url(u.value.id), {
+        preserveScroll: true,
+        onSuccess: () => formRol.defaults({ rol_id: formRol.rol_id }),
+    });
+
+// Permisos efectivos agrupados por módulo («Productos · Ver»).
+const permisosAgrupados = computed(() => {
+    const grupos = new Map<string, string[]>();
+
+    for (const permiso of props.rol.permisos_efectivos) {
+        const [modulo, accion] = permiso.etiqueta.split(' · ');
+        grupos.set(modulo, [...(grupos.get(modulo) ?? []), accion ?? modulo]);
+    }
+
+    return [...grupos.entries()];
+});
+
 // Contraseña temporal
 const formClave = useForm({ password: '' });
 const asignarClave = () =>
@@ -144,6 +184,9 @@ const asignarClave = () =>
                         class="size-3.5"
                         aria-hidden="true"
                     />{{ u.rol_etiqueta }}
+                    <template v-if="rol.actual">
+                        · {{ rol.actual.nombre }}</template
+                    >
                 </span>
                 <template v-if="u.negocio">
                     ·
@@ -179,24 +222,32 @@ const asignarClave = () =>
                                 maxlength="255"
                                 autocomplete="off"
                                 required
+                                :disabled="!puede.editar"
                             />
                         </CampoFormulario>
                         <CampoFormulario
                             etiqueta="Correo electrónico"
                             para="email"
-                            :error="form.errors.email"
                         >
-                            <Input
+                            <CampoCorreo
+                                v-if="puede.editar"
                                 id="email"
                                 v-model="form.email"
-                                type="email"
-                                maxlength="255"
+                                :error="form.errors.email"
                                 autocomplete="off"
-                                required
+                                verificar-duplicado
+                                :ignorar-id="u.id"
+                                requerido
+                            />
+                            <Input
+                                v-else
+                                id="email"
+                                :model-value="form.email"
+                                disabled
                             />
                         </CampoFormulario>
                     </div>
-                    <div class="flex justify-end">
+                    <div v-if="puede.editar" class="flex justify-end">
                         <Button
                             type="submit"
                             :disabled="form.processing || !form.isDirty"
@@ -210,6 +261,81 @@ const asignarClave = () =>
             </Panel>
 
             <Panel
+                titulo="Rol y permisos"
+                descripcion="El rol define qué acciones puede realizar. El alcance (todos los negocios o solo el suyo) lo define el tipo de cuenta."
+            >
+                <form
+                    v-if="rol.puede_cambiar"
+                    class="flex flex-col gap-3 sm:flex-row sm:items-end"
+                    novalidate
+                    @submit.prevent="cambiarRol"
+                >
+                    <CampoFormulario
+                        etiqueta="Rol asignado"
+                        para="rol_id"
+                        :error="formRol.errors.rol_id"
+                        class="flex-1"
+                    >
+                        <SelectorBuscable
+                            id="rol_id"
+                            v-model="formRol.rol_id"
+                            :opciones="rol.opciones"
+                            etiqueta="Rol asignado"
+                            placeholder="Selecciona un rol"
+                            placeholder-busqueda="Buscar rol…"
+                            :invalido="!!formRol.errors.rol_id"
+                        />
+                    </CampoFormulario>
+                    <Button
+                        type="submit"
+                        variant="secondary"
+                        :disabled="formRol.processing || !formRol.isDirty"
+                    >
+                        <Spinner v-if="formRol.processing" />
+                        <ShieldCheck v-else />
+                        Cambiar rol
+                    </Button>
+                </form>
+                <div v-else class="text-sm">
+                    <p class="font-medium">
+                        {{ rol.actual?.nombre ?? 'Sin rol asignado' }}
+                    </p>
+                    <p class="text-xs text-muted-foreground">
+                        {{
+                            u.es_actual
+                                ? 'No puedes cambiar tu propio rol.'
+                                : 'No tienes permiso para cambiar el rol de este usuario.'
+                        }}
+                    </p>
+                </div>
+
+                <div class="mt-5 border-t pt-4">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Permisos efectivos ({{ rol.permisos_efectivos.length }})
+                    </p>
+                    <ul
+                        v-if="permisosAgrupados.length > 0"
+                        class="mt-2 grid gap-2 sm:grid-cols-2"
+                    >
+                        <li
+                            v-for="[modulo, acciones] in permisosAgrupados"
+                            :key="modulo"
+                            class="rounded-lg bg-muted/40 px-3 py-2 text-sm"
+                        >
+                            <span class="font-medium">{{ modulo }}</span>
+                            <span class="block text-xs text-muted-foreground">{{
+                                acciones.join(' · ')
+                            }}</span>
+                        </li>
+                    </ul>
+                    <p v-else class="mt-2 text-sm text-muted-foreground">
+                        Sin permisos: solo puede administrar su cuenta.
+                    </p>
+                </div>
+            </Panel>
+
+            <Panel
+                v-if="puede.gestionar_accesos"
                 titulo="Contraseña temporal"
                 descripcion="Reemplaza la contraseña actual; el usuario deberá cambiarla al entrar."
             >
@@ -285,7 +411,10 @@ const asignarClave = () =>
                         </dd>
                     </div>
                 </dl>
-                <div class="mt-4 space-y-2 border-t pt-4">
+                <div
+                    v-if="puede.gestionar_accesos"
+                    class="mt-4 space-y-2 border-t pt-4"
+                >
                     <Button
                         variant="outline"
                         class="w-full"
@@ -300,7 +429,7 @@ const asignarClave = () =>
                 </div>
             </Panel>
 
-            <Panel titulo="Estado del acceso">
+            <Panel v-if="puede.gestionar_accesos" titulo="Estado del acceso">
                 <p class="text-sm text-muted-foreground">
                     {{
                         suspendido

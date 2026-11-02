@@ -3,7 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
-use App\Services\Configuracion\AjustesPlataforma;
+use App\Services\Apariencia\TemaVisual;
+use App\Services\Usuarios\PreferenciasUsuario;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -51,6 +52,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $usuario->name,
                     'email' => $usuario->email,
                     'rol' => $usuario->rol->value,
+                    'rol_nombre' => $usuario->rolAsignado()?->name,
                     'two_factor_enabled' => $usuario->two_factor_confirmed_at !== null,
                     'negocio' => $usuario->esCliente() && $usuario->negocio !== null
                         ? ['id' => $usuario->negocio->id, 'nombre_comercial' => $usuario->negocio->nombre_comercial]
@@ -58,8 +60,13 @@ class HandleInertiaRequests extends Middleware
                 ],
                 'permisos' => $usuario === null ? null : [
                     'administrar' => $usuario->esAdministrador(),
+                    'superadministrador' => $usuario->esSuperadministrador(),
+                    // Permisos efectivos del rol (para mostrar u ocultar
+                    // menús y botones; el servidor vuelve a comprobarlos).
+                    'lista' => $usuario->permisosEfectivos(),
                     'ver_estadisticas' => $usuario->esAdministrador()
-                        || app(AjustesPlataforma::class)->booleano('clientes_ven_estadisticas'),
+                        ? $usuario->tienePermiso('estadisticas.ver')
+                        : $usuario->can('ver-estadisticas-cliente'),
                     // El administrador debe activar la verificación en dos
                     // pasos antes de usar el panel (RequerirDosPasosAdministrador).
                     'requiere_dos_pasos' => $usuario->esAdministrador()
@@ -67,6 +74,11 @@ class HandleInertiaRequests extends Middleware
                         && $usuario->two_factor_confirmed_at === null,
                 ],
             ],
+            'preferencias' => [
+                'vistas' => $usuario === null ? (object) [] : (object) PreferenciasUsuario::vistas($usuario),
+            ],
+            // Colores personalizados de la interfaz (null: tema predeterminado).
+            'tema' => fn () => app(TemaVisual::class)->tokens(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

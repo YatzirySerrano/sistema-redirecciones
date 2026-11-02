@@ -13,7 +13,7 @@ import { computed, watch } from 'vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import EstadoVacio from '@/components/comun/EstadoVacio.vue';
 import Panel from '@/components/comun/Panel.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import SelectorPeriodo from '@/components/comun/SelectorPeriodo.vue';
 import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
@@ -27,6 +27,10 @@ import {
 } from '@/lib/formato';
 import { index as estadisticasIndex } from '@/routes/admin/estadisticas';
 import { show as negocioShow } from '@/routes/admin/negocios';
+import {
+    negocios as opcionesNegocios,
+    productos as opcionesProductos,
+} from '@/routes/admin/opciones';
 import { show as productoShow } from '@/routes/admin/productos';
 import type {
     Barra,
@@ -59,8 +63,8 @@ const props = defineProps<{
     dispositivos: ElementoDesglose[];
     navegadores: ElementoDesglose[];
     sistemas: ElementoDesglose[];
-    negocios: Opcion[];
-    productos: Opcion[];
+    negocio_filtro: Opcion | null;
+    producto_filtro: Opcion | null;
     dias_conservacion_huella: number;
 }>();
 
@@ -108,22 +112,28 @@ const sinDatos = computed(() => props.totales.total === 0);
             v-model:hasta="filtros.hasta"
         />
         <div class="flex flex-1 flex-col gap-2 sm:flex-row xl:justify-end">
-            <SelectNativo
+            <SelectorBuscable
                 v-model="filtros.negocio_id"
-                :opciones="negocios"
+                :url="opcionesNegocios.url()"
+                :seleccion-inicial="negocio_filtro"
                 vacio="Todos los negocios"
                 etiqueta="Filtrar por negocio"
+                placeholder-busqueda="Buscar negocio…"
                 class="sm:w-56"
             />
-            <SelectNativo
+            <SelectorBuscable
                 v-model="filtros.producto_id"
-                :opciones="productos"
+                :url="opcionesProductos.url()"
+                :parametros="{ negocio_id: filtros.negocio_id }"
+                :seleccion-inicial="producto_filtro"
                 :vacio="
                     filtros.negocio_id
                         ? 'Todos los productos'
                         : 'Elige un negocio primero'
                 "
+                :disabled="!filtros.negocio_id"
                 etiqueta="Filtrar por producto"
+                placeholder-busqueda="Nombre o código…"
                 class="sm:w-56"
             />
         </div>

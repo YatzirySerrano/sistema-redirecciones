@@ -88,6 +88,8 @@ class ProductoController extends Controller
                 'orden' => $filtros['orden'] ?? 'registro',
                 'direccion' => $direccion,
             ],
+            'negocio_filtro' => $this->opcionNegocio($filtros['negocio_id'] ?? null),
+            'estados' => EstadoProducto::opciones(),
             ...$this->catalogos(),
         ]);
     }
@@ -96,8 +98,8 @@ class ProductoController extends Controller
     {
         return Inertia::render('admin/productos/Create', [
             'negocio_id' => $request->integer('negocio_id') ?: null,
+            'negocio_inicial' => $this->opcionNegocio($request->integer('negocio_id') ?: null),
             'url_publica_base' => Producto::construirUrlPermanente(''),
-            'negocios' => $this->opcionesNegocios(),
             ...$this->catalogos(),
         ]);
     }
@@ -146,7 +148,6 @@ class ProductoController extends Controller
                     ->where('auditable_type', 'producto')->where('auditable_id', $producto->id)
                     ->latest('created_at')->latest('id')->limit(20)->get()
             ),
-            'negocios' => $this->opcionesNegocios(),
         ]);
     }
 
@@ -221,18 +222,17 @@ class ProductoController extends Controller
     }
 
     /**
-     * @return list<array{value: string, label: string}>
+     * Opción ya elegida de un selector remoto de negocios.
+     *
+     * @return array{value: string, label: string}|null
      */
-    private function opcionesNegocios(): array
+    private function opcionNegocio(int|string|null $id): ?array
     {
-        return array_values(Negocio::query()
-            ->orderBy('nombre_comercial')
-            ->get(['id', 'nombre_comercial', 'estado'])
-            ->map(fn (Negocio $n) => [
-                'value' => (string) $n->id,
-                'label' => $n->nombre_comercial.($n->estaActivo() ? '' : ' (suspendido)'),
-            ])
-            ->values()
-            ->all());
+        $negocio = $id ? Negocio::query()->find((int) $id, ['id', 'nombre_comercial', 'estado']) : null;
+
+        return $negocio === null ? null : [
+            'value' => (string) $negocio->id,
+            'label' => $negocio->nombre_comercial.($negocio->estaActivo() ? '' : ' (suspendido)'),
+        ];
     }
 }

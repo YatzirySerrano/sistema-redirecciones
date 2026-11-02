@@ -12,6 +12,21 @@ use Illuminate\Validation\Rule;
 class CambiarEstadoRequest extends SolicitudAdministrativa
 {
     /**
+     * Suspender y reactivar son permisos distintos en negocios y productos;
+     * en usuarios ambos forman parte de «gestionar accesos».
+     */
+    protected function permiso(): string
+    {
+        $suspender = $this->input('estado') === EstadoCuenta::Suspendido->value;
+
+        return match (true) {
+            $this->routeIs('admin.negocios.estado') => $suspender ? 'negocios.suspender' : 'negocios.reactivar',
+            $this->routeIs('admin.productos.estado') => $suspender ? 'productos.suspender' : 'productos.reactivar',
+            default => 'usuarios.gestionar_accesos',
+        };
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array

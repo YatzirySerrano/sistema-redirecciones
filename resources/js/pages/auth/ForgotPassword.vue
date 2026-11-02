@@ -27,7 +27,8 @@ defineProps<{
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-success"
+        class="mb-6 rounded-lg border border-success/20 bg-success-soft px-3.5 py-3 text-sm text-success"
+        role="status"
     >
         {{ status }}
     </div>
@@ -40,8 +41,10 @@ defineProps<{
                     id="email"
                     type="email"
                     name="email"
-                    autocomplete="off"
+                    autocomplete="email"
+                    inputmode="email"
                     v-focus
+                    class="h-11"
                     placeholder="nombre@negocio.com"
                 />
                 <InputError :message="errors.email" />
@@ -49,7 +52,7 @@ defineProps<{
 
             <div class="my-6 flex items-center justify-start">
                 <Button
-                    class="w-full"
+                    class="h-11 w-full"
                     :disabled="processing"
                     data-test="email-password-reset-link-button"
                 >
@@ -61,7 +64,9 @@ defineProps<{
 
         <div class="space-x-1 text-center text-sm text-muted-foreground">
             <span>O vuelve a</span>
-            <TextLink :href="login()">iniciar sesión</TextLink>
+            <TextLink :href="login()" class="text-enlace"
+                >iniciar sesión</TextLink
+            >
         </div>
     </div>
 </template>

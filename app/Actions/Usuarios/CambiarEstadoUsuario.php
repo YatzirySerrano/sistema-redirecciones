@@ -3,10 +3,11 @@
 namespace App\Actions\Usuarios;
 
 use App\Enums\EstadoCuenta;
-use App\Enums\RolUsuario;
 use App\Models\User;
 use App\Services\Auditoria\RegistradorAuditoria;
+use App\Services\Autorizacion\GuardianRoles;
 use App\Services\Usuarios\SesionesUsuario;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -18,6 +19,7 @@ class CambiarEstadoUsuario
     public function __construct(
         private readonly RegistradorAuditoria $auditoria,
         private readonly SesionesUsuario $sesiones,
+        private readonly GuardianRoles $guardian,
     ) {}
 
     public function ejecutar(User $usuario, EstadoCuenta $estado, User $actor, ?string $motivo = null): User
@@ -32,8 +34,12 @@ class CambiarEstadoUsuario
             throw ValidationException::withMessages(['usuario' => 'No puedes suspender tu propio acceso.']);
         }
 
-        if ($suspender && $usuario->esAdministrador() && $this->esUltimoAdministradorActivo($usuario)) {
-            throw ValidationException::withMessages(['usuario' => 'Debe existir al menos un administrador activo.']);
+        if (! $this->guardian->puedeGestionar($actor, $usuario)) {
+            throw new AuthorizationException('No puedes modificar el acceso de un usuario con permisos que tú no tienes.');
+        }
+
+        if ($suspender && $this->guardian->esUltimoSuperadministradorActivo($usuario)) {
+            throw ValidationException::withMessages(['usuario' => 'Debe existir al menos un superadministrador activo.']);
         }
 
         $anterior = $usuario->estado;
@@ -57,14 +63,5 @@ class CambiarEstadoUsuario
         );
 
         return $usuario;
-    }
-
-    private function esUltimoAdministradorActivo(User $usuario): bool
-    {
-        return ! User::query()
-            ->where('rol', RolUsuario::Admin)
-            ->where('estado', EstadoCuenta::Activo)
-            ->whereKeyNot($usuario->id)
-            ->exists();
     }
 }

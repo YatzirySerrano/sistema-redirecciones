@@ -22,6 +22,10 @@ class UsuarioResource extends JsonResource
             'email' => $this->email,
             'rol' => $this->rol->value,
             'rol_etiqueta' => $this->rol->etiqueta(),
+            'rol_asignado' => $this->whenLoaded('roles', fn () => $this->roles->first() === null ? null : [
+                'id' => $this->roles->first()->id,
+                'nombre' => $this->roles->first()->name,
+            ]),
             'estado' => $this->estado->value,
             'estado_etiqueta' => $this->estado->etiqueta(),
             'negocio' => $this->whenLoaded('negocio', fn () => $this->negocio === null ? null : [

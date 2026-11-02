@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { LinkIcon } from '@lucide/vue';
+import { ref } from 'vue';
+import CoincidenciaContrasena from '@/components/formularios/CoincidenciaContrasena.vue';
+import RequisitosContrasena from '@/components/formularios/RequisitosContrasena.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
@@ -24,6 +27,10 @@ defineProps<{
     accion?: string;
     passwordRules?: string;
 }>();
+
+// Valores para la retroalimentación en vivo (el envío lo hace <Form>).
+const nuevaContrasena = ref('');
+const confirmacionContrasena = ref('');
 </script>
 
 <template>
@@ -76,11 +83,16 @@ defineProps<{
                 <Label for="password">Contraseña</Label>
                 <PasswordInput
                     id="password"
+                    v-model="nuevaContrasena"
                     name="password"
                     autocomplete="new-password"
                     autofocus
                     placeholder="Nueva contraseña"
                     :passwordrules="passwordRules"
+                />
+                <RequisitosContrasena
+                    :valor="nuevaContrasena"
+                    :reglas="passwordRules"
                 />
                 <InputError :message="errors.password" />
             </div>
@@ -91,15 +103,20 @@ defineProps<{
                 >
                 <PasswordInput
                     id="password_confirmation"
+                    v-model="confirmacionContrasena"
                     name="password_confirmation"
                     autocomplete="new-password"
                     placeholder="Repite la contraseña"
                     :passwordrules="passwordRules"
                 />
+                <CoincidenciaContrasena
+                    :contrasena="nuevaContrasena"
+                    :confirmacion="confirmacionContrasena"
+                />
                 <InputError :message="errors.password_confirmation" />
             </div>
 
-            <Button type="submit" class="w-full" :disabled="processing">
+            <Button type="submit" class="h-11 w-full" :disabled="processing">
                 <Spinner v-if="processing" />
                 Activar mi acceso
             </Button>

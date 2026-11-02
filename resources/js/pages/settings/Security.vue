@@ -3,6 +3,9 @@ import { Form, Head, usePage } from '@inertiajs/vue3';
 import { ShieldAlert } from '@lucide/vue';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/Heading.vue';
+import { ref } from 'vue';
+import CoincidenciaContrasena from '@/components/formularios/CoincidenciaContrasena.vue';
+import RequisitosContrasena from '@/components/formularios/RequisitosContrasena.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
@@ -31,6 +34,10 @@ defineOptions({
         ],
     },
 });
+
+// Valores para la retroalimentación en vivo (el envío lo hace <Form>).
+const nuevaContrasena = ref('');
+const confirmacionContrasena = ref('');
 </script>
 
 <template>
@@ -88,11 +95,16 @@ defineOptions({
                 <Label for="password">Nueva contraseña</Label>
                 <PasswordInput
                     id="password"
+                    v-model="nuevaContrasena"
                     name="password"
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                     placeholder="Nueva contraseña"
                     :passwordrules="props.passwordRules"
+                />
+                <RequisitosContrasena
+                    :valor="nuevaContrasena"
+                    :reglas="props.passwordRules"
                 />
                 <InputError :message="errors.password" />
             </div>
@@ -103,11 +115,16 @@ defineOptions({
                 >
                 <PasswordInput
                     id="password_confirmation"
+                    v-model="confirmacionContrasena"
                     name="password_confirmation"
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                     placeholder="Repite la nueva contraseña"
                     :passwordrules="props.passwordRules"
+                />
+                <CoincidenciaContrasena
+                    :contrasena="nuevaContrasena"
+                    :confirmacion="confirmacionContrasena"
                 />
                 <InputError :message="errors.password_confirmation" />
             </div>

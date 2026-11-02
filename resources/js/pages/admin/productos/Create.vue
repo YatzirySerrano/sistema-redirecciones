@@ -6,6 +6,7 @@ import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import SelectorTipoProducto from '@/components/admin-productos/SelectorTipoProducto.vue';
 import EstadoValidacionDestino from '@/components/productos/EstadoValidacionDestino.vue';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useValidacionDestino } from '@/composables/useValidacionDestino';
+import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
 import { create, index, store } from '@/routes/admin/productos';
 import type { Opcion } from '@/types';
 
@@ -28,7 +30,7 @@ defineOptions({
 const props = defineProps<{
     negocio_id: number | null;
     url_publica_base: string;
-    negocios: Opcion[];
+    negocio_inicial: Opcion | null;
     tipos: Opcion[];
     preparaciones: Opcion[];
 }>();
@@ -89,11 +91,15 @@ const guardar = () => {
                         para="negocio_id"
                         :error="form.errors.negocio_id"
                     >
-                        <SelectNativo
+                        <SelectorBuscable
                             id="negocio_id"
                             v-model="form.negocio_id"
-                            :opciones="negocios"
-                            vacio="Selecciona un negocio"
+                            :url="opcionesNegocios.url()"
+                            :seleccion-inicial="negocio_inicial"
+                            etiqueta="Negocio propietario"
+                            placeholder="Busca y selecciona un negocio"
+                            placeholder-busqueda="Nombre, responsable o correo…"
+                            sin-resultados="Ningún negocio coincide con la búsqueda."
                             :invalido="!!form.errors.negocio_id"
                         />
                     </CampoFormulario>

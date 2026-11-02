@@ -78,9 +78,12 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'es'),
+    // La plataforma solo se ofrece en español: el idioma no depende de
+    // APP_LOCALE para que un .env antiguo (p. ej. APP_LOCALE=en) no muestre
+    // mensajes del framework en inglés.
+    'locale' => 'es',
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => 'es',
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'es_MX'),
 

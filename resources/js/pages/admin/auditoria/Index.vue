@@ -7,10 +7,14 @@ import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import ListaAuditoria from '@/components/comun/ListaAuditoria.vue';
 import Paginacion from '@/components/comun/Paginacion.vue';
 import Panel from '@/components/comun/Panel.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
+import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
 import { Button } from '@/components/ui/button';
 import { useFiltros } from '@/composables/useFiltros';
 import { index as auditoriaIndex } from '@/routes/admin/auditoria';
+import {
+    negocios as opcionesNegocios,
+    usuarios as opcionesUsuarios,
+} from '@/routes/admin/opciones';
 import type { Opcion, Paginado, RegistroAuditoria } from '@/types';
 
 defineOptions({
@@ -30,8 +34,8 @@ const props = defineProps<{
         hasta: string;
     };
     acciones: Opcion[];
-    negocios: Opcion[];
-    usuarios: Opcion[];
+    negocio_filtro: Opcion | null;
+    usuario_filtro: Opcion | null;
 }>();
 
 const { filtros, limpiar } = useFiltros(auditoriaIndex.url(), {
@@ -58,25 +62,30 @@ const hayFiltros = computed(() => Object.values(filtros).some((v) => v !== ''));
                 placeholder="Buscar en la descripción…"
                 etiqueta="Buscar en la descripción"
             />
-            <SelectNativo
+            <SelectorBuscable
                 v-model="filtros.accion"
                 :opciones="acciones"
                 vacio="Todas las acciones"
                 etiqueta="Filtrar por acción"
+                placeholder-busqueda="Buscar acción…"
                 class="sm:w-56"
             />
-            <SelectNativo
+            <SelectorBuscable
                 v-model="filtros.negocio_id"
-                :opciones="negocios"
+                :url="opcionesNegocios.url()"
+                :seleccion-inicial="negocio_filtro"
                 vacio="Todos los negocios"
                 etiqueta="Filtrar por negocio"
+                placeholder-busqueda="Buscar negocio…"
                 class="sm:w-52"
             />
-            <SelectNativo
+            <SelectorBuscable
                 v-model="filtros.usuario_id"
-                :opciones="usuarios"
+                :url="opcionesUsuarios.url()"
+                :seleccion-inicial="usuario_filtro"
                 vacio="Todos los usuarios"
                 etiqueta="Filtrar por usuario"
+                placeholder-busqueda="Nombre o correo…"
                 class="sm:w-60"
             />
         </div>

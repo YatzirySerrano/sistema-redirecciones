@@ -7,6 +7,7 @@ use App\Actions\Negocios\CrearNegocio;
 use App\Actions\Productos\CambiarDestinoProducto;
 use App\Actions\Productos\CambiarEstadoProducto;
 use App\Actions\Productos\CrearProducto;
+use App\Actions\Usuarios\AsignarRol;
 use App\Enums\CategoriaDispositivo;
 use App\Enums\EstadoCuenta;
 use App\Enums\EstadoProducto;
@@ -15,7 +16,9 @@ use App\Enums\RolUsuario;
 use App\Models\CambioDestino;
 use App\Models\Negocio;
 use App\Models\Producto;
+use App\Models\Rol;
 use App\Models\User;
+use App\Services\Autorizacion\CatalogoPermisos;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
@@ -128,6 +131,14 @@ class DemoSeeder extends Seeder
                 'email_verified_at' => now(),
                 'debe_cambiar_password' => false,
             ])->save();
+        }
+
+        if ($admin->roles()->doesntExist()) {
+            $superadministrador = Rol::porClave(CatalogoPermisos::ROL_SUPERADMINISTRADOR);
+
+            if ($superadministrador !== null) {
+                AsignarRol::inicial($admin, $superadministrador);
+            }
         }
 
         return $admin;

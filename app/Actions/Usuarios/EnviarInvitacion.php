@@ -10,12 +10,8 @@ use App\Services\Usuarios\EnlaceInvitacion;
 use Throwable;
 
 /**
- * Envía (o reenvía) el enlace para que el usuario defina su contraseña.
- *
- * Se llama siempre fuera de transacciones (CrearUsuario lo difiere con
- * DB::afterCommit), de modo que un fallo del servidor de correo nunca revierte
- * el alta del negocio ni del usuario: el fallo queda registrado en el usuario
- * y en la auditoría, y el administrador puede reenviar el enlace.
+ * Envía (en cola) el enlace de acceso de un usuario. Cada envío invalida los
+ * enlaces anteriores (la huella incluye la fecha de envío).
  */
 class EnviarInvitacion
 {
@@ -32,31 +28,27 @@ class EnviarInvitacion
             return ResultadoInvitacion::NoPermitida;
         }
 
-        // Nueva fecha de envío: invalida cualquier enlace enviado antes.
-        $usuario->forceFill(['invitacion_enviada_en' => now(), 'invitacion_aceptada_en' => null])->save();
+        $usuario->forceFill([
+            'invitacion_enviada_en' => now(),
+            'invitacion_aceptada_en' => null,
+            'invitacion_fallida_en' => null,
+        ])->save();
 
         try {
             $usuario->notify(new InvitacionAcceso(
                 url: $this->enlaces->generar($usuario),
                 horasValidez: $this->enlaces->horasValidez(),
+                usuarioId: $usuario->id,
+                emitidaEn: $usuario->invitacion_enviada_en?->getTimestamp(),
             ));
         } catch (Throwable $e) {
+            // Cola síncrona o fallo al encolar: InvitacionAcceso::failed() ya
+            // pudo registrarlo; registrarFallo() no lo duplica.
             report($e);
-
-            $usuario->forceFill(['invitacion_fallida_en' => now()])->save();
-
-            $this->auditoria->registrar(
-                accion: 'usuario.invitacion_fallida',
-                descripcion: "No se pudo enviar el enlace de acceso a {$usuario->email}",
-                recurso: $usuario,
-                negocio: $usuario->negocio_id,
-                nuevos: ['error' => mb_substr(class_basename($e).': '.$e->getMessage(), 0, 200)],
-            );
+            $this->registrarFallo($usuario, $e);
 
             return ResultadoInvitacion::Fallida;
         }
-
-        $usuario->forceFill(['invitacion_fallida_en' => null])->save();
 
         $this->auditoria->registrar(
             accion: 'usuario.invitacion_enviada',
@@ -66,5 +58,27 @@ class EnviarInvitacion
         );
 
         return ResultadoInvitacion::Enviada;
+    }
+
+    /**
+     * Marca la invitación vigente como fallida y lo audita una sola vez.
+     */
+    public function registrarFallo(User $usuario, Throwable $error): void
+    {
+        $usuario->refresh();
+
+        if ($usuario->invitacion_fallida_en !== null || $usuario->invitacion_aceptada_en !== null) {
+            return;
+        }
+
+        $usuario->forceFill(['invitacion_fallida_en' => now()])->save();
+
+        $this->auditoria->registrar(
+            accion: 'usuario.invitacion_fallida',
+            descripcion: "No se pudo enviar el enlace de acceso a {$usuario->email}",
+            recurso: $usuario,
+            negocio: $usuario->negocio_id,
+            nuevos: ['error' => mb_substr(class_basename($error).': '.$error->getMessage(), 0, 200)],
+        );
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Enums;
 
 /**
- * Rol del usuario dentro de la plataforma.
+ * Tipo (ámbito) de la cuenta: define el ALCANCE de sus permisos. El
+ * personal de DASTI opera sobre todos los negocios; los clientes, solo sobre
+ * el suyo. Lo que cada uno puede hacer lo define su rol dinámico
+ * (App\Models\Rol).
  */
 enum RolUsuario: string
 {
@@ -15,7 +18,7 @@ enum RolUsuario: string
     public function etiqueta(): string
     {
         return match ($this) {
-            self::Admin => 'Administrador DASTI',
+            self::Admin => 'Personal DASTI',
             self::Cliente => 'Cliente',
         };
     }

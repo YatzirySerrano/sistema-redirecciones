@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { PackageOpen, SearchX } from '@lucide/vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Download, Eye, PackageOpen, PencilLine, SearchX } from '@lucide/vue';
 import TarjetaProducto from '@/components/cliente/TarjetaProducto.vue';
+import AccionFila from '@/components/comun/AccionFila.vue';
 import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import EstadoVacio from '@/components/comun/EstadoVacio.vue';
+import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
+import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
 import Paginacion from '@/components/comun/Paginacion.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
+import SelectorVista from '@/components/comun/SelectorVista.vue';
 import { Button } from '@/components/ui/button';
 import { useFiltros } from '@/composables/useFiltros';
-import { numero } from '@/lib/formato';
-import { index } from '@/routes/cliente/productos';
+import { useVistaListado } from '@/composables/useVistaListado';
+import { dominio, numero } from '@/lib/formato';
+import { index, show } from '@/routes/cliente/productos';
+import { show as qrShow } from '@/routes/productos/qr';
 import type { Opcion, Paginado, Producto } from '@/types';
 
 defineOptions({
@@ -26,6 +32,10 @@ const props = defineProps<{
 }>();
 
 const { filtros, limpiar } = useFiltros(index().url, { ...props.filtros });
+const { vista } = useVistaListado('cliente_productos');
+
+const descarga = (p: Producto) =>
+    qrShow.url(p.id, { query: { formato: 'png', descargar: 1 } });
 </script>
 
 <template>
@@ -51,7 +61,7 @@ const { filtros, limpiar } = useFiltros(index().url, { ...props.filtros });
                 placeholder="Buscar por nombre o destino…"
                 etiqueta="Buscar productos"
             />
-            <div class="grid grid-cols-2 gap-2 sm:flex">
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                 <SelectNativo
                     v-model="filtros.tipo"
                     :opciones="tipos"
@@ -66,6 +76,7 @@ const { filtros, limpiar } = useFiltros(index().url, { ...props.filtros });
                     etiqueta="Filtrar por estado"
                     class="sm:w-40"
                 />
+                <SelectorVista v-model="vista" class="col-span-2 sm:ml-2" />
             </div>
         </div>
 
@@ -80,7 +91,128 @@ const { filtros, limpiar } = useFiltros(index().url, { ...props.filtros });
         </EstadoVacio>
 
         <template v-else>
+            <div
+                v-if="vista === 'tabla'"
+                class="overflow-x-auto rounded-xl border bg-card shadow-xs"
+            >
+                <table class="w-full text-sm">
+                    <caption class="sr-only">
+                        Mis productos
+                    </caption>
+                    <thead class="bg-muted/40 text-left text-muted-foreground">
+                        <tr>
+                            <th scope="col" class="h-10 px-4 font-medium">
+                                Producto
+                            </th>
+                            <th scope="col" class="h-10 px-3 font-medium">
+                                Tipo
+                            </th>
+                            <th
+                                scope="col"
+                                class="hidden h-10 px-3 font-medium md:table-cell"
+                            >
+                                Destino
+                            </th>
+                            <th scope="col" class="h-10 px-3 font-medium">
+                                Estado
+                            </th>
+                            <th
+                                scope="col"
+                                class="hidden h-10 px-3 text-right font-medium sm:table-cell"
+                            >
+                                Accesos
+                            </th>
+                            <th
+                                scope="col"
+                                class="h-10 px-3 text-right font-medium"
+                            >
+                                Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="producto in productos.data"
+                            :key="producto.id"
+                            class="border-t hover:bg-muted/30"
+                        >
+                            <td class="max-w-64 px-4 py-3">
+                                <Link
+                                    :href="show(producto.id)"
+                                    class="block truncate font-medium hover:text-enlace hover:underline"
+                                    >{{ producto.nombre }}</Link
+                                >
+                                <span
+                                    class="font-mono text-xs text-muted-foreground"
+                                    >{{ producto.codigo }}</span
+                                >
+                            </td>
+                            <td class="px-3 py-3">
+                                <InsigniaTipo
+                                    :tipo="producto.tipo"
+                                    :etiqueta="producto.tipo_etiqueta"
+                                />
+                            </td>
+                            <td class="hidden max-w-56 px-3 py-3 md:table-cell">
+                                <span
+                                    class="block truncate"
+                                    :title="producto.url_destino ?? undefined"
+                                    >{{
+                                        producto.url_destino
+                                            ? dominio(producto.url_destino)
+                                            : 'Sin destino'
+                                    }}</span
+                                >
+                            </td>
+                            <td class="px-3 py-3">
+                                <InsigniaEstado
+                                    :estado="producto.estado"
+                                    :etiqueta="producto.estado_etiqueta"
+                                />
+                            </td>
+                            <td
+                                class="hidden px-3 py-3 text-right tabular-nums sm:table-cell"
+                            >
+                                {{
+                                    producto.total_accesos === null
+                                        ? '—'
+                                        : numero(producto.total_accesos)
+                                }}
+                            </td>
+                            <td class="px-2 py-2">
+                                <div
+                                    class="flex flex-wrap items-center justify-end gap-0.5"
+                                >
+                                    <AccionFila
+                                        :etiqueta="
+                                            producto.permisos.cambiar_destino
+                                                ? 'Cambiar destino'
+                                                : 'Ver'
+                                        "
+                                        :icono="
+                                            producto.permisos.cambiar_destino
+                                                ? PencilLine
+                                                : Eye
+                                        "
+                                        :href="show(producto.id)"
+                                        compacta
+                                    />
+                                    <AccionFila
+                                        v-if="producto.permisos.descargar_qr"
+                                        etiqueta="Descargar QR"
+                                        :icono="Download"
+                                        :href="descarga(producto)"
+                                        externo
+                                        compacta
+                                    />
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             <ul
+                v-else
                 class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
                 role="list"
             >

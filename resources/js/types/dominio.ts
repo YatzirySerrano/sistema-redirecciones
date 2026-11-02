@@ -2,7 +2,10 @@
  * Tipos de las props que envían los controladores (API Resources de Laravel).
  */
 
-export type Opcion = { value: string; label: string };
+export type Opcion = { value: string; label: string; descripcion?: string };
+
+/** Página de resultados de un selector con búsqueda remota. */
+export type PaginaOpciones = { data: Opcion[]; hay_mas: boolean };
 
 export type EnlacePaginacion = {
     url: string | null;
@@ -94,6 +97,8 @@ export type Usuario = {
     email: string;
     rol: 'admin' | 'cliente';
     rol_etiqueta: string;
+    /** Rol dinámico (permisos). */
+    rol_asignado?: { id: number; nombre: string } | null;
     estado: EstadoCuenta;
     estado_etiqueta: string;
     negocio?: {
@@ -182,4 +187,33 @@ export type Barra = {
     detalle?: string;
     total: number;
     href?: string;
+};
+
+export type Rol = {
+    id: number;
+    nombre: string;
+    clave: string | null;
+    descripcion: string | null;
+    ambito: 'plataforma' | 'negocio';
+    ambito_etiqueta: string;
+    del_sistema: boolean;
+    protegido: boolean;
+    usuarios_count?: number;
+    permisos_count?: number;
+    permisos?: string[];
+    created_at: string | null;
+    updated_at: string | null;
+};
+
+export type PermisoCatalogo = {
+    nombre: string;
+    etiqueta: string;
+    descripcion: string;
+    ambitos: ('plataforma' | 'negocio')[];
+};
+
+export type ModuloPermisos = {
+    clave: string;
+    etiqueta: string;
+    permisos: PermisoCatalogo[];
 };

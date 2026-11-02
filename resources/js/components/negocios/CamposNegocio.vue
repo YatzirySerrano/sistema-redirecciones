@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
+import CampoCorreo from '@/components/formularios/CampoCorreo.vue';
+import CampoTelefono from '@/components/formularios/CampoTelefono.vue';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { DatosNegocio } from '@/components/negocios/tipos';
@@ -48,14 +50,7 @@ defineProps<{ errores: Partial<Record<keyof DatosNegocio, string>> }>();
             opcional
             :error="errores.telefono"
         >
-            <Input
-                id="telefono"
-                v-model="datos.telefono"
-                type="tel"
-                maxlength="30"
-                autocomplete="tel"
-                placeholder="55 1234 5678"
-            />
+            <CampoTelefono id="telefono" v-model="datos.telefono" />
         </CampoFormulario>
         <div class="sm:col-span-2">
             <CampoFormulario
@@ -65,12 +60,9 @@ defineProps<{ errores: Partial<Record<keyof DatosNegocio, string>> }>();
                 :error="errores.email_contacto"
                 ayuda="Correo comercial del negocio. El acceso al panel se configura aparte."
             >
-                <Input
+                <CampoCorreo
                     id="email_contacto"
                     v-model="datos.email_contacto"
-                    type="email"
-                    maxlength="255"
-                    autocomplete="email"
                     placeholder="contacto@negocio.com"
                 />
             </CampoFormulario>
