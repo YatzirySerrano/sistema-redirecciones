@@ -82,6 +82,14 @@ final class CatalogoAcciones
         'fidelidad.recompensa_anulada' => 'Recompensa anulada',
         'fidelidad.saldo_ajustado' => 'Ajuste de visitas',
         'fidelidad.visita_anulada' => 'Visita anulada',
+        'pagina.publicada' => 'Página de enlaces publicada',
+        'pagina.despublicada' => 'Página de enlaces despublicada',
+        'pagina.version_restaurada' => 'Versión de página restaurada',
+        'pagina.direccion_cambiada' => 'Dirección de página cambiada',
+        'pagina.dominio_agregado' => 'Dominio propio agregado',
+        'pagina.dominio_verificado' => 'Estado de dominio propio',
+        'pagina.dominio_principal' => 'Dominio principal elegido',
+        'pagina.dominio_eliminado' => 'Dominio propio desvinculado',
     ];
 
     public static function etiqueta(string $accion): string

@@ -7,10 +7,9 @@ use App\Models\Fidelidad\Campana;
 use App\Models\Fidelidad\Consumidor;
 use App\Models\Fidelidad\Credencial;
 use App\Models\Fidelidad\Recompensa;
-use App\Services\Fidelidad\Codigos;
+use App\Services\Fidelidad\BuscadorConsumidores;
 use App\Services\Fidelidad\FichaConsumidor;
 use App\Services\Fidelidad\RegistroVisitas;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,56 +36,37 @@ class MostradorController extends ControladorFidelidad
                     'meta' => $c->vigente?->meta_visitas,
                     'recompensa' => $c->vigente?->recompensa,
                 ]),
+            'busqueda' => [
+                'espera_ms' => max(100, min(2000, (int) config('dasti.fidelidad.busqueda_espera_ms', 300))),
+                'min_caracteres' => BuscadorConsumidores::MIN_CARACTERES,
+            ],
         ]);
     }
 
     /**
-     * Identifica por código de credencial (escrito, escaneado o la URL
-     * completa) o busca por nombre, alias, teléfono o correo.
+     * Búsqueda en tiempo real (código de tarjeta, nombre, alias, teléfono o
+     * correo exacto). Solo lectura: nunca registra visitas.
      */
-    public function identificar(Request $request): JsonResponse
+    public function identificar(Request $request, BuscadorConsumidores $buscador): JsonResponse
     {
-        $datos = $request->validate(['q' => ['required', 'string', 'min:2', 'max:255']]);
-        $negocio = $this->negocio($request);
-        $texto = trim($datos['q']);
+        $datos = $request->validate([
+            'q' => ['required', 'string', 'max:255'],
+            'pagina' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ], ['q.required' => 'Escribe un nombre, teléfono o código de tarjeta.']);
 
-        // Una URL completa de /f/{codigo} también sirve.
-        $codigo = strtolower((string) preg_replace('#^.*/f/#', '', $texto));
+        return response()->json($buscador->buscar($this->negocio($request), $datos['q'], (int) ($datos['pagina'] ?? 1)));
+    }
 
-        if (Codigos::esCodigoValido($codigo)) {
-            $credencial = Credencial::query()->where('codigo', $codigo)->where('negocio_id', $negocio->id)->first();
+    /**
+     * Ficha del consumidor elegido en la búsqueda (progreso por campaña y
+     * recompensas disponibles). Solo lectura.
+     */
+    public function consumidor(Request $request, Consumidor $consumidor): JsonResponse
+    {
+        $this->delNegocio($request, $consumidor);
+        abort_unless($consumidor->estaActivo(), 404);
 
-            if ($credencial === null) {
-                return response()->json(['resultados' => [], 'mensaje' => 'Esta tarjeta no pertenece a tu negocio o no existe.']);
-            }
-
-            if (! $credencial->estaActiva()) {
-                return response()->json(['resultados' => [], 'mensaje' => 'Esta tarjeta fue revocada. Pide la credencial vigente o busca al consumidor por nombre.']);
-            }
-
-            return response()->json([
-                'resultados' => [FichaConsumidor::resumen($credencial->consumidor)],
-                'credencial' => ['codigo' => $credencial->codigo, 'tipo' => $credencial->tipo->etiqueta()],
-            ]);
-        }
-
-        $like = '%'.addcslashes($texto, '%_\\').'%';
-        $digitos = preg_replace('/\D/', '', $texto);
-
-        $consumidores = Consumidor::query()->deNegocio($negocio->id)->where('estado', Consumidor::ACTIVO)
-            ->where(function (Builder $q) use ($like, $digitos, $texto) {
-                $q->where('nombre', 'like', $like)->orWhere('alias', 'like', $like)->orWhere('email', mb_strtolower($texto));
-
-                if (strlen((string) $digitos) >= 4) {
-                    $q->orWhere('telefono', 'like', '%'.$digitos);
-                }
-            })
-            ->orderBy('nombre')->limit(10)->get();
-
-        return response()->json([
-            'resultados' => $consumidores->map(fn (Consumidor $c) => FichaConsumidor::resumen($c))->all(),
-            'mensaje' => $consumidores->isEmpty() ? 'No encontramos consumidores con esos datos.' : null,
-        ]);
+        return response()->json(['consumidor' => FichaConsumidor::resumen($consumidor)]);
     }
 
     public function visita(Request $request, RegistroVisitas $registro): JsonResponse

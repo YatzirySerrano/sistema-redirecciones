@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Middleware\EnrutarDominiosPagina;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Services\Paginas\RespuestaPublica;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,8 +26,15 @@ return Application::configure(basePath: dirname(__DIR__))
             // Enlaces permanentes: sin el grupo "web" (sin sesión ni cookies).
             Route::middleware([])->group(base_path('routes/redirecciones.php'));
 
-            // Webhooks firmados (Stripe): sin sesión ni CSRF.
+            // Notificaciones de pago (Openpay): sin sesión ni CSRF; se
+            // autentican con HTTP Basic y se verifican consultando la API.
             Route::middleware([])->group(base_path('routes/webhooks.php'));
+
+            // Archivos publicados por los negocios: sin sesión ni cookies.
+            Route::middleware([])->group(base_path('routes/medios.php'));
+
+            // Páginas de enlaces públicas (/l/{slug}): sin sesión ni cookies.
+            Route::middleware([])->group(base_path('routes/paginas-publicas.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -34,6 +43,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Detrás de Nginx en el mismo servidor: confiar en el proxy local para
         // obtener la IP y el esquema reales (HTTPS).
         $middleware->trustProxies(at: ['127.0.0.1', '::1']);
+
+        // Dominios personalizados de las Páginas de enlaces: cualquier host
+        // que no sea de DASTI solo puede servir la página de su negocio (se
+        // resuelve antes del enrutador, sin sesión). Va después de
+        // TrustProxies para conocer la IP real (límites por IP).
+        $middleware->append(EnrutarDominiosPagina::class);
 
         $middleware->web(append: [
             HandleAppearance::class,
@@ -67,6 +82,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // genérica, salvo en modo depuración.
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             $estado = $response->getStatusCode();
+
+            // Páginas de enlaces públicas y dominios personalizados: página
+            // neutra sin marca de DASTI ni datos del negocio.
+            $prefijoPaginas = trim((string) config('dasti.paginas.prefijo', 'l'), '/');
+
+            if (! $request->expectsJson() && ($request->attributes->get('pagina_publica') === true || $request->is($prefijoPaginas.'/*'))) {
+                return in_array($estado, [404, 405, 410, 429], true)
+                    ? app(RespuestaPublica::class)->noDisponible($estado === 405 ? 404 : $estado)
+                    : $response;
+            }
 
             // Enlaces permanentes: siempre la página neutra, sin datos del
             // negocio (también al superar el límite de solicitudes).

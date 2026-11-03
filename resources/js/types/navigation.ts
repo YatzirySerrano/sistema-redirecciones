@@ -12,4 +12,6 @@ export type NavItem = {
     icon?: LucideIcon;
     isActive?: boolean;
     exact?: boolean;
+    /** Etiqueta breve a la derecha (p. ej. «Contratar»). */
+    insignia?: string;
 };

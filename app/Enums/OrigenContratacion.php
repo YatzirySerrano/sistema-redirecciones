@@ -9,6 +9,8 @@ enum OrigenContratacion: string
 {
     use EnumConEtiqueta;
 
+    case Openpay = 'openpay';
+    // Histórico: contrataciones pagadas con la pasarela anterior.
     case Stripe = 'stripe';
     case Manual = 'manual';
     case FueraDeLinea = 'fuera_de_linea';
@@ -16,7 +18,8 @@ enum OrigenContratacion: string
     public function etiqueta(): string
     {
         return match ($this) {
-            self::Stripe => 'Pago en línea (Stripe)',
+            self::Openpay => 'Pago en línea (Openpay)',
+            self::Stripe => 'Pago en línea (Stripe, histórico)',
             self::Manual => 'Activación manual',
             self::FueraDeLinea => 'Pago fuera de línea',
         };

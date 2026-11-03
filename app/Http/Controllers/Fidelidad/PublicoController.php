@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Fidelidad;
 use App\Http\Controllers\Controller;
 use App\Models\Fidelidad\Recuperacion;
 use App\Services\Fidelidad\AccesoConsumidor;
+use App\Services\Fidelidad\Diseno\PresentacionPublica;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,11 +13,15 @@ use Illuminate\Http\Response;
 /**
  * Páginas públicas del consumidor: SOLO LECTURA. Escanear la tarjeta o
  * abrir el enlace muestra el progreso; nunca registra visitas, canjea ni
- * modifica nada. Sin datos de contacto, `noindex` y sin caché.
+ * modifica nada. Sin datos de contacto, `noindex` y sin caché. La tarjeta
+ * se dibuja con el diseño publicado por el negocio (o el predeterminado).
  */
 class PublicoController extends Controller
 {
-    public function __construct(private readonly AccesoConsumidor $acceso) {}
+    public function __construct(
+        private readonly AccesoConsumidor $acceso,
+        private readonly PresentacionPublica $presentacion,
+    ) {}
 
     public function credencial(string $codigo): Response
     {
@@ -29,7 +34,7 @@ class PublicoController extends Controller
             ], 404);
         }
 
-        return $this->vista('fidelidad.progreso', $this->acceso->progreso($credencial->consumidor));
+        return $this->vista('fidelidad.progreso', $this->presentacion->paraConsumidor($credencial->consumidor));
     }
 
     public function enlace(string $token): Response
@@ -44,7 +49,7 @@ class PublicoController extends Controller
             ], 404);
         }
 
-        return $this->vista('fidelidad.progreso', $this->acceso->progreso($consumidor));
+        return $this->vista('fidelidad.progreso', $this->presentacion->paraConsumidor($consumidor));
     }
 
     public function recuperar(): Response

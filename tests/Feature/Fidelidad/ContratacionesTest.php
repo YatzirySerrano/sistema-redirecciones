@@ -28,13 +28,13 @@ class ContratacionesTest extends TestCase
         $negocio = Negocio::factory()->create();
 
         $this->actingAs($admin)->post(route('admin.contrataciones.store'), [
-            'negocio_id' => $negocio->id, 'origen' => 'manual', 'motivo' => 'Cortesía comercial',
+            'negocio_id' => $negocio->id, 'servicio' => 'fidelidad', 'origen' => 'manual', 'motivo' => 'Cortesía comercial',
         ])->assertSessionHasNoErrors();
         $this->assertTrue(app(AccesoServicios::class)->tieneFidelidad($negocio));
 
         $otro = Negocio::factory()->create();
         $this->actingAs($admin)->post(route('admin.contrataciones.store'), [
-            'negocio_id' => $otro->id, 'origen' => 'fuera_de_linea', 'motivo' => 'Transferencia', 'importe' => '1500.50', 'referencia' => 'SPEI 123',
+            'negocio_id' => $otro->id, 'servicio' => 'fidelidad', 'origen' => 'fuera_de_linea', 'motivo' => 'Transferencia', 'importe' => '1500.50', 'referencia' => 'SPEI 123',
         ])->assertSessionHasNoErrors();
 
         $pago = Pago::query()->where('negocio_id', $otro->id)->firstOrFail();
@@ -56,7 +56,7 @@ class ContratacionesTest extends TestCase
         app(AccesoServicios::class)->olvidar();
 
         $propietario = $this->propietario($negocio);
-        $this->actingAs($propietario)->get(route('cliente.fidelidad.consumidores.index'))->assertRedirect(route('cliente.fidelidad.contratacion'));
+        $this->actingAs($propietario)->get(route('cliente.fidelidad.consumidores.index'))->assertRedirect(route('cliente.servicios.show', 'fidelidad'));
         $this->assertNotNull(Consumidor::query()->find($consumidor->id));
         $this->get('/r/'.$producto->codigo)->assertRedirect('https://ejemplo.mx');
         $this->assertTrue($negocio->fresh()?->estaActivo());

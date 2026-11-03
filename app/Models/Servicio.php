@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $clave
  * @property string $nombre
  * @property string|null $descripcion
+ * @property list<string>|null $beneficios
+ * @property bool $impuestos_incluidos
+ * @property int $orden
  * @property bool $es_base
  * @property int|null $precio_centavos
  * @property string $moneda
@@ -28,6 +31,13 @@ class Servicio extends Model
 
     public const REDIRECCIONES = 'redirecciones';
 
+    public const PAGINA_ENLACES = 'pagina_enlaces';
+
+    /**
+     * Servicios adicionales (contratación independiente, pago único).
+     */
+    public const ADICIONALES = [self::FIDELIDAD, self::PAGINA_ENLACES];
+
     protected $table = 'servicios';
 
     protected $guarded = ['id', 'clave'];
@@ -40,12 +50,30 @@ class Servicio extends Model
             'vigencia_meses' => 'integer',
             'contratable_en_linea' => 'boolean',
             'activo' => 'boolean',
+            'beneficios' => 'array',
+            'impuestos_incluidos' => 'boolean',
+            'orden' => 'integer',
         ];
     }
 
     public static function fidelidad(): self
     {
-        return self::query()->where('clave', self::FIDELIDAD)->firstOrFail();
+        return self::porClave(self::FIDELIDAD);
+    }
+
+    public static function paginaEnlaces(): self
+    {
+        return self::porClave(self::PAGINA_ENLACES);
+    }
+
+    public static function porClave(string $clave): self
+    {
+        return self::query()->where('clave', $clave)->firstOrFail();
+    }
+
+    public static function esAdicional(string $clave): bool
+    {
+        return in_array($clave, self::ADICIONALES, true);
     }
 
     /**

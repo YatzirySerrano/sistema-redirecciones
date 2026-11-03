@@ -24,16 +24,17 @@ class ContratacionController extends Controller
     {
         $datos = $request->validate([
             'negocio_id' => ['required', 'integer', Rule::exists('negocios', 'id')],
+            'servicio' => ['required', Rule::in(Servicio::ADICIONALES)],
             'origen' => ['required', Rule::in([OrigenContratacion::Manual->value, OrigenContratacion::FueraDeLinea->value])],
             'importe' => ['exclude_unless:origen,fuera_de_linea', 'required', 'numeric', 'min:1', 'max:999999.99', 'decimal:0,2'],
             'referencia' => ['exclude_unless:origen,fuera_de_linea', 'required', 'string', 'max:120'],
             'motivo' => ['required', 'string', 'min:5', 'max:255'],
-        ], [], ['negocio_id' => 'negocio', 'importe' => 'importe', 'referencia' => 'referencia del pago', 'motivo' => 'motivo']);
+        ], [], ['negocio_id' => 'negocio', 'servicio' => 'servicio', 'importe' => 'importe', 'referencia' => 'referencia del pago', 'motivo' => 'motivo']);
 
         /** @var User $actor */
         $actor = $request->user();
         $negocio = Negocio::query()->findOrFail((int) $datos['negocio_id']);
-        $servicio = Servicio::fidelidad();
+        $servicio = Servicio::porClave((string) $datos['servicio']);
 
         if ($datos['origen'] === OrigenContratacion::FueraDeLinea->value) {
             $gestor->registrarPagoFueraDeLinea($negocio, $servicio, (int) round(((float) $datos['importe']) * 100), $datos['referencia'], $actor, $datos['motivo']);
@@ -41,7 +42,7 @@ class ContratacionController extends Controller
             $gestor->activar($negocio, $servicio, OrigenContratacion::Manual, null, $actor, $datos['motivo']);
         }
 
-        $this->notificar("Fidelidad activado para «{$negocio->nombre_comercial}».");
+        $this->notificar("{$servicio->nombre} activado para «{$negocio->nombre_comercial}». Los demás servicios no cambian.");
 
         return back();
     }

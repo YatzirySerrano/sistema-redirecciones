@@ -6,8 +6,12 @@ import {
     History,
     House,
     LayoutDashboard,
+    LayoutList,
     Link2,
+    Mail,
     Nfc,
+    Paintbrush,
+    Sparkles,
     CreditCard,
     Gift,
     HeartHandshake,
@@ -19,7 +23,7 @@ import {
     UsersRound,
 } from '@lucide/vue';
 import { computed } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
+import MarcaDasti from '@/components/MarcaDasti.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -39,6 +43,7 @@ import { index as enlaces } from '@/routes/admin/enlaces';
 import { index as estadisticasAdmin } from '@/routes/admin/estadisticas';
 import { index as negocios } from '@/routes/admin/negocios';
 import { edit as apariencia } from '@/routes/admin/personalizacion';
+import { index as paginasAdmin } from '@/routes/admin/paginas';
 import { index as pagos } from '@/routes/admin/pagos';
 import { index as productosAdmin } from '@/routes/admin/productos';
 import { index as roles } from '@/routes/admin/roles';
@@ -47,14 +52,24 @@ import { index as usuarios } from '@/routes/admin/usuarios';
 import { inicio as inicioCliente } from '@/routes/cliente';
 import { index as estadisticasCliente } from '@/routes/cliente/estadisticas';
 import {
-    contratacion,
     inicio as fidelidadInicio,
     mostrador,
 } from '@/routes/cliente/fidelidad';
+import { edit as disenoTarjeta } from '@/routes/cliente/fidelidad/diseno';
 import { index as campanas } from '@/routes/cliente/fidelidad/campanas';
 import { index as consumidores } from '@/routes/cliente/fidelidad/consumidores';
 import { index as personal } from '@/routes/cliente/fidelidad/personal';
+import {
+    editor as paginaEditor,
+    inicio as paginaInicio,
+} from '@/routes/cliente/paginas';
+import { index as paginaEstadisticas } from '@/routes/cliente/paginas/estadisticas';
+import { index as paginaMensajes } from '@/routes/cliente/paginas/mensajes';
 import { index as productosCliente } from '@/routes/cliente/productos';
+import {
+    index as serviciosCliente,
+    show as servicioCliente,
+} from '@/routes/cliente/servicios';
 import { usePermisos } from '@/composables/usePermisos';
 import type { NavItem } from '@/types';
 
@@ -127,6 +142,12 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                         icon: CreditCard,
                         permiso: 'pagos.ver',
                     },
+                    {
+                        title: 'Páginas de enlaces',
+                        href: paginasAdmin(),
+                        icon: LayoutList,
+                        permiso: 'paginas.supervisar',
+                    },
                 ]),
             },
             {
@@ -192,9 +213,15 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
     }
 
     const secciones = [{ titulo: 'Redirecciones', items }];
-    const fidelidad = page.props.servicios?.fidelidad;
+    const contratados = page.props.servicios;
+    const habilitado = (clave: 'fidelidad' | 'pagina_enlaces') =>
+        !!contratados?.[clave] &&
+        (contratados[clave].activo || contratados[clave].solo_lectura);
+    // Servicios sin contratar: se muestran con la indicación «Contratar»
+    // y llevan a su presentación comercial (nunca al módulo bloqueado).
+    const porContratar: NavItem[] = [];
 
-    if (fidelidad && (fidelidad.activo || fidelidad.solo_lectura)) {
+    if (habilitado('fidelidad')) {
         secciones.push({
             titulo: 'Fidelidad',
             items: filtrar([
@@ -224,6 +251,12 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                     permiso: 'fidelidad.campanas',
                 },
                 {
+                    title: 'Diseño de tarjeta',
+                    href: disenoTarjeta(),
+                    icon: Paintbrush,
+                    permiso: 'fidelidad.diseno',
+                },
+                {
                     title: 'Personal',
                     href: personal(),
                     icon: UserCog,
@@ -232,17 +265,66 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
             ]),
         });
     } else if (puede('servicios.contratar')) {
-        secciones.push({
-            titulo: 'Servicios',
-            items: [
-                {
-                    title: 'Contratar Fidelidad',
-                    href: contratacion(),
-                    icon: HeartHandshake,
-                },
-            ],
+        porContratar.push({
+            title: 'Fidelidad',
+            href: servicioCliente('fidelidad'),
+            icon: HeartHandshake,
+            insignia: 'Contratar',
         });
     }
+
+    if (habilitado('pagina_enlaces')) {
+        secciones.push({
+            titulo: 'Página de enlaces',
+            items: filtrar([
+                {
+                    title: 'Mi página',
+                    href: paginaInicio(),
+                    icon: LayoutList,
+                    exact: true,
+                    permiso: 'paginas.ver',
+                },
+                {
+                    title: 'Editor',
+                    href: paginaEditor(),
+                    icon: Paintbrush,
+                    permiso: 'paginas.editar',
+                },
+                {
+                    title: 'Estadísticas',
+                    href: paginaEstadisticas(),
+                    icon: ChartColumnBig,
+                    permiso: 'paginas.ver',
+                },
+                {
+                    title: 'Mensajes',
+                    href: paginaMensajes(),
+                    icon: Mail,
+                    permiso: 'paginas.mensajes',
+                },
+            ]),
+        });
+    } else if (puede('servicios.contratar')) {
+        porContratar.push({
+            title: 'Página de enlaces',
+            href: servicioCliente('pagina_enlaces'),
+            icon: LayoutList,
+            insignia: 'Contratar',
+        });
+    }
+
+    secciones.push({
+        titulo: 'Servicios',
+        items: [
+            {
+                title: 'Mis servicios',
+                href: serviciosCliente(),
+                icon: Sparkles,
+                exact: true,
+            },
+            ...porContratar,
+        ],
+    });
 
     return secciones.filter((s) => s.items.length > 0);
 });
@@ -258,8 +340,8 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                         as-child
                         class="hover:bg-sidebar-accent"
                     >
-                        <Link :href="inicio()">
-                            <AppLogo />
+                        <Link :href="inicio()" aria-label="DASTI · Inicio">
+                            <MarcaDasti />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

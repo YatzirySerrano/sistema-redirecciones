@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Negocio $negocio
  * @property-read Servicio $servicio
  * @property-read Pago|null $pago
+ * @property-read User|null $creador
  */
 class Contratacion extends Model
 {
@@ -66,6 +67,12 @@ class Contratacion extends Model
     public function pago(): BelongsTo
     {
         return $this->belongsTo(Pago::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function creador(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creado_por');
     }
 
     public function estaVencida(): bool

@@ -9,7 +9,14 @@ import { defineConfig, lazyPlugins } from 'vite-plus';
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.ts',
+                // Páginas públicas de los negocios (sin el panel ni su tema).
+                'resources/css/publico.css',
+                'resources/js/publico/pagina.ts',
+                'resources/js/publico/fidelidad.ts',
+            ],
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {

@@ -36,16 +36,26 @@ return [
     ],
 
     /*
-    | Stripe (pagos en línea de servicios adicionales). Sin STRIPE_SECRET el
-    | checkout se deshabilita; sin STRIPE_WEBHOOK_SECRET los webhooks se
-    | rechazan. Usa claves de prueba (sk_test_…) hasta autorizar producción.
+    | Openpay (pagos en línea de servicios adicionales; formulario de pago
+    | alojado por Openpay). Sin OPENPAY_MERCHANT_ID / OPENPAY_PRIVATE_KEY la
+    | compra en línea se deshabilita; sin OPENPAY_WEBHOOK_USER /
+    | OPENPAY_WEBHOOK_PASSWORD las notificaciones se rechazan (503).
+    | OPENPAY_PRODUCTION=false usa sandbox-api.openpay.mx (pruebas).
     */
-    'stripe' => [
-        'key' => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
-        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
-        // Tolerancia (segundos) de la marca de tiempo de la firma.
-        'tolerancia_webhook' => (int) env('STRIPE_WEBHOOK_TOLERANCE', 300),
+    'openpay' => [
+        'merchant_id' => env('OPENPAY_MERCHANT_ID'),
+        'private_key' => env('OPENPAY_PRIVATE_KEY'),
+        // No se usa con el formulario alojado (solo con Openpay.js).
+        'public_key' => env('OPENPAY_PUBLIC_KEY'),
+        'production' => (bool) env('OPENPAY_PRODUCTION', false),
+        'webhook_user' => env('OPENPAY_WEBHOOK_USER'),
+        'webhook_password' => env('OPENPAY_WEBHOOK_PASSWORD'),
+        // Opcional: IP o rangos CIDR desde los que Openpay envía
+        // notificaciones, separados por comas.
+        'webhook_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('OPENPAY_WEBHOOK_IPS', ''))))),
+        'timeout' => (int) env('OPENPAY_TIMEOUT', 20),
+        // Horas tras las que un pago no completado se da por caducado.
+        'horas_expiracion' => (int) env('OPENPAY_HORAS_EXPIRACION', 24),
     ],
 
 ];

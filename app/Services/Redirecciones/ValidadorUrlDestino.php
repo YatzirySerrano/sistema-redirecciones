@@ -2,6 +2,8 @@
 
 namespace App\Services\Redirecciones;
 
+use App\Enums\EstadoPagina;
+use App\Models\Paginas\PaginaEnlaces;
 use App\Services\Configuracion\AjustesPlataforma;
 
 /**
@@ -110,6 +112,12 @@ class ValidadorUrlDestino
             return 'Usa un nombre de dominio en lugar de una dirección IP.';
         }
 
+        // Única excepción al bloqueo del propio servicio: una Página de
+        // enlaces publicada (el host es exactamente la URL pública de DASTI).
+        if ($this->esPaginaDeEnlacesPublicada($host, $partes)) {
+            return null;
+        }
+
         if (! $this->tieneFormatoDeDominioPublico($host)) {
             return 'El dominio de la URL no es válido o no es público.';
         }
@@ -210,6 +218,31 @@ class ValidadorUrlDestino
         }
 
         return false;
+    }
+
+    /**
+     * Única excepción al bloqueo del dominio propio: una Página de enlaces
+     * PUBLICADA en el prefijo público (https://<url_publica>/l/{slug} o una
+     * de sus subpáginas), sin parámetros ni fragmentos. Así un QR/NFC puede
+     * llevar a la página de enlaces del negocio sin abrir bucles hacia /r/
+     * ni hacia el panel.
+     *
+     * @param  array<string, mixed>  $partes
+     */
+    private function esPaginaDeEnlacesPublicada(string $host, array $partes): bool
+    {
+        $publico = strtolower((string) parse_url((string) config('dasti.url_publica'), PHP_URL_HOST));
+        $prefijo = preg_quote(trim((string) config('dasti.paginas.prefijo', 'l'), '/'), '#');
+
+        if ($host !== $publico || isset($partes['query']) || isset($partes['fragment'])) {
+            return false;
+        }
+
+        if (! preg_match('#^/'.$prefijo.'/([a-z0-9-]{3,40})(?:/[a-z0-9-]{1,40})?/?$#', (string) ($partes['path'] ?? ''), $m)) {
+            return false;
+        }
+
+        return PaginaEnlaces::query()->where('slug', $m[1])->where('estado', EstadoPagina::Publicada)->whereNotNull('publicado')->exists();
     }
 
     private function estaBloqueado(string $host): bool

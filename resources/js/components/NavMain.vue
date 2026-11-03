@@ -4,6 +4,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
@@ -32,7 +33,12 @@ const activo = (item: NavItem) =>
                 <SidebarMenuButton
                     as-child
                     :is-active="activo(item)"
-                    :tooltip="item.title"
+                    :tooltip="
+                        item.insignia
+                            ? `${item.title} · ${item.insignia}`
+                            : item.title
+                    "
+                    :class="item.insignia ? 'pr-20' : ''"
                     class="h-9 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground"
                 >
                     <Link :href="item.href">
@@ -40,6 +46,11 @@ const activo = (item: NavItem) =>
                         <span>{{ item.title }}</span>
                     </Link>
                 </SidebarMenuButton>
+                <SidebarMenuBadge
+                    v-if="item.insignia"
+                    class="rounded-full bg-sidebar-primary/20 px-1.5 text-[10px] font-semibold text-sidebar-primary-foreground"
+                    >{{ item.insignia }}</SidebarMenuBadge
+                >
             </SidebarMenuItem>
         </SidebarMenu>
     </SidebarGroup>

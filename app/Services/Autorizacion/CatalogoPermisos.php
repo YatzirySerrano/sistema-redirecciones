@@ -145,6 +145,18 @@ final class CatalogoPermisos
                 'fidelidad.campanas' => ['etiqueta' => 'Campañas', 'descripcion' => 'Crear y modificar campañas y recompensas.', 'ambitos' => self::N],
                 'fidelidad.personal' => ['etiqueta' => 'Personal', 'descripcion' => 'Administrar empleados del negocio.', 'ambitos' => self::N],
                 'fidelidad.auditoria' => ['etiqueta' => 'Auditoría', 'descripcion' => 'Actividad del programa y visitas por empleado.', 'ambitos' => self::N],
+                'fidelidad.diseno' => ['etiqueta' => 'Diseño de tarjeta', 'descripcion' => 'Personalizar y publicar la tarjeta digital que ven los consumidores.', 'ambitos' => self::N],
+            ],
+        ],
+        'paginas' => [
+            'etiqueta' => 'Página de enlaces',
+            'permisos' => [
+                'paginas.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Consultar la página, su dirección pública y sus estadísticas.', 'ambitos' => self::N],
+                'paginas.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Diseño, contenido, imágenes y borradores.', 'ambitos' => self::N],
+                'paginas.publicar' => ['etiqueta' => 'Publicar', 'descripcion' => 'Publicar, despublicar y cambiar la dirección pública.', 'ambitos' => self::N],
+                'paginas.dominios' => ['etiqueta' => 'Dominio propio', 'descripcion' => 'Conectar, verificar y desvincular dominios del negocio.', 'ambitos' => self::N],
+                'paginas.mensajes' => ['etiqueta' => 'Mensajes', 'descripcion' => 'Leer los mensajes enviados desde el formulario de contacto.', 'ambitos' => self::N],
+                'paginas.supervisar' => ['etiqueta' => 'Supervisar', 'descripcion' => 'Negocios con el servicio, publicación, dominios e incidencias (sin mensajes de visitantes).', 'ambitos' => self::P],
             ],
         ],
         'roles' => [

@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Listeners\AuditarEventosDeSeguridad;
+use App\Models\ArchivoPublico;
 use App\Models\Contratacion;
 use App\Models\Fidelidad\Campana;
 use App\Models\Fidelidad\Consumidor;
+use App\Models\Fidelidad\Diseno;
 use App\Models\Fidelidad\Recompensa;
 use App\Models\Negocio;
 use App\Models\Pago;
@@ -16,8 +18,8 @@ use App\Models\User;
 use App\Services\Apariencia\TemaVisual;
 use App\Services\Autorizacion\CatalogoPermisos;
 use App\Services\Configuracion\AjustesPlataforma;
+use App\Services\Pagos\PasarelaOpenpay;
 use App\Services\Pagos\PasarelaPago;
-use App\Services\Pagos\PasarelaStripe;
 use App\Services\Servicios\AccesoServicios;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -44,7 +46,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(AjustesPlataforma::class);
         $this->app->scoped(TemaVisual::class);
         $this->app->scoped(AccesoServicios::class);
-        $this->app->bind(PasarelaPago::class, PasarelaStripe::class);
+        $this->app->bind(PasarelaPago::class, PasarelaOpenpay::class);
     }
 
     /**
@@ -83,6 +85,8 @@ class AppServiceProvider extends ServiceProvider
             'fidelidad_campana' => Campana::class,
             'fidelidad_consumidor' => Consumidor::class,
             'fidelidad_recompensa' => Recompensa::class,
+            'fidelidad_diseno' => Diseno::class,
+            'archivo_publico' => ArchivoPublico::class,
         ]);
 
         if (app()->isProduction()) {

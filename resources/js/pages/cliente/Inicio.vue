@@ -18,6 +18,7 @@ import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import GraficaArea from '@/components/graficas/GraficaArea.vue';
 import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
 import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
+import ResumenServicios from '@/components/servicios/ResumenServicios.vue';
 import { Button } from '@/components/ui/button';
 import { usePermisos } from '@/composables/usePermisos';
 import { numero, variacion, visitantes } from '@/lib/formato';
@@ -198,6 +199,8 @@ const barras = computed<Barra[]>(() =>
             />
         </Panel>
     </div>
+
+    <ResumenServicios />
 
     <!-- Fidelidad (si el negocio la contrató) -->
     <Panel

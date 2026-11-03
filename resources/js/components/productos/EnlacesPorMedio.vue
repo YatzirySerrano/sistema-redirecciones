@@ -19,6 +19,7 @@ const props = defineProps<{
     producto: Producto;
     accionDestino: (id: number) => string;
     estadisticas?: EstadisticaMedio[];
+    sugerencias?: { etiqueta: string; url: string }[];
 }>();
 
 const enlaces = computed(() => [
@@ -109,6 +110,7 @@ const AYUDA = {
                     :accion="accionDestino(enlace.id)"
                     :obligatorio="false"
                     compacto
+                    :sugerencias="sugerencias"
                 />
                 <div
                     v-if="enlace.medio === 'qr' && enlace.permisos.descargar_qr"

@@ -19,6 +19,14 @@ class AntifraudeTest extends TestCase
 {
     use PreparaFidelidad, RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Las páginas públicas cargan recursos de Vite que otros pueden estar
+        // recompilando en paralelo.
+        $this->withoutVite();
+    }
+
     private function visita(User $usuario, int $consumidorId, int $campanaId, ?string $uuid = null, array $extra = [])
     {
         return $this->actingAs($usuario)->postJson(route('cliente.fidelidad.visitas.store'), [
@@ -173,7 +181,7 @@ class AntifraudeTest extends TestCase
 
         $this->assertTrue($propietario->tienePermiso('fidelidad.visitas'));
         $this->visita($propietario, $consumidor->id, $campana->id)->assertForbidden();
-        $this->actingAs($propietario)->get(route('cliente.fidelidad.inicio'))->assertRedirect(route('cliente.fidelidad.contratacion'));
+        $this->actingAs($propietario)->get(route('cliente.fidelidad.inicio'))->assertRedirect(route('cliente.servicios.show', 'fidelidad'));
         $this->assertSame(0, Movimiento::query()->count());
     }
 

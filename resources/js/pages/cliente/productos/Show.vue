@@ -32,6 +32,7 @@ const props = defineProps<{
     estadisticas: { totales: TotalesEstadisticas; serie: PuntoSerie[] } | null;
     cambios: Coleccion<CambioDestino>;
     estadisticas_medios: EstadisticaMedio[];
+    destinos_pagina?: { etiqueta: string; url: string }[];
 }>();
 
 defineOptions({
@@ -96,6 +97,7 @@ const muestraQr = computed(
                     :producto="p"
                     :accion-destino="(id: number) => destino.url(id)"
                     :estadisticas="estadisticas_medios"
+                    :sugerencias="destinos_pagina ?? []"
                 />
             </Panel>
             <Panel
@@ -134,6 +136,7 @@ const muestraQr = computed(
                     :producto="p"
                     :accion="destino.url(p.id)"
                     obligatorio
+                    :sugerencias="destinos_pagina ?? []"
                 />
                 <div
                     v-else

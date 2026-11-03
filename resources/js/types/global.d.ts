@@ -22,13 +22,21 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             preferencias: { vistas: Record<string, 'tabla' | 'tarjetas'> };
             tema: import('@/lib/tema').TokensTema;
-            servicios: {
-                fidelidad: {
+            servicios: Record<
+                'fidelidad' | 'pagina_enlaces',
+                {
                     activo: boolean;
                     solo_lectura: boolean;
                     estado: string | null;
-                };
-            } | null;
+                }
+            > | null;
+            marca: {
+                logo: string | null;
+                logo_oscuro: string | null;
+                isotipo: string | null;
+                isotipo_oscuro: string | null;
+                temporal: boolean;
+            };
             [key: string]: unknown;
         };
     }

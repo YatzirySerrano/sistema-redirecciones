@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Apariencia\MarcaDasti;
 use App\Services\Apariencia\TemaVisual;
 use App\Services\Servicios\AccesoServicios;
 use App\Services\Usuarios\PreferenciasUsuario;
@@ -77,8 +78,11 @@ class HandleInertiaRequests extends Middleware
             ],
             // Servicios adicionales del negocio del cliente (navegación).
             'servicios' => fn () => $usuario !== null && $usuario->esCliente() && $usuario->negocio !== null
-                ? ['fidelidad' => (fn (array $e) => ['activo' => $e['activo'], 'solo_lectura' => $e['solo_lectura'], 'estado' => $e['estado']])(app(AccesoServicios::class)->fidelidad($usuario->negocio))]
+                ? app(AccesoServicios::class)->resumen($usuario->negocio)
                 : null,
+            // Identidad de DASTI (logotipo oficial cuando se coloque en
+            // public/marca; mientras tanto, recurso neutral temporal).
+            'marca' => fn () => app(MarcaDasti::class)->datos(),
             'preferencias' => [
                 'vistas' => $usuario === null ? (object) [] : (object) PreferenciasUsuario::vistas($usuario),
             ],

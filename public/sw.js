@@ -11,15 +11,19 @@
  *   /offline.html; nunca se sirve una página guardada (podría contener datos
  *   de otra sesión o de otro negocio).
  * - Todo lo demás no se intercepta: respuestas de Inertia/JSON, panel
- *   administrativo, autenticación, webhooks de Stripe, operaciones POST/PUT/
+ *   administrativo, autenticación, notificaciones de Openpay, operaciones POST/PUT/
  *   PATCH/DELETE (Fidelidad no funciona sin conexión), redirecciones públicas
- *   /r/{codigo} (siempre consultan el destino vigente) y /f/, /mi-fidelidad/.
+ *   /r/{codigo} (siempre consultan el destino vigente), /f/, /mi-fidelidad/,
+ *   las Páginas de enlaces públicas /l/ (cada negocio publica cambios en
+ *   vivo), los archivos /medios/, el retorno del pago en línea y la
+ *   autorización interna de dominios. Los dominios personalizados de los
+ *   negocios son otro origen: este Service Worker nunca los controla.
  *
  * Actualización controlada: una versión nueva queda en espera hasta que la
  * interfaz pide activarla (mensaje SKIP_WAITING); al activarse se borran
  * las cachés de versiones anteriores.
  */
-const VERSION = 'dasti-pwa-v1';
+const VERSION = 'dasti-pwa-v2';
 const CACHE_BASE = `${VERSION}-base`;
 const CACHE_ASSETS = `${VERSION}-assets`;
 const OFFLINE = '/offline.html';
@@ -36,7 +40,11 @@ const NUNCA = [
     '/r/',
     '/f/',
     '/mi-fidelidad',
-    '/stripe',
+    '/l/',
+    '/medios/',
+    '/interno/',
+    '/openpay',
+    '/panel/servicios/pago',
     '/login',
     '/logout',
     '/two-factor',

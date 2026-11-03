@@ -47,8 +47,8 @@ class AplicacionInstalableTest extends TestCase
 
         // Solo se interceptan GET del mismo origen.
         $this->assertStringContainsString("request.method !== 'GET'", $sw);
-        // Nunca: redirecciones públicas, Fidelidad pública, Stripe, sesión.
-        foreach (["'/r/'", "'/f/'", "'/mi-fidelidad'", "'/stripe'", "'/login'", "'/logout'"] as $prefijo) {
+        // Nunca: redirecciones públicas, Fidelidad pública, notificaciones de pago, sesión.
+        foreach (["'/r/'", "'/f/'", "'/mi-fidelidad'", "'/openpay'", "'/l/'", "'/medios/'", "'/panel/servicios/pago'", "'/login'", "'/logout'"] as $prefijo) {
             $this->assertStringContainsString($prefijo, $sw);
         }
         // Las navegaciones van a la red; sin conexión, página informativa.

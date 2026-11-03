@@ -75,3 +75,13 @@ En producción (o con `DASTI_EXIGIR_2FA_ADMIN=true`), los administradores deben 
     - mostrar estadísticas a los clientes;
     - dominios bloqueados;
     - días de retención de eventos.
+
+## Servicios, precios y pagos (Openpay)
+
+- **Servicios contratados › Catálogo y precios**: elige el servicio (Fidelidad o Página de enlaces) y define el precio final en MXN, si incluye IVA, la vigencia (vacía = permanente, pago único), la descripción y los beneficios que ve el cliente. Habilita «Permitir contratación en línea» solo cuando el precio esté definido y Openpay configurado.
+- **Activar servicio**: activa un servicio para un negocio sin pago en línea (cortesía o pago fuera de línea con importe y referencia). Queda registrado quién, cuándo y por qué. Solo se activa el servicio elegido.
+- **Suspender / reactivar / restringir**: con motivo obligatorio. Nunca afecta las redirecciones QR/NFC ni borra datos.
+- **Pagos**: cada orden muestra su folio, intentos de cobro (marca y últimos 4 dígitos de la tarjeta, nunca el número completo), reembolsos y contracargos. Acciones: **Consultar en Openpay** (actualiza el estado real), **Reembolsar** (total o parcial) y **Marcar revisado**.
+- Reglas automáticas: reembolso total → el servicio se suspende (si no hay otro periodo vigente); reembolso parcial → queda en revisión y se conserva el acceso; contracargo → el servicio queda restringido (solo lectura) hasta que se resuelve.
+- Configuración técnica de Openpay: ver `docs/despliegue.md` › «Pagos en línea con Openpay». El código de verificación del webhook aparece en Pagos › Openpay.
+- El personal de DASTI ve contrataciones y pagos, nunca los datos personales de los consumidores de Fidelidad ni los mensajes de las Páginas de enlaces.

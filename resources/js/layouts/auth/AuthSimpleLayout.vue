@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BarChart3, Link2, Nfc, QrCode, ShieldCheck } from '@lucide/vue';
-import AppLogo from '@/components/AppLogo.vue';
+import MarcaDasti from '@/components/MarcaDasti.vue';
 import IndicadorConexion from '@/components/comun/IndicadorConexion.vue';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -14,7 +14,7 @@ import { Toaster } from '@/components/ui/sonner';
  * - Móvil y tableta vertical: franja de marca compacta y el formulario.
  *
  * Solo usa tokens de color, para respetar la personalización visual. La
- * identidad es tipográfica: no existe un logotipo oficial de DASTI.
+ * identidad se muestra con MarcaDasti (logotipo oficial cuando exista).
  */
 defineProps<{
     title?: string;
@@ -64,7 +64,7 @@ const beneficios = [
             <div
                 class="relative flex flex-1 flex-col justify-between gap-12 px-10 py-10 xl:px-16 xl:py-14"
             >
-                <div class="flex"><AppLogo /></div>
+                <div class="flex"><MarcaDasti variante="completa" /></div>
 
                 <div class="max-w-lg space-y-9">
                     <div class="space-y-4">
@@ -157,7 +157,7 @@ const beneficios = [
                     aria-hidden="true"
                 />
                 <div class="relative">
-                    <div class="flex"><AppLogo /></div>
+                    <div class="flex"><MarcaDasti variante="completa" /></div>
                     <p
                         class="mt-5 max-w-sm text-lg leading-snug font-semibold text-sidebar-accent-foreground"
                     >

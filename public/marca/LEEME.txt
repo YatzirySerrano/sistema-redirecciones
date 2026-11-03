@@ -1,0 +1,13 @@
+Logotipo oficial de DASTI
+=========================
+
+Coloca aquí los archivos oficiales (SVG recomendado; PNG o WEBP también funcionan):
+
+  dasti-logo.svg            Variante completa (sidebar expandido, inicio de sesión).
+  dasti-logo-oscuro.svg     Opcional: versión para fondos oscuros.
+  dasti-isotipo.svg         Variante compacta y cuadrada (sidebar colapsado, móvil).
+  dasti-isotipo-oscuro.svg  Opcional: versión compacta para fondos oscuros.
+
+La interfaz los detecta automáticamente (App\Services\Apariencia\MarcaDasti).
+Mientras no existan se muestra un recurso neutral temporal.
+Las imágenes se ajustan con object-contain: nunca se estiran ni se recortan.

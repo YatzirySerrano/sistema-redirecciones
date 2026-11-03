@@ -7,10 +7,10 @@ import {
     CirclePlay,
     CreditCard,
     Layers,
+    LayoutList,
     Lock,
     LockOpen,
     Plus,
-    Save,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
@@ -23,9 +23,10 @@ import Panel from '@/components/comun/Panel.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
 import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
 import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
+import FormularioServicio from '@/components/servicios/FormularioServicio.vue';
+import type { ServicioAdmin } from '@/components/servicios/tipos';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useFiltros } from '@/composables/useFiltros';
 import { fechaCorta, numero, pesos } from '@/lib/formato';
@@ -36,7 +37,7 @@ import {
 import { show as verNegocio } from '@/routes/admin/negocios';
 import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
 import { index as pagos } from '@/routes/admin/pagos';
-import { index, update } from '@/routes/admin/servicios';
+import { index } from '@/routes/admin/servicios';
 import type { MetaPaginacion, Opcion } from '@/types';
 
 defineOptions({
@@ -45,23 +46,12 @@ defineOptions({
     },
 });
 
-type Servicio = {
-    id: number;
-    clave: string;
-    nombre: string;
-    descripcion: string | null;
-    es_base: boolean;
-    precio_centavos: number | null;
-    moneda: string;
-    vigencia_meses: number | null;
-    contratable_en_linea: boolean;
-    activo: boolean;
-};
-
 type Contratacion = {
     id: number;
     negocio: { id: number; nombre_comercial: string };
     servicio: string;
+    servicio_clave: string;
+    creado_por: string | null;
     estado: string;
     estado_etiqueta: string;
     vencida: boolean;
@@ -70,13 +60,18 @@ type Contratacion = {
     vence_en: string | null;
     motivo: string | null;
     restriccion_manual: boolean;
-    pago: { estado: string; importe_centavos: number; moneda: string } | null;
+    pago: {
+        folio: string | null;
+        estado: string;
+        importe_centavos: number;
+        moneda: string;
+    } | null;
 };
 
 const props = defineProps<{
-    servicios: Servicio[];
+    servicios: ServicioAdmin[];
     contrataciones: { data: Contratacion[]; meta: MetaPaginacion };
-    filtros: { estado: string; negocio_id: string };
+    filtros: { estado: string; negocio_id: string; servicio: string };
     negocio_filtro: Opcion | null;
     estados: Opcion[];
     resumen: {
@@ -87,40 +82,34 @@ const props = defineProps<{
         pagos_pendientes: number;
         incidencias: number;
     };
-    stripe: { configurado: boolean; modo_real: boolean; webhook: boolean };
+    pasarela: {
+        nombre: string;
+        configurado: boolean;
+        modo_real: boolean;
+        notificaciones: boolean;
+    };
     puede_gestionar: boolean;
 }>();
 
 const { filtros } = useFiltros(index.url(), { ...props.filtros });
 
-// Configuración comercial de Fidelidad
-const fidelidad = computed(() =>
-    props.servicios.find((s) => s.clave === 'fidelidad'),
+// Servicios adicionales (contratación independiente).
+const adicionales = computed(() => props.servicios.filter((s) => !s.es_base));
+const opcionesServicio = computed(() =>
+    adicionales.value.map((s) => ({ value: s.clave, label: s.nombre })),
 );
-const formServicio = useForm({
-    precio: fidelidad.value?.precio_centavos
-        ? (fidelidad.value.precio_centavos / 100).toFixed(2)
-        : '',
-    vigencia_meses: (fidelidad.value?.vigencia_meses ?? undefined) as
-        | number
-        | undefined,
-    contratable_en_linea: fidelidad.value?.contratable_en_linea ?? false,
-    activo: fidelidad.value?.activo ?? true,
-});
-const guardarServicio = () =>
-    fidelidad.value &&
-    formServicio
-        .transform((d) => ({
-            ...d,
-            precio: d.precio === '' ? null : d.precio,
-            vigencia_meses: d.vigencia_meses || null,
-        }))
-        .put(update.url(fidelidad.value.id), { preserveScroll: true });
+const configurando = ref(adicionales.value[0]?.clave ?? '');
+const servicioConfigurado = computed(() =>
+    adicionales.value.find((s) => s.clave === configurando.value),
+);
+const vigentes = (clave: string) =>
+    props.servicios.find((s) => s.clave === clave)?.contrataciones_activas ?? 0;
 
 // Activación manual / pago fuera de línea
 const dialogoActivar = ref(false);
 const formActivar = useForm({
     negocio_id: '',
+    servicio: adicionales.value[0]?.clave ?? '',
     origen: 'manual',
     importe: '',
     referencia: '',
@@ -177,8 +166,8 @@ void router;
 
     <EncabezadoPagina
         titulo="Servicios contratados"
-        descripcion="Redirecciones es el servicio base. Fidelidad DASTI es un servicio adicional que se activa por pago o manualmente."
-        ayuda="Los permisos de un usuario no bastan: su negocio también debe tener el servicio activo. Nada de lo que hagas aquí afecta las redirecciones QR/NFC."
+        descripcion="Redirecciones es el servicio base. Fidelidad y Página de enlaces son servicios adicionales independientes, de pago único, que se activan por pago en línea o manualmente."
+        ayuda="Los permisos de un usuario no bastan: su negocio también debe tener el servicio activo. Activar un servicio no activa el otro. Nada de lo que hagas aquí afecta las redirecciones QR/NFC."
         :icono="Layers"
     >
         <template #acciones>
@@ -186,16 +175,21 @@ void router;
                 ><Link :href="pagos()"><CreditCard /> Pagos</Link></Button
             >
             <Button v-if="puede_gestionar" @click="dialogoActivar = true"
-                ><Plus /> Activar Fidelidad</Button
+                ><Plus /> Activar servicio</Button
             >
         </template>
     </EncabezadoPagina>
 
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <TarjetaIndicador
-            etiqueta="Negocios con Fidelidad"
-            :valor="numero(resumen.negocios_con_fidelidad)"
+            etiqueta="Con Fidelidad"
+            :valor="numero(vigentes('fidelidad'))"
             :icono="BadgeCheck"
+        />
+        <TarjetaIndicador
+            etiqueta="Con Página de enlaces"
+            :valor="numero(vigentes('pagina_enlaces'))"
+            :icono="LayoutList"
         />
         <TarjetaIndicador
             etiqueta="Pagos confirmados"
@@ -205,10 +199,6 @@ void router;
         <TarjetaIndicador
             etiqueta="Pagos pendientes"
             :valor="numero(resumen.pagos_pendientes)"
-        />
-        <TarjetaIndicador
-            etiqueta="Contrataciones pendientes"
-            :valor="numero(resumen.contrataciones_pendientes)"
         />
         <TarjetaIndicador
             etiqueta="Incidencias"
@@ -232,6 +222,13 @@ void router;
                     vacio="Todos los negocios"
                     etiqueta="Filtrar por negocio"
                     class="sm:w-64"
+                />
+                <SelectNativo
+                    v-model="filtros.servicio"
+                    :opciones="opcionesServicio"
+                    vacio="Todos los servicios"
+                    etiqueta="Filtrar por servicio"
+                    class="sm:w-52"
                 />
                 <SelectNativo
                     v-model="filtros.estado"
@@ -279,6 +276,9 @@ void router;
                                     class="font-medium hover:text-enlace hover:underline"
                                     >{{ c.negocio.nombre_comercial }}</Link
                                 >
+                                <p class="text-xs font-medium text-primary">
+                                    {{ c.servicio }}
+                                </p>
                                 <p
                                     v-if="c.motivo"
                                     class="max-w-xs truncate text-xs text-muted-foreground"
@@ -317,6 +317,9 @@ void router;
                                         pesos(c.pago.importe_centavos)
                                     }}</template
                                 >
+                                <span v-if="c.creado_por" class="block text-xs"
+                                    >Por {{ c.creado_por }}</span
+                                >
                             </td>
                             <td class="px-2 py-1.5">
                                 <div
@@ -333,7 +336,7 @@ void router;
                                             pedirAccion(
                                                 c,
                                                 'restringir',
-                                                'Restringir Fidelidad',
+                                                `Restringir ${c.servicio}`,
                                             )
                                         "
                                         ><Lock
@@ -367,7 +370,7 @@ void router;
                                             pedirAccion(
                                                 c,
                                                 'suspender',
-                                                'Suspender Fidelidad',
+                                                `Suspender ${c.servicio}`,
                                             )
                                         "
                                         ><CirclePause
@@ -385,7 +388,7 @@ void router;
                                             pedirAccion(
                                                 c,
                                                 'reactivar',
-                                                'Reactivar Fidelidad',
+                                                `Reactivar ${c.servicio}`,
                                             )
                                         "
                                         ><CirclePlay
@@ -400,98 +403,56 @@ void router;
                 v-else
                 :icono="Layers"
                 titulo="Sin contrataciones"
-                descripcion="Activa Fidelidad para un negocio o espera su pago en línea."
+                descripcion="Activa un servicio para un negocio o espera su pago en línea."
             />
             <Paginacion :meta="contrataciones.meta" nombre="contrataciones" />
         </section>
 
         <Panel
-            titulo="Fidelidad: precio y vigencia"
-            descripcion="Se aplica a las contrataciones nuevas."
+            titulo="Catálogo y precios"
+            descripcion="Se aplica a las contrataciones nuevas. Sin precio no se puede contratar en línea."
         >
             <div
-                v-if="!stripe.configurado || !stripe.webhook"
+                v-if="!pasarela.configurado || !pasarela.notificaciones"
                 class="mb-4 flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-xs text-warning"
             >
                 <CircleAlert class="mt-0.5 size-4 shrink-0" />
                 <span>
                     {{
-                        !stripe.configurado
-                            ? 'Faltan las claves de Stripe (STRIPE_SECRET).'
-                            : 'Falta el secreto del webhook (STRIPE_WEBHOOK_SECRET).'
+                        !pasarela.configurado
+                            ? 'Faltan las credenciales de Openpay (OPENPAY_MERCHANT_ID y OPENPAY_PRIVATE_KEY): el pago en línea está deshabilitado.'
+                            : 'Faltan el usuario y la contraseña de las notificaciones de Openpay (OPENPAY_WEBHOOK_USER y OPENPAY_WEBHOOK_PASSWORD): los pagos solo se confirmarán al volver del formulario o con la conciliación programada.'
                     }}
-                    El pago en línea está deshabilitado; puedes activar
-                    manualmente o registrar pagos fuera de línea.
+                    Puedes activar manualmente o registrar pagos fuera de línea.
                 </span>
             </div>
             <p v-else class="mb-4 text-xs text-muted-foreground">
-                Stripe en modo
-                {{ stripe.modo_real ? 'REAL (cargos reales)' : 'de pruebas' }}.
+                Openpay en ambiente
+                {{
+                    pasarela.modo_real
+                        ? 'de PRODUCCIÓN (cargos reales)'
+                        : 'de pruebas (sandbox)'
+                }}.
             </p>
-            <form
-                class="space-y-4"
-                novalidate
-                @submit.prevent="guardarServicio"
-            >
-                <div class="grid grid-cols-2 gap-3">
-                    <CampoFormulario
-                        etiqueta="Precio (MXN)"
-                        para="precio"
-                        :error="formServicio.errors.precio"
-                    >
-                        <Input
-                            id="precio"
-                            v-model="formServicio.precio"
-                            inputmode="decimal"
-                            placeholder="Sin precio"
-                            :disabled="!puede_gestionar"
-                        />
-                    </CampoFormulario>
-                    <CampoFormulario
-                        etiqueta="Vigencia (meses)"
-                        para="vigencia"
-                        :error="formServicio.errors.vigencia_meses"
-                        ayuda="Vacío = indefinida."
-                    >
-                        <Input
-                            id="vigencia"
-                            v-model.number="formServicio.vigencia_meses"
-                            type="number"
-                            min="1"
-                            max="120"
-                            :disabled="!puede_gestionar"
-                        />
-                    </CampoFormulario>
-                </div>
-                <label class="flex items-center justify-between gap-3 text-sm">
-                    Permitir contratación en línea
-                    <Switch
-                        v-model="formServicio.contratable_en_linea"
-                        :disabled="!puede_gestionar"
-                    />
-                </label>
-                <label class="flex items-center justify-between gap-3 text-sm">
-                    Servicio disponible
-                    <Switch
-                        v-model="formServicio.activo"
-                        :disabled="!puede_gestionar"
-                    />
-                </label>
-                <Button
-                    v-if="puede_gestionar"
-                    type="submit"
-                    class="w-full"
-                    :disabled="formServicio.processing || !formServicio.isDirty"
-                    ><Save /> Guardar</Button
-                >
-            </form>
+            <SelectNativo
+                v-model="configurando"
+                :opciones="opcionesServicio"
+                etiqueta="Servicio a configurar"
+                class="mb-4"
+            />
+            <FormularioServicio
+                v-if="servicioConfigurado"
+                :key="servicioConfigurado.id"
+                :servicio="servicioConfigurado"
+                :editable="puede_gestionar"
+            />
         </Panel>
     </div>
 
     <DialogoConfirmacion
         v-model:open="dialogoActivar"
-        titulo="Activar Fidelidad"
-        descripcion="Activa el servicio para un negocio sin pago en línea. Queda registrado en la auditoría."
+        titulo="Activar servicio"
+        descripcion="Activa un servicio para un negocio sin pago en línea. Solo se activa el servicio elegido y queda registrado con tu nombre, la fecha y el motivo."
         confirmar="Activar"
         :procesando="formActivar.processing"
         :deshabilitado="
@@ -512,6 +473,17 @@ void router;
                     :parametros="{ solo_activos: true }"
                     etiqueta="Negocio"
                     placeholder="Busca un negocio"
+                />
+            </CampoFormulario>
+            <CampoFormulario
+                etiqueta="Servicio"
+                para="servicio-activar"
+                :error="formActivar.errors.servicio"
+            >
+                <SelectNativo
+                    id="servicio-activar"
+                    v-model="formActivar.servicio"
+                    :opciones="opcionesServicio"
                 />
             </CampoFormulario>
             <CampoFormulario etiqueta="Tipo" para="origen">
@@ -578,7 +550,7 @@ void router;
         :titulo="accionPendiente?.titulo ?? ''"
         :descripcion="
             accionPendiente
-                ? `${accionPendiente.contratacion.negocio.nombre_comercial}. Los datos del programa se conservan y las redirecciones no se afectan.`
+                ? `${accionPendiente.contratacion.servicio} de ${accionPendiente.contratacion.negocio.nombre_comercial}. Los datos se conservan, los demás servicios no cambian y las redirecciones no se afectan.`
                 : ''
         "
         confirmar="Confirmar"

@@ -3,11 +3,11 @@
 @section('titulo', $titulo)
 
 @section('contenido')
-    <section class="rounded-2xl border bg-card p-6 shadow-xs">
-        <h1 class="text-xl font-semibold tracking-tight">{{ $titulo }}</h1>
-        <p class="mt-2 text-sm text-muted-foreground">{{ $mensaje }}</p>
+    <section class="rounded-3xl border border-[#e7e5e4] bg-white p-7 text-center shadow-[0_18px_50px_-24px_rgba(28,25,23,0.35)]">
+        <h1 class="text-xl font-semibold tracking-tight text-balance">{{ $titulo }}</h1>
+        <p class="mt-3 text-sm leading-relaxed text-[#57534e] text-pretty">{{ $mensaje }}</p>
         @if ($recuperar ?? false)
-            <a href="{{ route('fidelidad.publico.recuperar') }}" class="mt-4 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">Recuperar con mi correo</a>
+            <a href="{{ route('fidelidad.publico.recuperar') }}" class="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-[#1f3a5f] px-5 text-sm font-medium text-white transition hover:bg-[#18304f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f3a5f]">Recuperar con mi correo</a>
         @endif
     </section>
 @endsection

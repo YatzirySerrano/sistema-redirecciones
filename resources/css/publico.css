@@ -1,0 +1,31 @@
+/*
+ * Hoja base de las páginas públicas de los negocios (Página de enlaces y
+ * tarjeta de Fidelidad). No incluye el tema del panel de DASTI: cada página
+ * define sus colores con variables CSS propias, acotadas a su contenedor.
+ */
+@import 'tailwindcss';
+
+@source '../js/publico/**/*.{ts,vue}';
+@source '../js/components/paginas/**/*.{ts,vue}';
+@source '../js/components/fidelidad-diseno/**/*.{ts,vue}';
+@source '../views/paginas/**/*.blade.php';
+@source '../views/fidelidad/**/*.blade.php';
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Respaldo sin JavaScript (las etiquetas en línea no están permitidas por la CSP). */
+.pagina-sin-js {
+    max-width: 36rem;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+}

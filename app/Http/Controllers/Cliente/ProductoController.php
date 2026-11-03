@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Configuracion\AjustesPlataforma;
 use App\Services\Estadisticas\ConsultasEstadisticas;
 use App\Services\Estadisticas\FiltroEstadisticas;
+use App\Services\Paginas\DestinosPagina;
 use App\Services\Qr\OpcionesQr;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -115,6 +116,8 @@ class ProductoController extends Controller
                     'totales' => $estadisticas->totales(new FiltroEstadisticas($filtro->desde, $filtro->hasta, negocioId: $negocioId, productoId: $enlace->id, soloProductosVigentes: true)),
                 ], [$producto, ...$producto->enlacesSecundarios->all()])
                 : [],
+            // Página de enlaces publicada del negocio como destino sugerido.
+            'destinos_pagina' => app(DestinosPagina::class)->paraNegocio($producto->negocio),
             'cambios' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['usuario', 'producto'])
                     ->whereIn('producto_id', [$producto->id, ...$producto->enlacesSecundarios->pluck('id')->all()])

@@ -112,3 +112,47 @@ La interfaz oculta lo que no corresponde, pero la seguridad se aplica siempre en
 ## Aplicación web progresiva
 
 `public/manifest.webmanifest`, `public/sw.js`, `public/offline.html`, `resources/js/lib/pwa.ts`. El Service Worker solo guarda recursos públicos (página sin conexión, íconos y `/build/assets/*`); las navegaciones siempre van a la red y nunca intercepta `/r/`, `/f/`, `/mi-fidelidad`, `/stripe`, autenticación ni métodos distintos de GET. Las versiones nuevas esperan a que el usuario pulse «Actualizar».
+
+## Página de enlaces
+
+Servicio adicional (`servicios.clave = pagina_enlaces`), contratado aparte de Fidelidad. Cada ruta del panel exige el permiso (`paginas.*`) **y** el servicio (`RequiereServicio:pagina_enlaces[,operar]`).
+
+### Datos
+
+```
+negocios 1─1 paginas_enlaces          (slug único, estado, borrador y publicado como JSON validado, version)
+              ├─< paginas_enlaces_versiones  (copias: publicación, restauración, guardados; se conservan 30)
+              ├─< paginas_enlaces_alias      (direcciones anteriores: 301 a la actual y reservadas)
+              ├─< paginas_enlaces_dominios   (host, token TXT, estado, host_verificado único)
+              ├─< paginas_enlaces_eventos    (visita/clic/contacto: fecha, hora, elemento, subpágina, dispositivo, host de procedencia, huella diaria)
+              ├─< paginas_enlaces_diarios    (totales por día, tipo y elemento; se conservan)
+              └─< paginas_enlaces_mensajes   (formulario de contacto; solo los ve el negocio)
+```
+
+Una página por negocio con varias **subpáginas** dentro del documento. Cada elemento tiene un `id` UUID estable: las estadísticas sobreviven a las ediciones y al reordenamiento.
+
+### Documento y validación (`App\Services\Paginas\DocumentoPagina`)
+
+Lista blanca estricta, la misma al guardar el borrador, publicar, restaurar y aplicar plantillas: claves desconocidas descartadas, colores solo `#rrggbb`, números acotados, textos sin etiquetas HTML y con longitud máxima, URL validadas con `ValidadorUrlDestino`, WhatsApp/teléfono/correo construidos en el servidor, insertados reducidos a proveedor + identificador (`Insertados`), imágenes y videos solo como UUID de archivos del propio negocio (`archivos_publicos`), límites de páginas, elementos y tamaño. Los errores se devuelven por elemento (`bloques.{id}.{campo}`). El borrador admite elementos incompletos; la publicación exige los datos obligatorios.
+
+Concurrencia optimista: cada guardado envía `version`; si otra pestaña guardó antes, el servidor responde 409 y el editor ofrece recargar o sobrescribir.
+
+### Renderizado
+
+`resources/js/components/paginas/RenderizadorPagina.vue` es el **único** renderizador: lo usan la vista previa del editor y la página pública (`resources/js/publico/pagina.ts`). Usa consultas de contenedor (`@container`), variables CSS acotadas a `.pe-raiz` y nunca `v-html` (el formato enriquecido se convierte en segmentos de texto).
+
+### Página pública (`/l/{slug}[/{subpagina}]`, sin sesión ni cookies)
+
+1. Resuelve el slug (o un alias → 301). Negocio suspendido o servicio no vigente → 410; sin publicar → 404 (página neutra, `noindex`, sin marca).
+2. `DocumentoPagina::paraPublico` quita lo oculto o fuera de su periodo programado y los destinos (solo queda la ruta `/ir/{id}`).
+3. Blade (`resources/views/paginas/publica.blade.php`) emite título, descripción, Open Graph/Twitter, URL canónica (dominio principal activo o la de DASTI), favicon del negocio y el JSON incrustado (`@json`, etiquetas escapadas); CSP con nonce, `frame-src` limitado a los proveedores permitidos y `font-src` a fonts.bunny.net.
+4. Clics: `/ir/{id}` registra y redirige (302, `no-store`) al destino **actual publicado**; `tel:`/`mailto:` se abren directo y avisan con `sendBeacon` (POST a la misma ruta).
+5. Eventos tras responder (`defer`), sin IP ni User-Agent completos; bots marcados y fuera de los totales; precargas ignoradas.
+
+### Dominios personalizados
+
+`GestorDominios` (TXT `_dasti-verificacion.<host>` + CNAME/A hacia DASTI + HTTPS forzado a las IP de entrada), `ResolvedorDns` y `ComprobadorHttps` como interfaces (simuladas en las pruebas), `EnrutarDominiosPagina` (middleware global: un host ajeno solo sirve la página de su negocio) y `/interno/dominios/autorizar` para `on_demand_tls` de Caddy. Ver «Página de enlaces y dominios personalizados» en `despliegue.md`.
+
+### Como destino de QR/NFC
+
+`ValidadorUrlDestino` mantiene el bloqueo del dominio propio con una sola excepción: `https://<url_publica>/l/{slug}[/{subpagina}]` de una página **publicada**, sin parámetros. El cambio pasa por `CambiarDestinoProducto` (historial y auditoría habituales).

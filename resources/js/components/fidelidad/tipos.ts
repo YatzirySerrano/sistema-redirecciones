@@ -64,3 +64,20 @@ export type ReglasCampana = {
     inicia_en: string;
     termina_en: string | null;
 };
+
+/** Resultado ligero de la búsqueda del mostrador (sin datos completos). */
+export type ResultadoBusqueda = {
+    id: number;
+    nombre: string;
+    alias: string | null;
+    /** Enmascarado: ••••1234. */
+    telefono: string | null;
+    coincidencia:
+        | 'codigo'
+        | 'telefono_exacto'
+        | 'telefono'
+        | 'correo'
+        | 'nombre';
+    campanas: string[];
+    recompensas: number;
+};

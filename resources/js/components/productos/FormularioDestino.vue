@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { Info, Save } from '@lucide/vue';
+import { Info, Link2, Save } from '@lucide/vue';
 import { computed, toRef } from 'vue';
 import InputError from '@/components/InputError.vue';
 import EstadoValidacionDestino from '@/components/productos/EstadoValidacionDestino.vue';
@@ -23,8 +23,10 @@ const props = withDefaults(
         accion: string;
         obligatorio?: boolean;
         compacto?: boolean;
+        /** Destinos sugeridos (p. ej. la Página de enlaces publicada). */
+        sugerencias?: { etiqueta: string; url: string }[];
     }>(),
-    { obligatorio: true, compacto: false },
+    { obligatorio: true, compacto: false, sugerencias: () => [] },
 );
 
 const emit = defineEmits<{ guardado: [] }>();
@@ -77,6 +79,24 @@ const guardar = () => {
                 class="h-11 font-mono text-sm"
             />
             <InputError :message="form.errors.url_destino" />
+
+            <div v-if="sugerencias.length" class="flex flex-wrap gap-2">
+                <Button
+                    v-for="s in sugerencias"
+                    :key="s.url"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    class="h-9"
+                    :disabled="form.url_destino.trim() === s.url"
+                    @click="form.url_destino = s.url"
+                >
+                    <Link2 /> Usar
+                    {{
+                        s.etiqueta.charAt(0).toLowerCase() + s.etiqueta.slice(1)
+                    }}
+                </Button>
+            </div>
 
             <EstadoValidacionDestino
                 :id="`ayuda-destino-${producto.id}`"

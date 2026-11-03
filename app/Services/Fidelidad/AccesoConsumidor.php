@@ -2,7 +2,6 @@
 
 namespace App\Services\Fidelidad;
 
-use App\Enums\EstadoRecompensa;
 use App\Models\Fidelidad\Consumidor;
 use App\Models\Fidelidad\Credencial;
 use App\Models\Fidelidad\Recuperacion;
@@ -14,7 +13,8 @@ use Illuminate\Support\Facades\DB;
  * Acceso del consumidor a su progreso, sin contraseña y de SOLO LECTURA.
  *
  * Nada de lo que hace esta clase registra visitas, modifica saldos ni
- * canjea recompensas. La vista resultante nunca incluye teléfono ni correo.
+ * canjea recompensas. La vista pública (Diseno\PresentacionPublica) nunca
+ * incluye teléfono ni correo.
  */
 class AccesoConsumidor
 {
@@ -41,37 +41,6 @@ class AccesoConsumidor
         }
 
         return Credencial::query()->with('consumidor.negocio')->where('codigo', strtolower($codigo))->first();
-    }
-
-    /**
-     * Datos mínimos para la página pública de progreso.
-     *
-     * @return array<string, mixed>
-     */
-    public function progreso(Consumidor $consumidor): array
-    {
-        $consumidor->loadMissing(['negocio', 'participaciones.campana', 'participaciones.version']);
-
-        return [
-            'nombre' => $consumidor->nombreVisible(),
-            'negocio' => $consumidor->negocio->nombre_comercial,
-            'programas' => $consumidor->participaciones
-                ->filter(fn ($p) => $p->estado !== 'fusionada')
-                ->map(fn ($p) => [
-                    'campana' => $p->campana->nombre,
-                    'visitas' => $p->visitas_ciclo,
-                    'meta' => $p->version->meta_visitas,
-                    'recompensa' => $p->version->recompensa,
-                    'completada' => $p->estado === 'completada',
-                ])->values()->all(),
-            'recompensas' => $consumidor->recompensas()
-                ->where('estado', EstadoRecompensa::Disponible)
-                ->where(fn ($q) => $q->whereNull('vence_en')->orWhere('vence_en', '>', now()))
-                ->orderBy('created_at')
-                ->get(['descripcion', 'vence_en'])
-                ->map(fn ($r) => ['descripcion' => $r->descripcion, 'vence_en' => $r->vence_en?->format('d/m/Y')])
-                ->all(),
-        ];
     }
 
     /**

@@ -1,18 +1,18 @@
 <?php
 
-use App\Http\Controllers\Pagos\WebhookStripeController;
+use App\Http\Controllers\Pagos\NotificacionOpenpayController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Webhooks de proveedores externos
+| Notificaciones de proveedores externos
 |--------------------------------------------------------------------------
 |
-| Sin el grupo "web" (sin sesión, cookies ni CSRF): la autenticidad se
-| comprueba con la firma de cada proveedor.
+| Sin el grupo "web" (sin sesión, cookies ni CSRF). Openpay se autentica con
+| HTTP Basic y su contenido se verifica consultando la API.
 |
 */
 
-Route::post('stripe/webhook', WebhookStripeController::class)
-    ->middleware('throttle:120,1')
-    ->name('stripe.webhook');
+Route::post('openpay/notificaciones', NotificacionOpenpayController::class)
+    ->middleware('throttle:240,1')
+    ->name('openpay.notificaciones');

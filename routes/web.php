@@ -66,3 +66,5 @@ require __DIR__.'/settings.php';
 require __DIR__.'/validaciones.php';
 require __DIR__.'/fidelidad.php';
 require __DIR__.'/pagos.php';
+require __DIR__.'/servicios.php';
+require __DIR__.'/paginas.php';

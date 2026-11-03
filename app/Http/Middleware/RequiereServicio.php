@@ -12,10 +12,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Exige que el NEGOCIO del usuario tenga contratado el servicio (los
- * permisos del rol no bastan).
+ * permisos del rol no bastan). Cada servicio adicional se comprueba por
+ * separado.
  *
  * Uso: `RequiereServicio:fidelidad` (consulta: activa, restringida o
- * vencida) o `RequiereServicio:fidelidad,operar` (solo activa y vigente).
+ * vencida) o `RequiereServicio:pagina_enlaces,operar` (solo activa y
+ * vigente).
  */
 class RequiereServicio
 {
@@ -29,22 +31,24 @@ class RequiereServicio
         $usuario = $request->user();
         $negocio = $usuario instanceof User ? $usuario->negocio : null;
 
-        abort_if($negocio === null || $servicio !== Servicio::FIDELIDAD, 403, 'No tienes permiso para realizar esta acción.');
+        abort_if($negocio === null || ! Servicio::esAdicional($servicio), 403, 'No tienes permiso para realizar esta acción.');
 
-        if ($modo === 'operar' && ! $this->acceso->puedeOperarFidelidad($negocio)) {
-            abort(403, $this->acceso->puedeConsultarFidelidad($negocio)
-                ? 'Fidelidad está en modo de solo lectura: el servicio venció o está en revisión. Contacta a DASTI.'
-                : 'Tu negocio no tiene Fidelidad contratado.');
+        $nombre = $servicio === Servicio::FIDELIDAD ? 'Fidelidad' : 'Página de enlaces';
+
+        if ($modo === 'operar' && ! $this->acceso->puedeOperar($negocio, $servicio)) {
+            abort(403, $this->acceso->puedeConsultar($negocio, $servicio)
+                ? "{$nombre} está en modo de solo lectura: el servicio venció o está en revisión. Contacta a DASTI."
+                : "Tu negocio no tiene {$nombre} contratado.");
         }
 
-        if (! $this->acceso->puedeConsultarFidelidad($negocio)) {
+        if (! $this->acceso->puedeConsultar($negocio, $servicio)) {
             if ($request->expectsJson()) {
-                abort(403, 'Tu negocio no tiene Fidelidad contratado.');
+                abort(403, "Tu negocio no tiene {$nombre} contratado.");
             }
 
-            Inertia::flash('toast', ['type' => 'info', 'message' => 'Fidelidad DASTI no está activo para tu negocio.']);
+            Inertia::flash('toast', ['type' => 'info', 'message' => "{$nombre} no está activo para tu negocio. Aquí puedes conocerlo y contratarlo."]);
 
-            return redirect()->route('cliente.fidelidad.contratacion');
+            return redirect()->route('cliente.servicios.show', $servicio);
         }
 
         return $next($request);

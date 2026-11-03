@@ -24,6 +24,14 @@ class ConsumidoresTest extends TestCase
 {
     use PreparaFidelidad, RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Las páginas públicas cargan recursos de Vite que otros pueden estar
+        // recompilando en paralelo.
+        $this->withoutVite();
+    }
+
     public function test_alta_exige_nombre_un_contacto_y_consentimiento(): void
     {
         $negocio = $this->negocioConFidelidad();
@@ -101,8 +109,11 @@ class ConsumidoresTest extends TestCase
         $this->assertSame('revocada', $tarjeta->fresh()?->estado);
         $this->assertSame(2, Participacion::query()->value('visitas_ciclo'));
 
+        // La tarjeta nueva identifica (y preselecciona) a la misma cuenta.
         $this->actingAs($propietario)->getJson(route('cliente.fidelidad.mostrador.identificar', ['q' => $nueva->urlPublica()]))
-            ->assertOk()->assertJsonPath('resultados.0.progreso.0.visitas', 2);
+            ->assertOk()->assertJsonPath('preseleccion', $consumidor->id);
+        $this->actingAs($propietario)->getJson(route('cliente.fidelidad.mostrador.consumidor', $consumidor))
+            ->assertOk()->assertJsonPath('consumidor.progreso.0.visitas', 2);
         $this->assertDatabaseHas('registros_auditoria', ['accion' => 'fidelidad.credencial_revocada']);
     }
 

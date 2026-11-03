@@ -6,6 +6,7 @@ import {
     CreditCard,
     Gift,
     LayoutDashboard,
+    Palette,
     ScanLine,
     UserCog,
     UsersRound,
@@ -21,6 +22,7 @@ import {
 } from '@/routes/cliente/fidelidad';
 import { index as campanas } from '@/routes/cliente/fidelidad/campanas';
 import { index as consumidores } from '@/routes/cliente/fidelidad/consumidores';
+import { edit as diseno } from '@/routes/cliente/fidelidad/diseno';
 import { index as personal } from '@/routes/cliente/fidelidad/personal';
 import type { EstadoServicio } from './tipos';
 
@@ -59,6 +61,12 @@ const secciones = computed(() =>
             href: campanas(),
             icono: Gift,
             permiso: 'fidelidad.ver',
+        },
+        {
+            titulo: 'Diseño',
+            href: diseno(),
+            icono: Palette,
+            permiso: 'fidelidad.diseno',
         },
         {
             titulo: 'Personal',

@@ -40,6 +40,33 @@ En los productos con QR, la ficha incluye el diseñador: elige colores, fondo, m
 
 En **Estadísticas** puedes elegir el periodo y el producto, y ver los accesos por día, los productos más usados y el desglose por dispositivo y navegador. Las cifras son accesos registrados (sin bots identificados), no necesariamente personas distintas. Los «visitantes estimados» solo pueden calcularse para los últimos 30 días; en periodos más antiguos la tarjeta lo indica.
 
+## Servicios de tu negocio
+
+En **Servicios › Mis servicios** ves los tres servicios de DASTI:
+
+- **Redirecciones QR y NFC**: incluido con tus productos.
+- **Fidelidad**: tarjetas de sellos digitales para tus clientes.
+- **Página de enlaces**: una página pública con tu identidad que reúne redes sociales, contacto y contenidos.
+
+Fidelidad y Página de enlaces se contratan **por separado** con un **pago único** (sin mensualidades). Contratar uno no activa el otro. Los servicios que aún no tienes aparecen en el menú con la etiqueta «Contratar» y llevan a su presentación.
+
+### Contratar en línea
+
+1. Abre el servicio y revisa el precio final (indica si incluye IVA).
+2. Pulsa **Contratar** y confirma. Te enviaremos al formulario seguro de **Openpay** para pagar con tarjeta de crédito o débito. DASTI nunca recibe ni guarda los datos de tu tarjeta.
+3. Al terminar, Openpay te regresa a DASTI. El servicio se activa **cuando Openpay confirma el pago** (normalmente al instante; puede tardar unos minutos). Si aparece «Esperando la confirmación», usa **Consultar de nuevo** más tarde: no pagues otra vez.
+4. Si la tarjeta es rechazada, puedes intentarlo de nuevo; no se activa nada ni se hace un cargo aprobado.
+
+Solo las personas con el permiso «Contratar» pueden comprar. En la misma pantalla verás el historial de activación y tus pagos (con su folio).
+
+## Diseño de tarjeta (Fidelidad)
+
+En **Fidelidad › Diseño de tarjeta** personalizas lo que ven tus clientes al abrir su tarjeta: plantillas, colores, fondos, tipografía, sellos, mensajes, secciones informativas y términos. La vista previa muestra el resultado al instante; **Guardar borrador** no cambia lo publicado hasta que pulses **Publicar**. Puedes restaurar versiones anteriores y crear variantes por campaña. El diseño nunca modifica visitas, metas ni recompensas.
+
+## Registrar visitas (mostrador)
+
+Escribe el código de la tarjeta, el nombre o el teléfono: los resultados aparecen **mientras escribes** (no hace falta pulsar Buscar). Con las flechas y Enter eliges al cliente; si hay varios con el mismo nombre, confirma con él cuál es. Buscar **no registra visitas**: la visita se registra solo al confirmarla. También puedes **Escanear QR** con la cámara.
+
 ## Mi cuenta
 
 Desde el menú de tu nombre:

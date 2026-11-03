@@ -4,8 +4,8 @@ use App\Http\Controllers\Fidelidad\ActividadController;
 use App\Http\Controllers\Fidelidad\AjusteController;
 use App\Http\Controllers\Fidelidad\CampanaController;
 use App\Http\Controllers\Fidelidad\ConsumidorController;
-use App\Http\Controllers\Fidelidad\ContratacionController;
 use App\Http\Controllers\Fidelidad\CredencialController;
+use App\Http\Controllers\Fidelidad\DisenoController;
 use App\Http\Controllers\Fidelidad\InicioController;
 use App\Http\Controllers\Fidelidad\MostradorController;
 use App\Http\Controllers\Fidelidad\PersonalController;
@@ -56,13 +56,9 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
     ->prefix('panel/fidelidad')
     ->name('cliente.fidelidad.')
     ->group(function () {
-        // Contratación (disponible aunque el servicio no esté activo).
-        Route::get('contratacion', [ContratacionController::class, 'show'])->name('contratacion');
-        Route::post('contratacion/checkout', [ContratacionController::class, 'checkout'])
-            ->middleware(['can:servicios.contratar', 'throttle:10,1'])
-            ->name('contratacion.checkout');
-        Route::get('contratacion/exito', [ContratacionController::class, 'exito'])->name('contratacion.exito');
-        Route::get('contratacion/cancelado', [ContratacionController::class, 'cancelado'])->name('contratacion.cancelado');
+        // Contratación: ahora vive en «Servicios» (se conserva la dirección
+        // anterior como redirección).
+        Route::redirect('contratacion', '/panel/servicios/fidelidad')->name('contratacion');
 
         $consulta = RequiereServicio::class.':fidelidad';
         $opera = RequiereServicio::class.':fidelidad,operar';
@@ -72,8 +68,12 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
 
             // Mostrador: identificar, registrar visitas y canjear.
             Route::get('mostrador', [MostradorController::class, 'show'])->middleware('can:fidelidad.ver')->name('mostrador');
+            // Búsqueda mientras se escribe (con espera en la interfaz): el
+            // límite contempla ráfagas de tecleo; nunca registra visitas.
             Route::get('mostrador/identificar', [MostradorController::class, 'identificar'])
-                ->middleware(['can:fidelidad.ver', 'throttle:120,1'])->name('mostrador.identificar');
+                ->middleware(['can:fidelidad.ver', 'throttle:180,1'])->name('mostrador.identificar');
+            Route::get('mostrador/consumidores/{consumidor}', [MostradorController::class, 'consumidor'])
+                ->middleware(['can:fidelidad.ver', 'throttle:120,1'])->name('mostrador.consumidor');
             Route::post('visitas', [MostradorController::class, 'visita'])
                 ->middleware([$opera, 'can:fidelidad.visitas', 'throttle:60,1'])->name('visitas.store');
             Route::post('recompensas/{recompensa}/canje', [MostradorController::class, 'canje'])
@@ -126,6 +126,20 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
             Route::post('personal', [PersonalController::class, 'store'])->middleware([$opera, 'can:fidelidad.personal', 'throttle:10,1'])->name('personal.store');
             Route::patch('personal/{usuario}/estado', [PersonalController::class, 'estado'])->middleware('can:fidelidad.personal')->name('personal.estado');
             Route::put('personal/{usuario}/rol', [PersonalController::class, 'rol'])->middleware('can:fidelidad.personal')->name('personal.rol');
+
+            // Diseño de la tarjeta digital (solo apariencia: nunca cambia
+            // visitas, metas ni recompensas).
+            Route::get('diseno', [DisenoController::class, 'edit'])->middleware('can:fidelidad.diseno')->name('diseno.edit');
+            Route::put('diseno', [DisenoController::class, 'guardar'])
+                ->middleware([$opera, 'can:fidelidad.diseno', 'throttle:60,1'])->name('diseno.update');
+            Route::post('diseno/publicacion', [DisenoController::class, 'publicar'])
+                ->middleware([$opera, 'can:fidelidad.diseno', 'throttle:20,1'])->name('diseno.publicar');
+            Route::post('diseno/versiones/{version}/restauracion', [DisenoController::class, 'restaurar'])
+                ->middleware([$opera, 'can:fidelidad.diseno', 'throttle:20,1'])->name('diseno.restaurar');
+            Route::delete('diseno/variantes/{campana}', [DisenoController::class, 'eliminarVariante'])
+                ->middleware([$opera, 'can:fidelidad.diseno'])->name('diseno.variantes.destroy');
+            Route::post('diseno/imagenes', [DisenoController::class, 'subirImagen'])
+                ->middleware([$opera, 'can:fidelidad.diseno', 'throttle:20,1'])->name('diseno.imagenes.store');
 
             // Actividad y reporte por empleado
             Route::get('actividad', ActividadController::class)->middleware('can:fidelidad.auditoria')->name('actividad');
