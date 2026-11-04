@@ -1,3 +1,5 @@
+import type { MapaIconos } from '@/components/iconos/contexto';
+
 /**
  * Documento de apariencia de la tarjeta digital (esquema 1). El servidor lo
  * sanea siempre (app/Services/Fidelidad/Diseno/DocumentoDiseno.php); aquí
@@ -22,7 +24,8 @@ export type ClaveFuente =
     | 'pacifico'
     | 'caveat';
 
-export type ClaveIcono =
+/** Claves de la lista original (siguen siendo válidas). */
+export type ClaveIconoHeredada =
     | 'cafe'
     | 'estrella'
     | 'corazon'
@@ -45,6 +48,13 @@ export type ClaveIcono =
     | 'sol'
     | 'pesa'
     | 'pincel';
+
+/**
+ * Valor del ícono de los sellos: clave heredada o ícono de la biblioteca
+ * (`i:<nombre>`, ver resources/js/components/iconos). El servidor valida
+ * que exista (App\Services\Iconos\CatalogoIconos).
+ */
+export type ClaveIcono = ClaveIconoHeredada | `i:${string}` | `red:${string}`;
 
 export type Presentacion =
     | 'sellos'
@@ -168,5 +178,7 @@ export type DatosPublicos = {
     aviso: string | null;
     disenos: { general: DocumentoDiseno; variantes: DocumentoDiseno[] };
     medios: Record<string, string>;
+    /** Trazos de los íconos de la biblioteca que usan los diseños. */
+    iconos?: MapaIconos;
     recuperar_url?: string;
 };

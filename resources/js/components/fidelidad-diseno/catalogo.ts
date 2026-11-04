@@ -31,7 +31,7 @@ import type { Component } from 'vue';
 import type {
     ClaveDecoracion,
     ClaveFuente,
-    ClaveIcono,
+    ClaveIconoHeredada,
     DocumentoDiseno,
     Presentacion,
     Sombra,
@@ -140,31 +140,33 @@ export const FUENTES: Record<
     },
 };
 
-export const ICONOS: Record<ClaveIcono, { nombre: string; icono: Component }> =
-    {
-        cafe: { nombre: 'Taza de café', icono: Coffee },
-        estrella: { nombre: 'Estrella', icono: Star },
-        corazon: { nombre: 'Corazón', icono: Heart },
-        tijeras: { nombre: 'Tijeras', icono: Scissors },
-        flor: { nombre: 'Flor', icono: Flower2 },
-        gota: { nombre: 'Gota', icono: Droplet },
-        hoja: { nombre: 'Hoja', icono: Leaf },
-        regalo: { nombre: 'Regalo', icono: Gift },
-        check: { nombre: 'Palomita', icono: Check },
-        huella: { nombre: 'Huella', icono: PawPrint },
-        cubiertos: { nombre: 'Cubiertos', icono: UtensilsCrossed },
-        pastel: { nombre: 'Pastel', icono: CakeSlice },
-        helado: { nombre: 'Helado', icono: IceCreamCone },
-        pizza: { nombre: 'Pizza', icono: Pizza },
-        croissant: { nombre: 'Pan', icono: Croissant },
-        copa: { nombre: 'Copa', icono: Wine },
-        diamante: { nombre: 'Diamante', icono: Gem },
-        corona: { nombre: 'Corona', icono: Crown },
-        destello: { nombre: 'Destellos', icono: Sparkles },
-        sol: { nombre: 'Sol', icono: Sun },
-        pesa: { nombre: 'Pesa', icono: Dumbbell },
-        pincel: { nombre: 'Pincel', icono: Paintbrush },
-    };
+export const ICONOS: Record<
+    ClaveIconoHeredada,
+    { nombre: string; icono: Component }
+> = {
+    cafe: { nombre: 'Taza de café', icono: Coffee },
+    estrella: { nombre: 'Estrella', icono: Star },
+    corazon: { nombre: 'Corazón', icono: Heart },
+    tijeras: { nombre: 'Tijeras', icono: Scissors },
+    flor: { nombre: 'Flor', icono: Flower2 },
+    gota: { nombre: 'Gota', icono: Droplet },
+    hoja: { nombre: 'Hoja', icono: Leaf },
+    regalo: { nombre: 'Regalo', icono: Gift },
+    check: { nombre: 'Palomita', icono: Check },
+    huella: { nombre: 'Huella', icono: PawPrint },
+    cubiertos: { nombre: 'Cubiertos', icono: UtensilsCrossed },
+    pastel: { nombre: 'Pastel', icono: CakeSlice },
+    helado: { nombre: 'Helado', icono: IceCreamCone },
+    pizza: { nombre: 'Pizza', icono: Pizza },
+    croissant: { nombre: 'Pan', icono: Croissant },
+    copa: { nombre: 'Copa', icono: Wine },
+    diamante: { nombre: 'Diamante', icono: Gem },
+    corona: { nombre: 'Corona', icono: Crown },
+    destello: { nombre: 'Destellos', icono: Sparkles },
+    sol: { nombre: 'Sol', icono: Sun },
+    pesa: { nombre: 'Pesa', icono: Dumbbell },
+    pincel: { nombre: 'Pincel', icono: Paintbrush },
+};
 
 export const PRESENTACIONES: Record<
     Presentacion,

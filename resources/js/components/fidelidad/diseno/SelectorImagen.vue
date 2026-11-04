@@ -3,6 +3,12 @@ import { ImageUp, Images, Trash2 } from '@lucide/vue';
 import { computed, ref, useId } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import InfoArchivo from '@/components/comun/InfoArchivo.vue';
+import {
+    mensajeErrorSubida,
+    useLimitesArchivos,
+    validarArchivo,
+} from '@/lib/archivos';
 import { ErrorPeticion } from '@/lib/peticion';
 import { store as subirImagen } from '@/routes/cliente/fidelidad/diseno/imagenes';
 import { enviar } from './api';
@@ -20,6 +26,8 @@ const props = defineProps<{
     ayuda?: string;
     uso: 'logo' | 'portada' | 'fondo';
     archivos: ArchivoImagen[];
+    /** URL de subida (la entrega el controlador en `rutas`). */
+    url?: string;
 }>();
 
 const emit = defineEmits<{ subida: [archivo: ArchivoImagen] }>();
@@ -32,10 +40,18 @@ const biblioteca = ref(false);
 const actual = computed(
     () => props.archivos.find((a) => a.id === modelo.value) ?? null,
 );
-const MAX_MB = 5;
+const { limite } = useLimitesArchivos();
+const tipoLimite = computed(() => (props.uso === 'logo' ? 'logo' : 'imagen'));
+const datosLimite = computed(() => limite(tipoLimite.value));
+const RECOMENDACION: Record<typeof props.uso, string> = {
+    logo: 'Recomendado: cuadrado, de al menos 256 × 256 px y con fondo transparente.',
+    portada: 'Recomendado: horizontal (3:1), de al menos 1600 × 530 px.',
+    fondo: 'Recomendado: al menos 1600 px por su lado mayor.',
+};
 
 const elegido = async (evento: Event) => {
     const archivo = (evento.target as HTMLInputElement).files?.[0];
+    // Se limpia para poder elegir otro archivo (o el mismo) sin recargar.
     (evento.target as HTMLInputElement).value = '';
     error.value = null;
 
@@ -43,18 +59,10 @@ const elegido = async (evento: Event) => {
         return;
     }
 
-    if (
-        !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(
-            archivo.type,
-        )
-    ) {
-        error.value = 'Usa una imagen PNG, JPG, WEBP o GIF.';
+    const problema = await validarArchivo(archivo, datosLimite.value);
 
-        return;
-    }
-
-    if (archivo.size > MAX_MB * 1024 * 1024) {
-        error.value = `La imagen pesa más de ${MAX_MB} MB. Elige una más ligera.`;
+    if (problema) {
+        error.value = problema;
 
         return;
     }
@@ -66,7 +74,7 @@ const elegido = async (evento: Event) => {
 
     try {
         const r = await enviar<{ archivo: ArchivoImagen }>(
-            subirImagen.url(),
+            props.url ?? subirImagen.url(),
             'POST',
             datos,
         );
@@ -75,7 +83,9 @@ const elegido = async (evento: Event) => {
     } catch (e) {
         error.value =
             e instanceof ErrorPeticion
-                ? e.message
+                ? e.estado === 0
+                    ? e.message
+                    : mensajeErrorSubida(e.estado, datosLimite.value, e.message)
                 : 'No pudimos subir la imagen. Inténtalo nuevamente.';
     } finally {
         subiendo.value = false;
@@ -116,13 +126,14 @@ const elegido = async (evento: Event) => {
                     ref="entrada"
                     type="file"
                     class="sr-only"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    :accept="datosLimite.aceptar"
                     tabindex="-1"
                     @change="elegido"
                 />
                 <Button
                     type="button"
                     size="sm"
+                    class="h-10"
                     variant="outline"
                     :disabled="subiendo"
                     @click="entrada?.click()"
@@ -135,6 +146,7 @@ const elegido = async (evento: Event) => {
                     v-if="archivos.length"
                     type="button"
                     size="sm"
+                    class="h-10"
                     variant="ghost"
                     :aria-expanded="biblioteca"
                     @click="biblioteca = !biblioteca"
@@ -145,6 +157,7 @@ const elegido = async (evento: Event) => {
                     v-if="modelo"
                     type="button"
                     size="sm"
+                    class="h-10"
                     variant="ghost"
                     aria-label="Quitar imagen"
                     @click="modelo = null"
@@ -153,6 +166,7 @@ const elegido = async (evento: Event) => {
                 </Button>
             </div>
         </div>
+        <InfoArchivo :tipo="tipoLimite" :recomendacion="RECOMENDACION[uso]" />
         <p v-if="error" class="text-xs text-destructive" role="alert">
             {{ error }}
         </p>

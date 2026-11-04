@@ -4,6 +4,7 @@ namespace App\Services\Paginas;
 
 use App\Models\ArchivoPublico;
 use App\Models\Negocio;
+use App\Services\Iconos\CatalogoIconos;
 use App\Services\Redirecciones\ValidadorUrlDestino;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -169,8 +170,12 @@ class DocumentoPagina
             'botones' => [
                 'estilo' => 'solido', 'radio' => 14, 'sombra' => 'suave', 'borde' => 1, 'tamano' => 'normal',
                 'animacion' => 'elevar', 'icono' => 'izquierda', 'alineacion' => 'centro',
+                'icono_fondo' => 'ninguno', 'mayusculas' => false,
             ],
-            'disposicion' => ['ancho' => 'normal', 'espaciado' => 'normal', 'encabezado' => 'centrado', 'forma_foto' => 'circulo'],
+            'disposicion' => [
+                'ancho' => 'normal', 'espaciado' => 'normal', 'encabezado' => 'centrado', 'forma_foto' => 'circulo',
+                'monograma' => false, 'forma_imagen' => 'tema', 'tarjetas' => 'borde', 'lienzo' => 'libre', 'titulos' => 'simple',
+            ],
         ];
     }
 
@@ -287,12 +292,19 @@ class DocumentoPagina
                 'animacion' => $this->opcion($b['animacion'] ?? null, CatalogoPagina::ANIMACIONES, 'elevar'),
                 'icono' => $this->opcion($b['icono'] ?? null, CatalogoPagina::POSICIONES_ICONO, 'izquierda'),
                 'alineacion' => $this->opcion($b['alineacion'] ?? null, ['centro', 'izquierda'], 'centro'),
+                'icono_fondo' => $this->opcion($b['icono_fondo'] ?? null, CatalogoPagina::FONDOS_ICONO, 'ninguno'),
+                'mayusculas' => $this->booleano($b['mayusculas'] ?? false),
             ],
             'disposicion' => [
                 'ancho' => $this->opcion($d['ancho'] ?? null, CatalogoPagina::ANCHOS, 'normal'),
                 'espaciado' => $this->opcion($d['espaciado'] ?? null, CatalogoPagina::ESPACIADOS, 'normal'),
                 'encabezado' => $this->opcion($d['encabezado'] ?? null, CatalogoPagina::ENCABEZADOS, 'centrado'),
                 'forma_foto' => $this->opcion($d['forma_foto'] ?? null, CatalogoPagina::FORMAS_FOTO, 'circulo'),
+                'monograma' => $this->booleano($d['monograma'] ?? false),
+                'forma_imagen' => $this->opcion($d['forma_imagen'] ?? null, CatalogoPagina::FORMAS_IMAGEN, 'tema'),
+                'tarjetas' => $this->opcion($d['tarjetas'] ?? null, CatalogoPagina::ESTILOS_TARJETA, 'borde'),
+                'lienzo' => $this->opcion($d['lienzo'] ?? null, CatalogoPagina::LIENZOS, 'libre'),
+                'titulos' => $this->opcion($d['titulos'] ?? null, CatalogoPagina::ESTILOS_TITULO, 'simple'),
             ],
         ];
     }
@@ -417,7 +429,7 @@ class DocumentoPagina
                 'tamano' => $this->opcion($b['tamano'] ?? null, ['normal', 'pequeno', 'grande'], 'normal'),
             ],
             'separador' => [
-                'estilo' => $this->opcion($b['estilo'] ?? null, ['linea', 'espacio', 'puntos'], 'linea'),
+                'estilo' => $this->opcion($b['estilo'] ?? null, CatalogoPagina::ESTILOS_SEPARADOR, 'linea'),
                 'alto' => $this->entero($b['alto'] ?? null, 8, 120, 24),
             ],
             'grupo' => $this->grupo($b, $campo),
@@ -449,6 +461,9 @@ class DocumentoPagina
             'titulo' => $this->requerido($titulo, $campo('titulo'), 'Escribe el texto del botón.'),
             'subtitulo' => $this->texto($b['subtitulo'] ?? '', 140),
             'icono' => $this->icono($b['icono'] ?? null),
+            // Color y tamaño propios del ícono (null = los del tema).
+            'icono_color' => $this->colorOpcional($b['icono_color'] ?? null),
+            'icono_tamano' => is_numeric($b['icono_tamano'] ?? null) ? $this->entero($b['icono_tamano'], 16, 36, 20) : null,
             'miniatura' => $this->medio($b['miniatura'] ?? null, ArchivoPublico::TIPO_IMAGEN, $campo('miniatura')),
             'destacado' => $this->booleano($b['destacado'] ?? false),
             'insignia' => $this->texto($b['insignia'] ?? '', 24),
@@ -1174,11 +1189,8 @@ class DocumentoPagina
             return null;
         }
 
-        if (in_array($valor, CatalogoPagina::ICONOS, true)) {
-            return $valor;
-        }
-
-        return str_starts_with($valor, 'red:') && array_key_exists(substr($valor, 4), CatalogoPagina::REDES) ? $valor : null;
+        // Claves heredadas, «red:<red>» e «i:<nombre>» de la biblioteca.
+        return app(CatalogoIconos::class)->existe($valor) ? $valor : null;
     }
 
     private function uuidValido(mixed $valor): ?string

@@ -17,7 +17,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Fidelidad', href: inicio() },
-            { title: 'Actividad', href: actividad() },
+            { title: 'Historial y actividad', href: actividad() },
         ],
     },
 });
@@ -59,10 +59,12 @@ const canjesDe = (nombre: string) =>
 </script>
 
 <template>
-    <Head title="Actividad de Fidelidad" />
+    <Head title="Historial y actividad" />
+
+    <NavFidelidad :servicio="servicio" />
 
     <EncabezadoPagina
-        titulo="Actividad"
+        titulo="Historial y actividad"
         descripcion="Qué registró cada persona de tu equipo. Útil para detectar visitas o canjes indebidos."
         ayuda="Ninguna herramienta evita por completo el fraude interno. Compara visitas por empleado con tus ventas y revisa ajustes y anulaciones."
         :icono="Activity"
@@ -81,8 +83,6 @@ const canjesDe = (nombre: string) =>
             />
         </template>
     </EncabezadoPagina>
-
-    <NavFidelidad :servicio="servicio" />
 
     <Panel titulo="Por empleado" sin-relleno>
         <div v-if="por_empleado.length" class="overflow-x-auto">

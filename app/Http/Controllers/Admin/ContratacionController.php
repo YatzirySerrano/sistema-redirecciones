@@ -28,7 +28,8 @@ class ContratacionController extends Controller
             'origen' => ['required', Rule::in([OrigenContratacion::Manual->value, OrigenContratacion::FueraDeLinea->value])],
             'importe' => ['exclude_unless:origen,fuera_de_linea', 'required', 'numeric', 'min:1', 'max:999999.99', 'decimal:0,2'],
             'referencia' => ['exclude_unless:origen,fuera_de_linea', 'required', 'string', 'max:120'],
-            'motivo' => ['required', 'string', 'min:5', 'max:255'],
+            // Opcional: la auditoría registra siempre quién, cuándo y qué.
+            'motivo' => ['nullable', 'string', 'max:255'],
         ], [], ['negocio_id' => 'negocio', 'servicio' => 'servicio', 'importe' => 'importe', 'referencia' => 'referencia del pago', 'motivo' => 'motivo']);
 
         /** @var User $actor */
@@ -37,9 +38,9 @@ class ContratacionController extends Controller
         $servicio = Servicio::porClave((string) $datos['servicio']);
 
         if ($datos['origen'] === OrigenContratacion::FueraDeLinea->value) {
-            $gestor->registrarPagoFueraDeLinea($negocio, $servicio, (int) round(((float) $datos['importe']) * 100), $datos['referencia'], $actor, $datos['motivo']);
+            $gestor->registrarPagoFueraDeLinea($negocio, $servicio, (int) round(((float) $datos['importe']) * 100), $datos['referencia'], $actor, $this->motivo($datos));
         } else {
-            $gestor->activar($negocio, $servicio, OrigenContratacion::Manual, null, $actor, $datos['motivo']);
+            $gestor->activar($negocio, $servicio, OrigenContratacion::Manual, null, $actor, $this->motivo($datos));
         }
 
         $this->notificar("{$servicio->nombre} activado para «{$negocio->nombre_comercial}». Los demás servicios no cambian.");
@@ -51,13 +52,13 @@ class ContratacionController extends Controller
     {
         $datos = $request->validate([
             'accion' => ['required', Rule::in(['suspender', 'reactivar', 'restringir', 'levantar'])],
-            'motivo' => ['required', 'string', 'min:5', 'max:255'],
+            'motivo' => ['nullable', 'string', 'max:255'],
         ], [], ['motivo' => 'motivo']);
 
         /** @var User $actor */
         $actor = $request->user();
 
-        $motivo = (string) $datos['motivo'];
+        $motivo = $this->motivo($datos);
 
         match ((string) $datos['accion']) {
             'suspender' => $gestor->suspender($contratacion, $motivo, $actor),
@@ -69,5 +70,17 @@ class ContratacionController extends Controller
         $this->notificar('Contratación actualizada.');
 
         return back();
+    }
+
+    /**
+     * Motivo opcional: vacío se guarda como nulo (nunca un texto ficticio).
+     *
+     * @param  array<string, mixed>  $datos
+     */
+    private function motivo(array $datos): ?string
+    {
+        $motivo = trim((string) ($datos['motivo'] ?? ''));
+
+        return $motivo === '' ? null : $motivo;
     }
 }

@@ -60,6 +60,8 @@ defineProps<{
 <template>
     <Head title="Fidelidad" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina
         titulo="Fidelidad"
         descripcion="Tu tarjeta de sellos digital: visitas confirmadas por tu personal, recompensas y canjes."
@@ -72,8 +74,6 @@ defineProps<{
             </Button>
         </template>
     </EncabezadoPagina>
-
-    <NavFidelidad :servicio="servicio" />
 
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <TarjetaIndicador

@@ -5,6 +5,7 @@ namespace App\Services\Auditoria;
 use App\Models\Negocio;
 use App\Models\RegistroAuditoria;
 use App\Models\User;
+use App\Services\Autorizacion\NegocioDeTrabajo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -39,6 +40,15 @@ class RegistradorAuditoria
         // que los listeners y procesos largos no usen una petición obsoleta.
         $request = app(Request::class);
         $actor ??= $request->user();
+
+        // «Diseño para clientes»: la operación la hizo el personal DASTI en
+        // nombre del negocio (el autor sigue siendo su propia cuenta).
+        $contexto = app(NegocioDeTrabajo::class);
+
+        if ($contexto->esDasti()) {
+            $nuevos = [...($nuevos ?? []), 'realizado_por_dasti' => true];
+            $descripcion .= ' (personal DASTI)';
+        }
 
         return RegistroAuditoria::query()->create([
             'user_id' => $actor?->getKey(),

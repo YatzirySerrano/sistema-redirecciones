@@ -280,18 +280,15 @@ class PanelPaginasTest extends TestCase
 
         $this->actingAs($usuario)->get(route('cliente.paginas.editor'))->assertOk()
             ->assertInertia(fn (Assert $p) => $p->component('cliente/paginas/Editor')
-                ->has('plantillas', 9)
-                ->where('plantillas', fn ($lista) => collect($lista)->pluck('nombre')->all() === [
-                    'Minimalista', 'Corporativa', 'Restaurantes', 'Belleza y spa', 'Redes sociales',
-                    'Servicios profesionales', 'Oscura premium', 'Creativa', 'Catálogo visual',
-                ])
+                ->has('plantillas', count(app(PlantillasPagina::class)->todas($negocio)))
+                ->where('plantillas.0.clave', 'barra-de-cafe')
                 ->where('plantillas.0.documento.perfil.nombre', $negocio->nombre_comercial));
 
         // Aplicar una plantilla (en el editor) y guardar pasa la validación.
         $pagina = PaginaEnlaces::query()->where('negocio_id', $negocio->id)->firstOrFail();
-        $plantilla = app(PlantillasPagina::class)->todas($negocio)[6]['documento'];
+        $plantilla = collect(app(PlantillasPagina::class)->todas($negocio))->firstWhere('clave', 'tecnologia')['documento'];
         $this->actingAs($usuario)->putJson(route('cliente.paginas.borrador'), ['documento' => $plantilla, 'version' => $pagina->version])
-            ->assertOk()->assertJsonPath('documento.tema.fondo.textura', 'cuadricula');
+            ->assertOk()->assertJsonPath('documento.tema.fondo.textura', 'cuadricula')->assertJsonPath('documento.tema.disposicion.lienzo', 'panel');
         $this->assertTrue(Str::isUuid((string) app(GestorPaginas::class)->paraNegocio($negocio)->borrador['paginas'][0]['id']));
     }
 }

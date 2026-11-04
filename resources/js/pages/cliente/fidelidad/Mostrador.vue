@@ -574,14 +574,14 @@ const sinCampanas = computed(() => props.campanas.length === 0);
 <template>
     <Head title="Mostrador de Fidelidad" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina
         titulo="Mostrador"
         descripcion="Identifica al cliente y confirma su visita o entrega su recompensa."
         ayuda="Solo confirma una visita cuando el cliente realmente compró o recibió el servicio. Cada confirmación queda registrada con tu nombre."
         :icono="ScanLine"
     />
-
-    <NavFidelidad :servicio="servicio" />
 
     <EstadoVacio
         v-if="sinCampanas"

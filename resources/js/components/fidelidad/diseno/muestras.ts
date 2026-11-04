@@ -12,7 +12,8 @@ import type {
 import type { CampanaDiseno } from './tipos';
 
 export const EJEMPLO = {
-    campana: 'Programa de ejemplo',
+    consumidor: 'Ana (ejemplo)',
+    campana: 'Campaña de ejemplo',
     meta: 10,
     recompensa: 'Un producto de regalo',
 };
@@ -51,7 +52,7 @@ export function datosDeMuestra(
 ): DatosPublicos {
     return {
         negocio,
-        consumidor: 'Ana',
+        consumidor: EJEMPLO.consumidor,
         programas: [{ ...programa, variante: esVariante ? 0 : null }],
         aviso: null,
         disenos: {

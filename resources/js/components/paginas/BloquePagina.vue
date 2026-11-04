@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown } from '@lucide/vue';
+import { ChevronDown, Image as IconoImagen } from '@lucide/vue';
 import { computed } from 'vue';
 import { ICONOS_REDES } from './iconosRedes';
 import { REDES } from './catalogo';
@@ -69,7 +69,7 @@ const tamanosTitulo: Record<string, string> = {
 
     <h2
         v-else-if="bloque.tipo === 'titulo'"
-        class="pe-titulo mt-2 text-balance"
+        class="pe-titulo pe-seccion mt-2 text-balance"
         :class="[
             alineacion,
             tamanosTitulo[String(bloque.tamano)] ?? tamanosTitulo.mediano,
@@ -109,6 +109,35 @@ const tamanosTitulo: Record<string, string> = {
             aria-hidden="true"
             >•••</span
         >
+        <span
+            v-else-if="bloque.estilo === 'ornamento'"
+            class="flex w-full items-center gap-3 text-(--pe-acento)"
+            aria-hidden="true"
+        >
+            <span class="h-px flex-1 bg-(--pe-borde)" />
+            <span class="text-[0.9em]">✦</span>
+            <span class="h-px flex-1 bg-(--pe-borde)" />
+        </span>
+        <svg
+            v-else-if="bloque.estilo === 'zigzag'"
+            class="h-2.5 w-full text-(--pe-borde)"
+            viewBox="0 0 120 10"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+        >
+            <polyline
+                points="0,8 5,2 10,8 15,2 20,8 25,2 30,8 35,2 40,8 45,2 50,8 55,2 60,8 65,2 70,8 75,2 80,8 85,2 90,8 95,2 100,8 105,2 110,8 115,2 120,8"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                vector-effect="non-scaling-stroke"
+            />
+        </svg>
+        <span
+            v-else-if="bloque.estilo === 'doble'"
+            class="block h-1.5 w-full border-y border-(--pe-borde)"
+            aria-hidden="true"
+        />
     </div>
 
     <nav v-else-if="bloque.tipo === 'redes'" aria-label="Redes sociales">
@@ -256,7 +285,7 @@ const tamanosTitulo: Record<string, string> = {
             :alt="bloque.alt ?? ''"
             :width="bloque.archivo?.ancho ?? undefined"
             :height="bloque.archivo?.alto ?? undefined"
-            class="h-auto w-full object-cover"
+            class="pe-imagen h-auto w-full object-cover"
             :class="[
                 proporcion(bloque.proporcion),
                 bloque.redondeo !== false ? 'rounded-(--pe-radio)' : '',
@@ -264,6 +293,19 @@ const tamanosTitulo: Record<string, string> = {
             loading="lazy"
             decoding="async"
         />
+        <div
+            v-else-if="modo !== 'publico'"
+            class="pe-imagen pe-imagen-vacia flex w-full flex-col items-center justify-center gap-1.5 p-4 text-center text-[0.8em]"
+            :class="[
+                proporcion(bloque.proporcion) || 'aspect-[4/3]',
+                bloque.redondeo !== false ? 'rounded-(--pe-radio)' : '',
+            ]"
+        >
+            <IconoImagen class="size-6 opacity-70" aria-hidden="true" />
+            <span class="line-clamp-2 font-medium">{{
+                bloque.alt || 'Tu foto aquí'
+            }}</span>
+        </div>
         <div
             v-else
             class="rounded-(--pe-radio) border border-dashed border-(--pe-borde) p-8 text-center text-[0.85em] opacity-70"
@@ -320,7 +362,7 @@ const tamanosTitulo: Record<string, string> = {
         <template v-else>
             <h2
                 v-if="bloque.titulo"
-                class="pe-titulo mb-2 text-[1.05em]"
+                class="pe-titulo pe-seccion mb-2 text-[1.05em]"
                 :class="alineacion"
             >
                 {{ bloque.titulo }}
@@ -356,7 +398,7 @@ const tamanosTitulo: Record<string, string> = {
             v-if="urlMedio(bloque.imagen)"
             :src="urlMedio(bloque.imagen) ?? undefined"
             :alt="textoPlano(bloque.titulo ?? '')"
-            class="aspect-[16/9] w-full object-cover"
+            class="pe-imagen aspect-[16/9] w-full object-cover"
             loading="lazy"
             decoding="async"
         />

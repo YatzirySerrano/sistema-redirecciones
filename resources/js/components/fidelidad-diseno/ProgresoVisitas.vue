@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Gift } from '@lucide/vue';
-import { computed } from 'vue';
-import { ICONOS, PRESENTACIONES } from './catalogo';
+import { computed, h } from 'vue';
+import type { FunctionalComponent } from 'vue';
+import IconoCatalogo from '@/components/iconos/IconoCatalogo.vue';
+import { PRESENTACIONES } from './catalogo';
 import { conAlfa } from './color';
 import type { DocumentoDiseno } from './tipos';
 
@@ -34,9 +36,10 @@ const presentacion = computed(() =>
         ? 'barra'
         : props.progreso.presentacion,
 );
-const icono = computed(
-    () => (ICONOS[props.progreso.icono] ?? ICONOS.estrella).icono,
-);
+// Clave heredada o ícono de la biblioteca («i:…»); los atributos (clase,
+// color, posición dentro del SVG del camino) pasan al ícono.
+const icono: FunctionalComponent = (_, { attrs }) =>
+    h(IconoCatalogo, { ...attrs, valor: props.progreso.icono || 'estrella' });
 const sellos = computed(() =>
     Array.from({ length: meta.value }, (_, i) => ({
         n: i + 1,

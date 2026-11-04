@@ -70,9 +70,12 @@ final class CatalogoPagina
 
     public const FONDOS = ['solido', 'degradado', 'imagen', 'textura', 'video'];
 
-    public const TEXTURAS = ['puntos', 'cuadricula', 'lineas', 'diagonales', 'ondas', 'rombos'];
+    public const TEXTURAS = ['puntos', 'cuadricula', 'lineas', 'diagonales', 'ondas', 'rombos', 'cruces', 'cuadros', 'aurora'];
 
-    public const ESTILOS_BOTON = ['solido', 'contorno', 'suave', 'vidrio'];
+    public const ESTILOS_BOTON = ['solido', 'contorno', 'suave', 'vidrio', 'degradado', 'subrayado'];
+
+    /** Fondo detrás del ícono del botón. */
+    public const FONDOS_ICONO = ['ninguno', 'suave', 'solido'];
 
     public const SOMBRAS = ['ninguna', 'suave', 'media', 'marcada'];
 
@@ -86,7 +89,21 @@ final class CatalogoPagina
 
     public const ESPACIADOS = ['compacto', 'normal', 'amplio'];
 
-    public const ENCABEZADOS = ['centrado', 'izquierda', 'portada'];
+    public const ENCABEZADOS = ['centrado', 'izquierda', 'portada', 'banda', 'tarjeta', 'dividido', 'editorial'];
+
+    /** Tratamiento de las imágenes (tema = como hasta ahora). */
+    public const FORMAS_IMAGEN = ['tema', 'recta', 'marco', 'arco'];
+
+    /** Estilo de tarjetas, mapas y formularios. */
+    public const ESTILOS_TARJETA = ['borde', 'sombra', 'plana'];
+
+    /** Contenido libre sobre el fondo o dentro de un panel flotante. */
+    public const LIENZOS = ['libre', 'panel'];
+
+    /** Estilo de los títulos de sección. */
+    public const ESTILOS_TITULO = ['simple', 'linea', 'etiqueta', 'barra', 'resaltado'];
+
+    public const ESTILOS_SEPARADOR = ['linea', 'espacio', 'puntos', 'ornamento', 'zigzag', 'doble'];
 
     public const FORMAS_FOTO = ['circulo', 'redondeada', 'cuadrada'];
 

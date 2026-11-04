@@ -9,6 +9,7 @@ use App\Models\Fidelidad\Diseno;
 use App\Models\Fidelidad\Participacion;
 use App\Models\Fidelidad\Recompensa;
 use App\Models\Negocio;
+use App\Services\Iconos\CatalogoIconos;
 use App\Services\Servicios\AccesoServicios;
 use Illuminate\Support\Collection;
 
@@ -71,6 +72,8 @@ class PresentacionPublica
                     : 'Por ahora el negocio no está registrando visitas en este programa. Tu progreso se conserva.',
                 'disenos' => ['general' => $general, 'variantes' => $variantes],
                 'medios' => self::medios($negocio, $documentos),
+                // Solo los trazos de los íconos de la biblioteca que usan los diseños.
+                'iconos' => app(CatalogoIconos::class)->paraDocumentos($documentos),
                 'recuperar_url' => route('fidelidad.publico.recuperar', absolute: false),
             ],
         ];

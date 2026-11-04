@@ -98,6 +98,7 @@ const props = defineProps<{
         abiertos: number;
     };
     puede_gestionar: boolean;
+    puede_reembolsar: boolean;
 }>();
 
 const { filtros } = useFiltros(index.url(), { ...props.filtros });
@@ -459,9 +460,12 @@ const tono = (e: string) =>
                         </ul>
                     </div>
 
-                    <div v-if="puede_gestionar" class="flex flex-wrap gap-2">
+                    <div
+                        v-if="puede_gestionar || puede_reembolsar"
+                        class="flex flex-wrap gap-2"
+                    >
                         <Button
-                            v-if="p.consultable"
+                            v-if="puede_gestionar && p.consultable"
                             variant="outline"
                             size="sm"
                             :disabled="consultando === p.id"
@@ -475,14 +479,14 @@ const tono = (e: string) =>
                             Consultar en Openpay
                         </Button>
                         <Button
-                            v-if="p.reembolsable"
+                            v-if="puede_reembolsar && p.reembolsable"
                             variant="outline"
                             size="sm"
                             @click="pedirReembolso(p)"
                             ><Undo2 /> Reembolsar</Button
                         >
                         <Button
-                            v-if="p.requiere_revision"
+                            v-if="puede_gestionar && p.requiere_revision"
                             size="sm"
                             @click="revisando = p"
                             >Marcar revisado</Button
@@ -503,14 +507,19 @@ const tono = (e: string) =>
     <DialogoConfirmacion
         :open="revisando !== null"
         titulo="Marcar incidencia como revisada"
-        descripcion="Indica qué decidiste (por ejemplo, mantener o suspender el servicio). Si debes cambiar el servicio, hazlo desde Contrataciones."
+        descripcion="Quedará registrado quién la revisó y cuándo. Si debes cambiar el servicio, hazlo desde Contrataciones."
         confirmar="Marcar revisado"
         :procesando="form.processing"
-        :deshabilitado="form.nota.trim().length < 5"
         @update:open="(v: boolean) => !v && (revisando = null)"
         @confirmar="confirmar"
     >
-        <CampoFormulario etiqueta="Nota" para="nota" :error="form.errors.nota">
+        <CampoFormulario
+            etiqueta="Nota"
+            para="nota"
+            opcional
+            ayuda="Puedes anotar qué decidiste (por ejemplo, mantener o suspender el servicio)."
+            :error="form.errors.nota"
+        >
             <Textarea id="nota" v-model="form.nota" rows="2" maxlength="255" />
         </CampoFormulario>
     </DialogoConfirmacion>
@@ -565,6 +574,7 @@ const tono = (e: string) =>
             <CampoFormulario
                 etiqueta="Motivo"
                 para="motivo-reembolso"
+                ayuda="Obligatorio (mínimo 5 caracteres): un reembolso devuelve dinero y debe quedar justificado para conciliación y control antifraude."
                 :error="formReembolso.errors.motivo"
             >
                 <Textarea

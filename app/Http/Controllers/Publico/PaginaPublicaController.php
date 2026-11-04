@@ -13,6 +13,7 @@ use App\Models\Servicio;
 use App\Models\User;
 use App\Notifications\Paginas\NuevoMensajePagina;
 use App\Services\Apariencia\Color;
+use App\Services\Iconos\CatalogoIconos;
 use App\Services\Paginas\CatalogoPagina;
 use App\Services\Paginas\DocumentoPagina;
 use App\Services\Paginas\FuentesPagina;
@@ -170,6 +171,9 @@ class PaginaPublicaController extends Controller
                 ],
                 'qr' => $base.'/qr.svg',
                 'url_publica' => $canonica,
+                // Solo los trazos de los íconos de la biblioteca que usa la
+                // subpágina mostrada (nunca el catálogo completo).
+                'iconos' => app(CatalogoIconos::class)->paraDocumentos([$documento]),
             ],
         ])->withHeaders($this->respuesta->cabeceras($indexar));
     }

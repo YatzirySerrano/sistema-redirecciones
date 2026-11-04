@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Paginas;
 
 use App\Models\ArchivoPublico;
 use App\Services\Medios\AlmacenMedios;
+use App\Services\Medios\LimitesArchivos;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -32,7 +33,12 @@ class MedioController extends ControladorPaginas
             'archivo' => ['required', 'file'],
             'tipo' => ['required', 'in:imagen,video'],
             'uso' => ['nullable', 'in:normal,fondo,favicon,miniatura'],
-        ], ['archivo.required' => 'Elige un archivo.', 'archivo.file' => 'No recibimos el archivo. Inténtalo nuevamente.']);
+        ], [
+            'archivo.required' => 'Elige un archivo.',
+            'archivo.file' => 'No recibimos el archivo. Inténtalo nuevamente.',
+            // PHP no pudo recibirlo (p. ej. supera upload_max_filesize).
+            'archivo.uploaded' => 'El archivo es demasiado grande. '.app(LimitesArchivos::class)->texto($request->input('tipo') === 'video' ? LimitesArchivos::VIDEO : LimitesArchivos::IMAGEN),
+        ]);
 
         $negocio = $this->negocio($request);
         $archivo = $request->file('archivo');
@@ -47,7 +53,7 @@ class MedioController extends ControladorPaginas
 
         $guardado = $request->input('tipo') === 'video'
             ? $medios->guardarVideo($archivo, $negocio, ArchivoPublico::MODULO_PAGINAS, $this->usuario($request))
-            : $medios->guardarImagen($archivo, $negocio, ArchivoPublico::MODULO_PAGINAS, $this->usuario($request), $lado);
+            : $medios->guardarImagen($archivo, $negocio, ArchivoPublico::MODULO_PAGINAS, $this->usuario($request), $lado, 'archivo', $request->input('uso') === 'favicon' ? LimitesArchivos::LOGO : LimitesArchivos::IMAGEN);
 
         return response()->json(['medio' => [...$guardado->resumen(), 'nombre' => $guardado->nombre_original]], 201);
     }

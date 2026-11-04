@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { ArrowLeft, Mail, MapPin, Phone } from '@lucide/vue';
+import { ArrowLeft } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import BloquePagina from './BloquePagina.vue';
 import TextoEnriquecido from './TextoEnriquecido.vue';
+import AvatarPerfil from './cabecera/AvatarPerfil.vue';
+import CabeceraPagina from './cabecera/CabeceraPagina.vue';
+import ContactoPerfil from './cabecera/ContactoPerfil.vue';
 import { asegurarFuentes, urlFuentes } from './catalogo';
-import { esVisible, estiloFondo, hex, urlMedio, variablesTema } from './tema';
+import {
+    esVisible,
+    estiloFondo,
+    extrasTema,
+    hex,
+    urlMedio,
+    variablesTema,
+} from './tema';
 import type { Documento } from './tipos';
 
 /**
@@ -25,8 +35,19 @@ const props = withDefaults(
         qr?: string;
         /** Vista previa: el contenido se desplaza dentro del marco. */
         enMarco?: boolean;
+        /**
+         * Carga la hoja de tipografías de la página (una sola en el
+         * documento). Las miniaturas del catálogo cargan las suyas aparte.
+         */
+        cargarFuentes?: boolean;
     }>(),
-    { pagina: 'inicio', modo: 'publico', base: '', enMarco: false },
+    {
+        pagina: 'inicio',
+        modo: 'publico',
+        base: '',
+        enMarco: false,
+        cargarFuentes: true,
+    },
 );
 
 const emit = defineEmits<{ navegar: [slug: string] }>();
@@ -54,6 +75,16 @@ const logo = computed(() =>
 );
 const portada = computed(() => urlMedio(perfil.value.portada));
 const encabezado = computed(() => tema.value.disposicion.encabezado);
+const extras = computed(() => extrasTema(tema.value));
+/** Composiciones nuevas (las originales siguen tal cual abajo). */
+const cabeceraNueva = computed(() =>
+    encabezado.value === 'banda' ||
+    encabezado.value === 'tarjeta' ||
+    encabezado.value === 'dividido' ||
+    encabezado.value === 'editorial'
+        ? encabezado.value
+        : null,
+);
 const forma = computed(
     () =>
         ({
@@ -107,7 +138,7 @@ watch(() => tema.value.fondo, evaluarVideo, { deep: true });
 // Tipografías de fonts.bunny.net (sin rastreo).
 watch(
     () => urlFuentes(tema.value.tipografia),
-    (url) => asegurarFuentes(url),
+    (url) => (props.cargarFuentes ? asegurarFuentes(url) : undefined),
     { immediate: true },
 );
 
@@ -137,6 +168,10 @@ const direccion = computed(() => perfil.value.contacto?.direccion ?? '');
         :class="enMarco ? 'h-full overflow-hidden' : 'min-h-dvh'"
         :style="variables"
         :data-modo="modo"
+        :data-titulos="extras.titulos"
+        :data-tarjetas="extras.tarjetas"
+        :data-imagenes="extras.formaImagen"
+        :data-mayusculas="extras.mayusculas || undefined"
     >
         <!-- Fondo -->
         <div
@@ -211,10 +246,28 @@ const direccion = computed(() => perfil.value.contacto?.direccion ?? '');
         >
             <main
                 class="mx-auto w-full max-w-(--pe-ancho) px-5 pt-8 pb-16 @md:px-6 @md:pt-12"
-                :class="centrado ? 'text-center' : 'text-left'"
+                :class="[
+                    centrado ? 'text-center' : 'text-left',
+                    extras.lienzo === 'panel' ? 'pe-panel' : '',
+                ]"
             >
                 <!-- Encabezado -->
-                <header v-if="esInicio" class="mb-7">
+                <CabeceraPagina
+                    v-if="esInicio && cabeceraNueva"
+                    :estilo="cabeceraNueva"
+                    :nombre="perfil.nombre"
+                    :mostrar-nombre="perfil.mostrar_nombre !== false"
+                    :descripcion="perfil.descripcion"
+                    :foto="foto"
+                    :logo="logo"
+                    :portada="portada"
+                    :forma="forma"
+                    :monograma="extras.monograma"
+                    :centrado="centrado"
+                    :contacto="{ telefono, email, direccion }"
+                    :modo="modo"
+                />
+                <header v-else-if="esInicio" class="mb-7">
                     <div
                         v-if="portada"
                         class="overflow-hidden"
@@ -246,23 +299,23 @@ const direccion = computed(() => perfil.value.contacto?.direccion ?? '');
                                   : '',
                         ]"
                     >
-                        <img
-                            v-if="foto"
-                            :src="foto"
-                            :alt="perfil.nombre"
-                            class="shrink-0 border-4 border-(--pe-fondo) bg-(--pe-tarjeta-fondo) object-cover shadow-sm"
+                        <AvatarPerfil
+                            v-if="foto || extras.monograma"
+                            :foto="foto"
+                            :nombre="perfil.nombre"
+                            :monograma="extras.monograma"
                             :class="[
                                 forma,
                                 encabezado === 'izquierda'
-                                    ? 'size-20'
-                                    : 'size-24 @md:size-28',
+                                    ? 'size-20 text-[1.6em]'
+                                    : 'size-24 text-[1.9em] @md:size-28',
                             ]"
                         />
                         <div
                             :class="
                                 encabezado === 'izquierda'
                                     ? 'min-w-0'
-                                    : foto
+                                    : foto || extras.monograma
                                       ? 'mt-3'
                                       : ''
                             "
@@ -301,48 +354,13 @@ const direccion = computed(() => perfil.value.contacto?.direccion ?? '');
                         </div>
                     </div>
 
-                    <ul
-                        v-if="telefono || email || direccion"
-                        class="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[0.85em] text-(--pe-suave)"
-                        :class="centrado ? 'justify-center' : ''"
-                    >
-                        <li v-if="telefono">
-                            <a
-                                :href="
-                                    modo === 'publico'
-                                        ? `tel:+${telefono}`
-                                        : undefined
-                                "
-                                class="inline-flex items-center gap-1.5 hover:underline"
-                            >
-                                <Phone class="size-3.5" aria-hidden="true" />+{{
-                                    telefono
-                                }}
-                            </a>
-                        </li>
-                        <li v-if="email">
-                            <a
-                                :href="
-                                    modo === 'publico'
-                                        ? `mailto:${email}`
-                                        : undefined
-                                "
-                                class="inline-flex items-center gap-1.5 hover:underline"
-                            >
-                                <Mail class="size-3.5" aria-hidden="true" />{{
-                                    email
-                                }}
-                            </a>
-                        </li>
-                        <li
-                            v-if="direccion"
-                            class="inline-flex items-center gap-1.5"
-                        >
-                            <MapPin class="size-3.5" aria-hidden="true" />{{
-                                direccion
-                            }}
-                        </li>
-                    </ul>
+                    <ContactoPerfil
+                        :telefono="telefono"
+                        :email="email"
+                        :direccion="direccion"
+                        :centrado="centrado"
+                        :modo="modo"
+                    />
                 </header>
 
                 <header
@@ -719,6 +737,203 @@ const direccion = computed(() => perfil.value.contacto?.direccion ?? '');
     .pe-raiz .pe-flecha {
         display: inline-flex;
     }
+}
+
+/*
+ * Opciones de estilo añadidas después de la primera versión. Con sus
+ * valores por defecto (simple, borde, tema, libre, ninguno) no aplican
+ * ninguna regla: las páginas existentes se ven exactamente igual.
+ */
+.pe-raiz .pe-monograma.pe-titulo {
+    background: var(--pe-acento);
+    color: var(--pe-acento-texto);
+    line-height: 1;
+    letter-spacing: 0.02em;
+}
+
+.pe-raiz .pe-banda {
+    background:
+        radial-gradient(
+            120% 90% at 15% 0%,
+            rgb(255 255 255 / 0.22),
+            transparent 60%
+        ),
+        radial-gradient(
+            90% 80% at 100% 100%,
+            rgb(0 0 0 / 0.18),
+            transparent 60%
+        ),
+        var(--pe-acento);
+}
+
+.pe-raiz .pe-cabecera-tarjeta {
+    box-shadow: 0 24px 48px -28px rgb(0 0 0 / 0.45);
+}
+
+.pe-raiz .pe-cabecera-tarjeta[data-centrado] {
+    text-align: center;
+}
+
+.pe-raiz .pe-panel {
+    width: calc(100% - 1.5rem);
+    margin-block: 0.75rem 2rem;
+    overflow: hidden;
+    border: 1px solid var(--pe-borde);
+    border-radius: 28px;
+    background: var(--pe-fondo);
+    box-shadow: 0 40px 80px -40px rgb(0 0 0 / 0.5);
+}
+
+@container (min-width: 40rem) {
+    .pe-raiz .pe-panel {
+        margin-block: 2.5rem 3rem;
+    }
+}
+
+/* Botones: degradado y subrayado */
+.pe-raiz .pe-boton[data-estilo='degradado'] {
+    border-color: transparent;
+    background: linear-gradient(
+        135deg,
+        var(--b-fondo),
+        color-mix(in srgb, var(--pe-acento) 85%, var(--b-fondo))
+    );
+}
+
+.pe-raiz .pe-boton[data-estilo='degradado']:hover,
+.pe-raiz .pe-boton[data-estilo='degradado']:focus-visible {
+    background: linear-gradient(135deg, var(--b-hover-fondo), var(--pe-acento));
+}
+
+.pe-raiz .pe-boton[data-estilo='subrayado'] {
+    padding-inline: 0.25rem;
+    border-width: 0 0 max(1px, var(--pe-borde-ancho));
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.pe-raiz .pe-boton[data-estilo='subrayado']:hover,
+.pe-raiz .pe-boton[data-estilo='subrayado']:focus-visible {
+    background: color-mix(in srgb, var(--b-hover-fondo) 30%, transparent);
+    color: var(--b-hover-texto);
+}
+
+.pe-raiz .pe-boton[data-estilo='subrayado'][data-destacado] {
+    border-color: var(--pe-acento);
+    box-shadow: none;
+}
+
+.pe-raiz .pe-boton-icono {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: min(calc(var(--pe-radio) * 0.7), 999px);
+}
+
+.pe-raiz .pe-boton-icono[data-fondo='suave'] {
+    background: color-mix(in srgb, currentColor 13%, transparent);
+}
+
+.pe-raiz .pe-boton-icono[data-fondo='solido'] {
+    background: var(--pe-acento);
+    color: var(--pe-acento-texto);
+}
+
+.pe-raiz[data-mayusculas] .pe-boton-titulo {
+    font-size: 0.88em;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+/* Títulos de sección */
+.pe-raiz[data-titulos='linea'] .pe-seccion {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pe-raiz[data-titulos='linea'] .pe-seccion::after,
+.pe-raiz[data-titulos='linea'] .pe-seccion.text-center::before {
+    content: '';
+    flex: 1 1 1.5rem;
+    height: 1px;
+    background: var(--pe-borde);
+}
+
+.pe-raiz[data-titulos='etiqueta'] .pe-seccion {
+    color: var(--pe-acento);
+    font-family: var(--pe-fuente);
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.pe-raiz[data-titulos='barra'] .pe-seccion::after {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin-top: 0.45rem;
+    border-radius: 3px;
+    background: var(--pe-acento);
+}
+
+.pe-raiz[data-titulos='barra'] .pe-seccion.text-center::after {
+    margin-inline: auto;
+}
+
+.pe-raiz[data-titulos='resaltado'] .pe-seccion {
+    display: table;
+    padding: 0.15em 0.55em;
+    border-radius: min(var(--pe-radio), 0.5em);
+    background: var(--pe-acento);
+    color: var(--pe-acento-texto);
+}
+
+.pe-raiz[data-titulos='resaltado'] .pe-seccion.text-center {
+    margin-inline: auto;
+}
+
+/* Tarjetas */
+.pe-raiz[data-tarjetas='sombra'] .pe-tarjeta {
+    border-color: transparent;
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.05),
+        0 12px 32px -14px rgb(0 0 0 / 0.28);
+}
+
+.pe-raiz[data-tarjetas='plana'] .pe-tarjeta {
+    border-color: transparent;
+}
+
+/* Imágenes */
+.pe-raiz .pe-imagen-vacia {
+    background: color-mix(
+        in srgb,
+        var(--pe-acento) 12%,
+        var(--pe-tarjeta-fondo)
+    );
+    color: color-mix(in srgb, var(--pe-tarjeta-texto) 75%, transparent);
+}
+
+.pe-raiz[data-imagenes='recta'] .pe-imagen {
+    border-radius: 0;
+}
+
+.pe-raiz[data-imagenes='marco'] .pe-imagen {
+    padding: 0.4rem;
+    border: 1px solid var(--pe-borde);
+    border-radius: calc(var(--pe-radio) * 0.5);
+    background-color: var(--pe-tarjeta-fondo);
+    box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.35);
+}
+
+.pe-raiz[data-imagenes='arco'] .pe-imagen {
+    border-radius: 999px 999px var(--pe-radio) var(--pe-radio);
 }
 
 @media (prefers-reduced-motion: reduce) {

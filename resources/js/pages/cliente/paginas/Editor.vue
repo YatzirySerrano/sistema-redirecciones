@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, setLayoutProps } from '@inertiajs/vue3';
+import AvisoDisenoDasti from '@/components/disenos/AvisoDisenoDasti.vue';
 import {
     CircleAlert,
     Cloud,
@@ -9,6 +10,7 @@ import {
     EyeOff,
     History,
     LayoutList,
+    LayoutTemplate,
     Palette,
     Redo2,
     Rocket,
@@ -19,9 +21,11 @@ import {
     Undo2,
 } from '@lucide/vue';
 import { useEventListener, useMediaQuery } from '@vueuse/core';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import Ayuda from '@/components/comun/Ayuda.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import CatalogoBloques from '@/components/paginas/editor/CatalogoBloques.vue';
+import CatalogoPlantillas from '@/components/paginas/editor/CatalogoPlantillas.vue';
 import EditorPerfil from '@/components/paginas/editor/EditorPerfil.vue';
 import HistorialVersiones from '@/components/paginas/editor/HistorialVersiones.vue';
 import ListaBloques from '@/components/paginas/editor/ListaBloques.vue';
@@ -29,10 +33,20 @@ import PanelAjustes from '@/components/paginas/editor/PanelAjustes.vue';
 import PanelDiseno from '@/components/paginas/editor/PanelDiseno.vue';
 import PanelPaginas from '@/components/paginas/editor/PanelPaginas.vue';
 import VistaPrevia from '@/components/paginas/editor/VistaPrevia.vue';
+import { configurarBiblioteca } from '@/components/paginas/editor/biblioteca';
 import { nuevoBloque } from '@/components/paginas/editor/bloques';
 import { proveerEditor } from '@/components/paginas/editor/contexto';
+import { aplicarPlantilla } from '@/components/paginas/editor/plantillas';
+import type {
+    CategoriasPlantillas,
+    ModoPlantilla,
+    PlantillaPagina,
+} from '@/components/paginas/editor/plantillas';
+import { conConsulta } from '@/components/paginas/editor/rutas';
+import type { RutasEditor } from '@/components/paginas/editor/rutas';
 import { useEditorPagina } from '@/components/paginas/editor/useEditorPagina';
 import type { ResumenPagina } from '@/components/paginas/editor/useEditorPagina';
+import { completarTema } from '@/components/paginas/tema';
 import type { Documento, Tema, TipoBloque } from '@/components/paginas/tipos';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,16 +71,6 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { relativo } from '@/lib/formato';
-import { editor as rutaEditor, inicio, qr } from '@/routes/cliente/paginas';
-
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            { title: 'Página de enlaces', href: inicio() },
-            { title: 'Editor', href: rutaEditor() },
-        ],
-    },
-});
 
 const props = defineProps<{
     servicio: {
@@ -86,24 +90,50 @@ const props = defineProps<{
     pagina: ResumenPagina;
     documento: Documento;
     tema_por_defecto: Tema;
-    plantillas: {
-        clave: string;
-        nombre: string;
-        descripcion: string;
-        documento: Documento;
-    }[];
+    plantillas: PlantillaPagina[];
+    categorias_plantillas: CategoriasPlantillas;
     limites: { subpaginas: number };
     reservadas: string[];
+    /** Todas las URL del editor (EditorController::rutasEditor). */
+    rutas: RutasEditor;
+    /** Personal DASTI diseñando para el negocio («Diseño para clientes»). */
+    contexto_dasti?: {
+        negocio_id: number;
+        negocio: string;
+        volver: string;
+    } | null;
 }>();
 
+setLayoutProps({
+    breadcrumbs: [
+        ...(props.rutas.inicio
+            ? [{ title: 'Página de enlaces', href: props.rutas.inicio }]
+            : []),
+        { title: 'Editor', href: props.rutas.editor },
+    ],
+});
+
+configurarBiblioteca({
+    medios: props.rutas.medios,
+    subir: props.rutas.medios_subir,
+    eliminar: props.rutas.medios_eliminar,
+});
+
+// Documentos guardados antes de las opciones de diseño nuevas: se completan
+// con los valores que reproducen su aspecto original.
 const estado = useEditorPagina({
-    documento: props.documento,
+    documento: {
+        ...props.documento,
+        tema: completarTema(props.documento.tema, props.tema_por_defecto),
+    },
     pagina: props.pagina,
+    rutas: props.rutas,
 });
 const { documento, pagina, ocupado, sucio, errores, conflicto } = estado;
 const paginaActual = ref('inicio');
 const recienAgregado = ref<string | null>(null);
 const catalogoAbierto = ref(false);
+const plantillasAbiertas = ref(false);
 
 proveerEditor({
     ...estado,
@@ -113,6 +143,39 @@ proveerEditor({
     abrirCatalogo: () => {
         catalogoAbierto.value = true;
     },
+    abrirPlantillas: () => {
+        plantillasAbiertas.value = true;
+    },
+});
+
+// ---- Plantillas ----
+const elementosInicio = computed(
+    () =>
+        (
+            documento.value.paginas.find((p) => p.slug === 'inicio') ??
+            documento.value.paginas[0]
+        )?.bloques.length ?? 0,
+);
+
+const usarPlantilla = (plantilla: PlantillaPagina, modo: ModoPlantilla) => {
+    estado.cambiarConDeshacer(
+        () => aplicarPlantilla(documento.value, plantilla, modo),
+        `Plantilla «${plantilla.nombre}» aplicada. Guarda o publica para conservarla.`,
+    );
+
+    if (modo !== 'diseno') {
+        paginaActual.value = 'inicio';
+    }
+};
+
+// Desde el inicio del módulo: /editor?plantillas=1 abre el catálogo.
+onMounted(() => {
+    if (
+        props.puede.editar &&
+        new URLSearchParams(window.location.search).has('plantillas')
+    ) {
+        plantillasAbiertas.value = true;
+    }
 });
 
 const esEscritorio = useMediaQuery('(min-width: 1024px)');
@@ -311,19 +374,29 @@ const despublicar = async () => {
     }
 };
 
-const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
+const urlQr = computed(() =>
+    props.rutas.qr
+        ? conConsulta(props.rutas.qr, { formato: 'svg' })
+        : undefined,
+);
 </script>
 
 <template>
     <Head title="Editor de tu página" />
 
     <div class="-mt-2 pb-24 lg:pb-0">
+        <AvisoDisenoDasti
+            v-if="contexto_dasti"
+            :contexto="contexto_dasti"
+            editor="Diseñar Página de enlaces"
+            class="mt-2 mb-3"
+        />
         <!-- Barra superior -->
         <div
             class="sticky top-0 z-30 -mx-4 mb-4 border-b bg-background/90 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
         >
             <div class="flex flex-wrap items-center gap-2">
-                <div class="min-w-0 flex-1">
+                <div class="min-w-[9rem] flex-1">
                     <div class="flex items-center gap-2">
                         <h1 class="truncate text-base font-semibold sm:text-lg">
                             Tu página de enlaces
@@ -352,7 +425,9 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                     </p>
                 </div>
 
-                <div class="flex items-center gap-1">
+                <div
+                    class="ml-auto flex flex-wrap items-center justify-end gap-1"
+                >
                     <Button
                         type="button"
                         variant="ghost"
@@ -386,6 +461,14 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                         ><History
                     /></Button>
                     <Button
+                        v-if="puede.editar"
+                        type="button"
+                        variant="ghost"
+                        class="hidden h-10 xl:inline-flex"
+                        @click="plantillasAbiertas = true"
+                        ><LayoutTemplate /> Plantillas</Button
+                    >
+                    <Button
                         v-if="esEscritorio && !esAmplio"
                         type="button"
                         variant="outline"
@@ -396,7 +479,7 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                     <Button
                         v-if="pagina.publicada"
                         variant="ghost"
-                        class="hidden h-10 md:inline-flex"
+                        class="hidden h-10 xl:inline-flex"
                         as-child
                     >
                         <a
@@ -410,11 +493,15 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                         v-if="puede.editar"
                         type="button"
                         variant="outline"
-                        class="hidden h-10 sm:inline-flex"
+                        class="h-10 px-3 xl:px-4"
+                        aria-label="Guardar borrador"
+                        title="Guardar borrador (Ctrl+S)"
                         :disabled="!sucio || ocupado !== null"
                         @click="estado.guardar()"
                     >
-                        <Save /> Guardar borrador
+                        <Spinner v-if="ocupado === 'guardando'" />
+                        <Save v-else />
+                        <span class="hidden xl:inline">Guardar borrador</span>
                     </Button>
                     <Button
                         v-if="puede.publicar"
@@ -432,6 +519,16 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                         <Rocket v-else />
                         Publicar
                     </Button>
+                    <span
+                        v-if="puede.publicar"
+                        class="hidden size-6 items-center justify-center sm:inline-flex"
+                    >
+                        <Ayuda
+                            texto="Hace visible tu página para las personas que tengan el enlace. «Guardar borrador» conserva tus cambios sin mostrarlos."
+                            etiqueta="Qué hace Publicar"
+                            lado="bottom"
+                        />
+                    </span>
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
                             <Button
@@ -446,10 +543,10 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                         <DropdownMenuContent align="end" class="w-56">
                             <DropdownMenuItem
                                 v-if="puede.editar"
-                                class="sm:hidden"
-                                :disabled="!sucio"
-                                @select="estado.guardar()"
-                                ><Save /> Guardar borrador</DropdownMenuItem
+                                class="xl:hidden"
+                                @select="plantillasAbiertas = true"
+                                ><LayoutTemplate /> Plantillas de
+                                diseño</DropdownMenuItem
                             >
                             <DropdownMenuItem
                                 class="sm:hidden"
@@ -575,7 +672,7 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
                 </div>
                 <PanelDiseno
                     v-else-if="panel === 'diseno'"
-                    :plantillas="plantillas"
+                    :total-plantillas="plantillas.length"
                     :tema-por-defecto="tema_por_defecto"
                 />
                 <PanelPaginas
@@ -720,6 +817,15 @@ const urlQr = computed(() => qr({ query: { formato: 'svg' } }).url);
     </Sheet>
 
     <HistorialVersiones v-model:open="historialAbierto" />
+
+    <CatalogoPlantillas
+        v-model:open="plantillasAbiertas"
+        :plantillas="plantillas"
+        :categorias="categorias_plantillas"
+        :editable="puede.editar"
+        :elementos-inicio="elementosInicio"
+        @aplicar="usarPlantilla"
+    />
 
     <DialogoConfirmacion
         v-model:open="confirmarDespublicar"

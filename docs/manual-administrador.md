@@ -79,9 +79,41 @@ En producción (o con `DASTI_EXIGIR_2FA_ADMIN=true`), los administradores deben 
 ## Servicios, precios y pagos (Openpay)
 
 - **Servicios contratados › Catálogo y precios**: elige el servicio (Fidelidad o Página de enlaces) y define el precio final en MXN, si incluye IVA, la vigencia (vacía = permanente, pago único), la descripción y los beneficios que ve el cliente. Habilita «Permitir contratación en línea» solo cuando el precio esté definido y Openpay configurado.
-- **Activar servicio**: activa un servicio para un negocio sin pago en línea (cortesía o pago fuera de línea con importe y referencia). Queda registrado quién, cuándo y por qué. Solo se activa el servicio elegido.
-- **Suspender / reactivar / restringir**: con motivo obligatorio. Nunca afecta las redirecciones QR/NFC ni borra datos.
-- **Pagos**: cada orden muestra su folio, intentos de cobro (marca y últimos 4 dígitos de la tarjeta, nunca el número completo), reembolsos y contracargos. Acciones: **Consultar en Openpay** (actualiza el estado real), **Reembolsar** (total o parcial) y **Marcar revisado**.
+- **Activar servicio**: activa un servicio para un negocio sin pago en línea (cortesía o pago fuera de línea con importe y referencia). El motivo es opcional; la auditoría registra siempre quién, cuándo y qué. Solo se activa el servicio elegido.
+- **Suspender / reactivar / restringir**: motivo opcional (la auditoría guarda el estado anterior y el nuevo). Nunca afecta las redirecciones QR/NFC ni borra datos.
+- **Pagos**: cada orden muestra su folio, intentos de cobro (marca y últimos 4 dígitos de la tarjeta, nunca el número completo), reembolsos y contracargos. Acciones: **Consultar en Openpay** (actualiza el estado real) y **Marcar revisado** (nota opcional) con el permiso «Pagos › Revisar incidencias»; **Reembolsar** (total o parcial, motivo obligatorio) con «Pagos › Reembolsar».
 - Reglas automáticas: reembolso total → el servicio se suspende (si no hay otro periodo vigente); reembolso parcial → queda en revisión y se conserva el acceso; contracargo → el servicio queda restringido (solo lectura) hasta que se resuelve.
 - Configuración técnica de Openpay: ver `docs/despliegue.md` › «Pagos en línea con Openpay». El código de verificación del webhook aparece en Pagos › Openpay.
 - El personal de DASTI ve contrataciones y pagos, nunca los datos personales de los consumidores de Fidelidad ni los mensajes de las Páginas de enlaces.
+
+## Motivos: cuándo son obligatorios
+
+En las operaciones ordinarias (activar, suspender o reactivar servicios, negocios, usuarios y productos; marcar pagos revisados) el motivo es **opcional**: si lo dejas vacío se guarda vacío y las pantallas muestran «No especificado». La auditoría registra siempre el usuario, la fecha y hora, la operación, el registro y el estado anterior y nuevo.
+
+Siguen siendo **obligatorios** por control antifraude o de seguridad:
+
+- transferir un producto a otro negocio (cambia el dueño de un enlace permanente);
+- reembolsar un pago (devuelve dinero);
+- en Fidelidad: ajustar o anular visitas y recompensas, fusionar consumidores, reemplazar o revocar credenciales y emitir enlaces de recuperación (protegen el saldo y la identidad del consumidor).
+
+## Diseño para clientes
+
+DASTI puede diseñar la tarjeta de Fidelidad o la Página de enlaces de un negocio como servicio adicional.
+
+1. **Servicios › Diseño para clientes**.
+2. Busca y elige el negocio.
+3. Pulsa **Abrir editor** en «Diseñar Fidelidad» o «Diseñar Página de enlaces».
+4. El editor muestra arriba «Estás diseñando para «Negocio»». Guarda y publica como lo haría el cliente.
+
+- Requiere el permiso «Diseñar para negocios» del módulo correspondiente (el rol Administrador lo tiene; el superadministrador puede darlo a otros roles).
+- El negocio debe tener el servicio contratado: para guardar o publicar, activo y vigente. Un permiso nunca sustituye la contratación.
+- La dirección pública, los dominios, los mensajes y las estadísticas de la página los administra el negocio.
+- Cada apertura, guardado y publicación queda en la auditoría del negocio con tu nombre y la marca «Realizado por personal DASTI». Las operaciones anteriores conservan a su autor.
+
+## Roles y permisos
+
+**Administración › Roles y permisos** muestra el catálogo completo, separado en «Administración de la plataforma» y «Servicios y operación de los negocios». Puedes buscar permisos, ver solo los marcados y abrir la ayuda de cada módulo. Los permisos que no aplican al tipo de cuenta del rol aparecen como referencia en «permisos no aplican a este tipo de cuenta».
+
+- Nadie otorga ni retira permisos que no tiene; solo un superadministrador gestiona el rol Superadministrador, y siempre queda al menos uno activo.
+- Los permisos de negocio nunca salen del negocio del usuario.
+- Permisos separados en esta versión: «Pagos › Revisar incidencias», «Pagos › Reembolsar» y «Página de enlaces › Consultar estadísticas». Los roles existentes los recibieron automáticamente si tenían el permiso equivalente anterior.

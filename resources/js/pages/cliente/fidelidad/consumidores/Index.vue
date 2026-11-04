@@ -57,6 +57,8 @@ const { filtros } = useFiltros(index.url(), { ...props.filtros });
 <template>
     <Head title="Consumidores" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina
         titulo="Consumidores"
         descripcion="Clientes inscritos en tus programas. Sus visitas pertenecen a su cuenta, no a la tarjeta."
@@ -68,8 +70,6 @@ const { filtros } = useFiltros(index.url(), { ...props.filtros });
             </Button>
         </template>
     </EncabezadoPagina>
-
-    <NavFidelidad :servicio="servicio" />
 
     <section class="overflow-hidden rounded-xl border bg-card shadow-xs">
         <div class="border-b p-4">

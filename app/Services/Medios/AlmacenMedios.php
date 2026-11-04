@@ -34,22 +34,26 @@ class AlmacenMedios
 
     private const MIMES_VIDEO = ['video/mp4' => 'mp4', 'video/webm' => 'webm'];
 
-    public function __construct(private readonly RegistradorAuditoria $auditoria) {}
+    public function __construct(
+        private readonly RegistradorAuditoria $auditoria,
+        private readonly LimitesArchivos $limites,
+    ) {}
 
     /**
      * @param  int  $ladoMaximo  Lado mayor resultante en píxeles.
+     * @param  string  $limite  LimitesArchivos::LOGO o ::IMAGEN.
      */
-    public function guardarImagen(UploadedFile $archivo, Negocio $negocio, string $modulo, ?User $usuario, int $ladoMaximo = 1600, string $campo = 'archivo'): ArchivoPublico
+    public function guardarImagen(UploadedFile $archivo, Negocio $negocio, string $modulo, ?User $usuario, int $ladoMaximo = 1600, string $campo = 'archivo', string $limite = LimitesArchivos::IMAGEN): ArchivoPublico
     {
-        $maxBytes = (int) config('dasti.medios.imagen_max_kb', 5120) * 1024;
+        $maxBytes = $this->limites->bytes($limite);
         $ruta = $archivo->getRealPath();
 
         if ($ruta === false || ! $archivo->isValid()) {
-            throw ValidationException::withMessages([$campo => 'No recibimos la imagen. Inténtalo nuevamente.']);
+            throw ValidationException::withMessages([$campo => $this->errorSubida($archivo, $limite)]);
         }
 
         if ($archivo->getSize() > $maxBytes) {
-            throw ValidationException::withMessages([$campo => 'La imagen supera el tamaño máximo de '.intdiv($maxBytes, 1048576).' MB.']);
+            throw ValidationException::withMessages([$campo => 'La imagen pesa '.LimitesArchivos::legible((int) $archivo->getSize()).'. '.$this->limites->texto($limite)]);
         }
 
         $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($ruta);
@@ -65,6 +69,10 @@ class AlmacenMedios
         }
 
         $this->verificarCuota($negocio, $modulo, $campo);
+
+        // Decodificar una foto grande requiere memoria (≈ 5 bytes por píxel):
+        // se amplía solo durante el procesamiento.
+        $this->asegurarMemoria($info[0] * $info[1]);
 
         $contenido = @file_get_contents($ruta);
         $imagen = is_string($contenido) && $contenido !== '' ? @imagecreatefromstring($contenido) : false;
@@ -91,15 +99,15 @@ class AlmacenMedios
      */
     public function guardarVideo(UploadedFile $archivo, Negocio $negocio, string $modulo, ?User $usuario, string $campo = 'archivo'): ArchivoPublico
     {
-        $maxBytes = (int) config('dasti.medios.video_max_kb', 15360) * 1024;
+        $maxBytes = $this->limites->bytes(LimitesArchivos::VIDEO);
         $ruta = $archivo->getRealPath();
 
         if ($ruta === false || ! $archivo->isValid()) {
-            throw ValidationException::withMessages([$campo => 'No recibimos el video. Inténtalo nuevamente.']);
+            throw ValidationException::withMessages([$campo => $this->errorSubida($archivo, LimitesArchivos::VIDEO)]);
         }
 
         if ($archivo->getSize() > $maxBytes) {
-            throw ValidationException::withMessages([$campo => 'El video supera el tamaño máximo de '.intdiv($maxBytes, 1048576).' MB.']);
+            throw ValidationException::withMessages([$campo => 'El video pesa '.LimitesArchivos::legible((int) $archivo->getSize()).'. '.$this->limites->texto(LimitesArchivos::VIDEO)]);
         }
 
         $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($ruta);
@@ -112,6 +120,27 @@ class AlmacenMedios
         $binario = (string) file_get_contents($ruta);
 
         return $this->persistir($negocio, $modulo, ArchivoPublico::TIPO_VIDEO, $binario, $mime, self::MIMES_VIDEO[$mime], null, null, $archivo, $usuario, $campo);
+    }
+
+    /**
+     * Mensaje comprensible cuando PHP no pudo recibir el archivo (p. ej.
+     * supera upload_max_filesize).
+     */
+    private function errorSubida(UploadedFile $archivo, string $limite): string
+    {
+        return in_array($archivo->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+            ? 'El archivo es demasiado grande. '.$this->limites->texto($limite)
+            : 'No recibimos el archivo completo. Inténtalo nuevamente.';
+    }
+
+    private function asegurarMemoria(int $pixeles): void
+    {
+        $necesaria = 64 * 1048576 + $pixeles * 6;
+        $actual = LimitesArchivos::aBytes((string) ini_get('memory_limit'));
+
+        if ($actual > 0 && $actual < $necesaria) {
+            @ini_set('memory_limit', (string) min($necesaria, 768 * 1048576));
+        }
     }
 
     /**

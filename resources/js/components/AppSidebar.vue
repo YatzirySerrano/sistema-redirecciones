@@ -7,22 +7,21 @@ import {
     House,
     LayoutDashboard,
     LayoutList,
+    Brush,
     Link2,
     Mail,
     Nfc,
     Paintbrush,
     Sparkles,
     CreditCard,
-    Gift,
     HeartHandshake,
     Palette,
-    Stamp,
-    UserCog,
     Settings2,
     ShieldCheck,
     UsersRound,
 } from '@lucide/vue';
 import { computed } from 'vue';
+import { gruposVisibles } from '@/components/fidelidad/secciones';
 import MarcaDasti from '@/components/MarcaDasti.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -43,6 +42,7 @@ import { index as enlaces } from '@/routes/admin/enlaces';
 import { index as estadisticasAdmin } from '@/routes/admin/estadisticas';
 import { index as negocios } from '@/routes/admin/negocios';
 import { edit as apariencia } from '@/routes/admin/personalizacion';
+import { index as disenosClientes } from '@/routes/admin/disenos';
 import { index as paginasAdmin } from '@/routes/admin/paginas';
 import { index as pagos } from '@/routes/admin/pagos';
 import { index as productosAdmin } from '@/routes/admin/productos';
@@ -51,14 +51,6 @@ import { index as servicios } from '@/routes/admin/servicios';
 import { index as usuarios } from '@/routes/admin/usuarios';
 import { inicio as inicioCliente } from '@/routes/cliente';
 import { index as estadisticasCliente } from '@/routes/cliente/estadisticas';
-import {
-    inicio as fidelidadInicio,
-    mostrador,
-} from '@/routes/cliente/fidelidad';
-import { edit as disenoTarjeta } from '@/routes/cliente/fidelidad/diseno';
-import { index as campanas } from '@/routes/cliente/fidelidad/campanas';
-import { index as consumidores } from '@/routes/cliente/fidelidad/consumidores';
-import { index as personal } from '@/routes/cliente/fidelidad/personal';
 import {
     editor as paginaEditor,
     inicio as paginaInicio,
@@ -77,12 +69,19 @@ const page = usePage();
 const permisos = computed(() => page.props.auth.permisos);
 const negocio = computed(() => page.props.auth.user.negocio);
 
-const { puede } = usePermisos();
+const { puede, puedeAlguno } = usePermisos();
 
 const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
     // Cada entrada exige su permiso; las secciones vacías no se muestran.
-    const filtrar = (items: (NavItem & { permiso: string })[]): NavItem[] =>
-        items.filter((i) => puede(i.permiso));
+    // `permiso`: uno o varios (basta con tener alguno).
+    const filtrar = (
+        items: (NavItem & { permiso: string | string[] })[],
+    ): NavItem[] =>
+        items.filter((i) =>
+            Array.isArray(i.permiso)
+                ? puedeAlguno(...i.permiso)
+                : puede(i.permiso),
+        );
 
     if (permisos.value.administrar) {
         return [
@@ -147,6 +146,15 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                         href: paginasAdmin(),
                         icon: LayoutList,
                         permiso: 'paginas.supervisar',
+                    },
+                    {
+                        title: 'Diseño para clientes',
+                        href: disenosClientes(),
+                        icon: Brush,
+                        permiso: [
+                            'fidelidad.disenar_negocios',
+                            'paginas.disenar_negocios',
+                        ],
                     },
                 ]),
             },
@@ -222,47 +230,19 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
     const porContratar: NavItem[] = [];
 
     if (habilitado('fidelidad')) {
+        // Misma organización y nombres que la navegación interna del módulo
+        // (components/fidelidad/secciones.ts), en el orden de sus grupos.
+        // La contratación vive en «Servicios › Mis servicios».
         secciones.push({
             titulo: 'Fidelidad',
-            items: filtrar([
-                {
-                    title: 'Resumen',
-                    href: fidelidadInicio(),
-                    icon: HeartHandshake,
-                    exact: true,
-                    permiso: 'fidelidad.ver',
-                },
-                {
-                    title: 'Registrar visita',
-                    href: mostrador(),
-                    icon: Stamp,
-                    permiso: 'fidelidad.visitas',
-                },
-                {
-                    title: 'Consumidores',
-                    href: consumidores(),
-                    icon: UsersRound,
-                    permiso: 'fidelidad.consumidores',
-                },
-                {
-                    title: 'Campañas',
-                    href: campanas(),
-                    icon: Gift,
-                    permiso: 'fidelidad.campanas',
-                },
-                {
-                    title: 'Diseño de tarjeta',
-                    href: disenoTarjeta(),
-                    icon: Paintbrush,
-                    permiso: 'fidelidad.diseno',
-                },
-                {
-                    title: 'Personal',
-                    href: personal(),
-                    icon: UserCog,
-                    permiso: 'fidelidad.personal',
-                },
-            ]),
+            items: gruposVisibles(puede, true, ['contratacion']).flatMap((g) =>
+                g.secciones.map((s) => ({
+                    title: s.titulo,
+                    href: s.href,
+                    icon: s.icono,
+                    exact: s.exacta,
+                })),
+            ),
         });
     } else if (puede('servicios.contratar')) {
         porContratar.push({
@@ -294,7 +274,7 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                     title: 'Estadísticas',
                     href: paginaEstadisticas(),
                     icon: ChartColumnBig,
-                    permiso: 'paginas.ver',
+                    permiso: 'paginas.estadisticas',
                 },
                 {
                     title: 'Mensajes',

@@ -13,6 +13,8 @@ const props = defineProps<{
     documento: Documento;
     qr?: string;
     alto?: string;
+    /** false en el catálogo de plantillas (carga sus propias tipografías). */
+    cargarFuentes?: boolean;
 }>();
 
 const pagina = defineModel<string>('pagina', { default: 'inicio' });
@@ -58,7 +60,7 @@ const escala = computed(() =>
                     :aria-checked="dispositivo === clave"
                     :aria-label="d.etiqueta"
                     :title="d.etiqueta"
-                    class="flex size-9 items-center justify-center rounded-md transition"
+                    class="flex size-10 items-center justify-center rounded-md transition"
                     :class="
                         dispositivo === clave
                             ? 'bg-background text-foreground shadow-xs'
@@ -95,6 +97,7 @@ const escala = computed(() =>
                     modo="vista_previa"
                     :qr="qr"
                     en-marco
+                    :cargar-fuentes="props.cargarFuentes !== false"
                     @navegar="pagina = $event"
                 />
             </div>

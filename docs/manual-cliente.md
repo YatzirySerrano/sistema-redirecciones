@@ -59,9 +59,28 @@ Fidelidad y Página de enlaces se contratan **por separado** con un **pago únic
 
 Solo las personas con el permiso «Contratar» pueden comprar. En la misma pantalla verás el historial de activación y tus pagos (con su folio).
 
-## Diseño de tarjeta (Fidelidad)
+## Fidelidad: secciones
 
-En **Fidelidad › Diseño de tarjeta** personalizas lo que ven tus clientes al abrir su tarjeta: plantillas, colores, fondos, tipografía, sellos, mensajes, secciones informativas y términos. La vista previa muestra el resultado al instante; **Guardar borrador** no cambia lo publicado hasta que pulses **Publicar**. Puedes restaurar versiones anteriores y crear variantes por campaña. El diseño nunca modifica visitas, metas ni recompensas.
+La navegación de Fidelidad se agrupa por finalidad: **Inicio** (resumen), **Operación** (Mostrador y Consumidores), **Programas** (Campañas), **Personalización** (Diseñar mi programa) y **Administración** (Personal autorizado, Historial y actividad, Contratación). En el teléfono se elige la sección en un selector compacto.
+
+## Diseñar mi programa (Fidelidad)
+
+En **Fidelidad › Diseñar mi programa** personalizas la página que abren tus clientes con su tarjeta o enlace, en cuatro pasos:
+
+1. **Elegir plantilla**.
+2. **Identidad y apariencia**: logotipo, colores, fondo, tipografía y decoración (cada decoración muestra una miniatura real).
+3. **Visitas y recompensas**: forma del avance, íconos (biblioteca con buscador, p. ej. «hielo» o «agua»), textos de recompensa, información y condiciones.
+4. **Revisar y publicar**: resumen de cambios, avisos de legibilidad y publicación.
+
+Toca cualquier parte de la vista previa para ir a su herramienta. **Guardar** no cambia lo publicado hasta que pulses **Publicar**. Puedes restaurar versiones anteriores y crear un diseño propio para una campaña. El diseño nunca modifica visitas, metas, recompensas ni canjes.
+
+## Imágenes y archivos
+
+Junto a cada botón de carga verás los formatos aceptados y el tamaño máximo (por ejemplo, «PNG, JPG o WEBP. Tamaño máximo: 10 MB»). Si un archivo es demasiado grande o no es una imagen válida, se avisa antes de subirlo y puedes elegir otro sin perder lo que llevabas.
+
+## Página de enlaces: plantillas
+
+En el editor de tu página, **Plantillas** abre un catálogo de 24 diseños por giro (cafeterías, restaurantes, estéticas, agua y hielo, consultorios, talleres, etc.) y estilo. Cada uno muestra una miniatura real y una vista ampliada; al usarlo eliges si cambiar solo el diseño, agregar los ejemplos o reemplazar la página de inicio, y puedes deshacerlo. Los textos de ejemplo («Escribe aquí…») y los destinos vacíos se marcan para que los completes antes de publicar.
 
 ## Registrar visitas (mostrador)
 

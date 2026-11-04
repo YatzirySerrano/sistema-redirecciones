@@ -4,8 +4,13 @@
  */
 import { contraste } from '@/components/fidelidad-diseno/color';
 import type { DocumentoDiseno } from '@/components/fidelidad-diseno/tipos';
+import type { ClaveHerramienta } from './pasos';
 
-export type AvisoLegibilidad = { seccion: string; mensaje: string };
+/** `herramienta`: dónde se corrige (el editor lleva ahí al usuario). */
+export type AvisoLegibilidad = {
+    herramienta: ClaveHerramienta;
+    mensaje: string;
+};
 
 const fmt = (n: number) => `${n.toFixed(1)}:1`;
 
@@ -23,7 +28,7 @@ export function avisosLegibilidad(
     if (t.fondo_tipo === 'imagen') {
         if (t.oscurecer < 30) {
             avisos.push({
-                seccion: 'tarjeta',
+                herramienta: 'tarjeta',
                 mensaje:
                     'Sobre una foto, oscurece el fondo al menos 30 % para que el texto se lea bien.',
             });
@@ -33,7 +38,7 @@ export function avisosLegibilidad(
 
         if (c < 4.5) {
             avisos.push({
-                seccion: 'tarjeta',
+                herramienta: 'tarjeta',
                 mensaje: `El texto de la tarjeta tiene poco contraste con el fondo (${fmt(c)}; se recomienda 4.5:1 o más).`,
             });
         }
@@ -42,7 +47,7 @@ export function avisosLegibilidad(
 
         if (s < 3) {
             avisos.push({
-                seccion: 'tarjeta',
+                herramienta: 'tarjeta',
                 mensaje: `El texto secundario de la tarjeta se lee con dificultad (${fmt(s)}; se recomienda 3:1 o más).`,
             });
         }
@@ -51,7 +56,7 @@ export function avisosLegibilidad(
 
         if (sello < 1.6 && d.progreso.presentacion !== 'barra') {
             avisos.push({
-                seccion: 'progreso',
+                herramienta: 'progreso',
                 mensaje:
                     'Los sellos completados casi no se distinguen del fondo de la tarjeta. Usa un color más contrastante.',
             });
@@ -65,7 +70,7 @@ export function avisosLegibilidad(
 
     if (icono < 3) {
         avisos.push({
-            seccion: 'progreso',
+            herramienta: 'progreso',
             mensaje: `El icono del sello completado no resalta sobre su color (${fmt(icono)}; se recomienda 3:1 o más).`,
         });
     }
@@ -74,7 +79,7 @@ export function avisosLegibilidad(
         contraste(d.progreso.completo_fondo, d.progreso.pendiente_fondo) < 1.4
     ) {
         avisos.push({
-            seccion: 'progreso',
+            herramienta: 'progreso',
             mensaje:
                 'Los sellos completados y pendientes tienen colores muy parecidos: será difícil ver el avance.',
         });
@@ -90,7 +95,7 @@ export function avisosLegibilidad(
 
         if (pagina < 4.5) {
             avisos.push({
-                seccion: 'pagina',
+                herramienta: 'fondo',
                 mensaje: `El texto de la página tiene poco contraste con su fondo (${fmt(pagina)}).`,
             });
         }
@@ -98,7 +103,7 @@ export function avisosLegibilidad(
 
     if (!variante && contraste(d.colores.texto, d.colores.superficie) < 4.5) {
         avisos.push({
-            seccion: 'pagina',
+            herramienta: 'colores',
             mensaje:
                 'El texto de las secciones informativas no contrasta con su recuadro.',
         });

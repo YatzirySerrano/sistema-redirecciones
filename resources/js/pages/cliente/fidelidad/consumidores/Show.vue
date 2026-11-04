@@ -228,6 +228,8 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
 <template>
     <Head :title="c.nombre" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina :titulo="c.nombre" :icono="UserRound">
         <template #detalle>
             <div
@@ -269,8 +271,6 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
             </Button>
         </template>
     </EncabezadoPagina>
-
-    <NavFidelidad :servicio="servicio" />
 
     <p
         v-if="fusionado_en"
@@ -717,7 +717,7 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
                 etiqueta="Motivo"
                 para="motivo-reemplazo"
                 :error="formReemplazo.errors.motivo"
-                ayuda="Por ejemplo: «Tarjeta extraviada, identidad verificada con INE»."
+                ayuda="Obligatorio (mínimo 5 caracteres) porque cambia el acceso del consumidor. Por ejemplo: «Tarjeta extraviada, identidad verificada con INE»."
             >
                 <Textarea
                     id="motivo-reemplazo"
@@ -744,6 +744,7 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
             etiqueta="Motivo"
             para="motivo-revocar"
             :error="formRevocar.errors.motivo"
+            ayuda="Obligatorio (mínimo 5 caracteres): protege la cuenta del consumidor y queda en el historial."
         >
             <Textarea
                 id="motivo-revocar"
@@ -771,6 +772,7 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
                 etiqueta="Motivo"
                 para="motivo-enlace"
                 :error="formEnlace.errors.motivo"
+                ayuda="Obligatorio (mínimo 5 caracteres): es una recuperación de acceso y queda en el historial."
             >
                 <Textarea
                     id="motivo-enlace"
@@ -828,6 +830,7 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
                 etiqueta="Motivo"
                 para="motivo-ajuste"
                 :error="formAjuste.errors.motivo"
+                ayuda="Obligatorio (mínimo 5 caracteres): evita ajustes de visitas sin justificación y queda en el historial."
             >
                 <Textarea
                     id="motivo-ajuste"
@@ -859,6 +862,7 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
         <CampoFormulario
             etiqueta="Motivo"
             para="motivo-anular"
+            ayuda="Obligatorio (mínimo 5 caracteres): anular cambia el saldo del consumidor y queda en el historial."
             :error="
                 formAnular.errors.motivo ||
                 (formAnular.errors as Record<string, string>).movimiento ||
@@ -891,6 +895,7 @@ const iconoCredencial = (t: string) => (t === 'qr' ? QrCode : Nfc);
         <CampoFormulario
             etiqueta="Motivo"
             para="motivo-fusion"
+            ayuda="Obligatorio (mínimo 5 caracteres): fusionar mueve visitas entre cuentas y queda en el historial."
             :error="formFusion.errors.motivo || formFusion.errors.destino_id"
         >
             <Textarea

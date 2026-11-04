@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Fidelidad;
 use App\Http\Controllers\Controller;
 use App\Models\Negocio;
 use App\Models\User;
+use App\Services\Autorizacion\NegocioDeTrabajo;
 use App\Services\Servicios\AccesoServicios;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -24,12 +25,24 @@ abstract class ControladorFidelidad extends Controller
         return $usuario;
     }
 
+    /**
+     * Negocio de trabajo: el del usuario o, para el personal DASTI en
+     * «Diseño para clientes», el negocio autorizado de la ruta.
+     */
     protected function negocio(Request $request): Negocio
     {
-        $negocio = $this->usuario($request)->negocio;
+        $negocio = app(NegocioDeTrabajo::class)->negocio($request);
         abort_if($negocio === null, 404);
 
         return $negocio;
+    }
+
+    /**
+     * ¿Es el personal DASTI diseñando para el negocio?
+     */
+    protected function esDasti(): bool
+    {
+        return app(NegocioDeTrabajo::class)->esDasti();
     }
 
     /**
@@ -40,9 +53,29 @@ abstract class ControladorFidelidad extends Controller
      */
     protected function delNegocio(Request $request, Model $modelo): Model
     {
-        abort_unless((int) $modelo->getAttribute('negocio_id') === $this->usuario($request)->negocio_id, 404);
+        abort_unless((int) $modelo->getAttribute('negocio_id') === $this->negocio($request)->id, 404);
 
         return $modelo;
+    }
+
+    /**
+     * Datos del aviso «Estás diseñando para…» (solo personal DASTI).
+     *
+     * @return array{negocio_id: int, negocio: string, volver: string}|null
+     */
+    protected function contextoDasti(Request $request): ?array
+    {
+        if (! $this->esDasti()) {
+            return null;
+        }
+
+        $negocio = $this->negocio($request);
+
+        return [
+            'negocio_id' => $negocio->id,
+            'negocio' => $negocio->nombre_comercial,
+            'volver' => route('admin.disenos.index', ['negocio' => $negocio->id], absolute: false),
+        ];
     }
 
     /**
@@ -58,6 +91,7 @@ abstract class ControladorFidelidad extends Controller
 
         return [
             'servicio' => $estado,
+            'contexto_dasti' => $this->contextoDasti($request),
             'puede' => [
                 'visitas' => $opera && $usuario->tienePermiso('fidelidad.visitas'),
                 'canjear' => $opera && $usuario->tienePermiso('fidelidad.canjear'),

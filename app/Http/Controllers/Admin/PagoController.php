@@ -127,18 +127,21 @@ class PagoController extends Controller
                 'modo_real' => $pasarela->modoReal(),
                 'notificaciones' => (string) config('services.openpay.webhook_user') !== '' && (string) config('services.openpay.webhook_password') !== '',
                 'url_notificaciones' => route('openpay.notificaciones'),
-                'codigo_verificacion' => $usuario->tienePermiso('servicios.gestionar') ? $verificacion?->codigo_verificacion : null,
+                'codigo_verificacion' => $usuario->tienePermiso('pagos.gestionar') ? $verificacion?->codigo_verificacion : null,
                 'verificacion_recibida_en' => $verificacion?->created_at?->toIso8601String(),
                 'ultima_notificacion_en' => NotificacionPago::query()->where('tipo', '!=', 'verification')->latest('id')->value('created_at')?->toIso8601String(),
                 'abiertos' => IntentoPago::query()->whereIn('estado', [EstadoIntentoPago::Creado, EstadoIntentoPago::Pendiente])->count(),
             ],
-            'puede_gestionar' => $usuario->tienePermiso('servicios.gestionar'),
+            'puede_gestionar' => $usuario->tienePermiso('pagos.gestionar'),
+            'puede_reembolsar' => $usuario->tienePermiso('pagos.reembolsar'),
         ]);
     }
 
     public function revision(Request $request, Pago $pago, RegistradorAuditoria $auditoria): RedirectResponse
     {
-        $datos = $request->validate(['nota' => ['required', 'string', 'min:5', 'max:255']], [], ['nota' => 'nota de revisión']);
+        // La nota es opcional: la auditoría ya registra quién revisó y cuándo.
+        $datos = $request->validate(['nota' => ['nullable', 'string', 'max:255']], [], ['nota' => 'nota de revisión']);
+        $nota = trim((string) ($datos['nota'] ?? ''));
         /** @var User $actor */
         $actor = $request->user();
 
@@ -148,7 +151,8 @@ class PagoController extends Controller
             descripcion: "Incidencia del pago {$pago->folio} revisada por DASTI",
             recurso: $pago,
             negocio: $pago->negocio_id,
-            nuevos: ['nota' => $datos['nota']],
+            nuevos: ['requiere_revision' => false, 'nota' => $nota === '' ? null : $nota],
+            anteriores: ['requiere_revision' => true],
         );
         $this->notificar('Incidencia marcada como revisada.');
 

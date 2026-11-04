@@ -83,7 +83,8 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Strict-Transport-Security "max-age=31536000" always;
-    client_max_body_size 2m;
+    # Igual o mayor que post_max_size de PHP (ver «Límites de archivos»).
+    client_max_body_size 24m;
 
     location / { try_files $uri $uri/ /index.php?$query_string; }
     location ~ \.php$ {
@@ -96,6 +97,22 @@ server {
 ```
 
 La aplicación confía en `127.0.0.1` como proxy (`bootstrap/app.php`) para obtener la IP y el esquema reales.
+
+## Límites de archivos
+
+Los límites se definen en un solo lugar (`App\Services\Medios\LimitesArchivos`) y la interfaz muestra siempre el valor **efectivo**: el menor entre lo configurado por DASTI y lo que PHP acepta en el servidor. Así nunca se anuncia un tamaño que el servidor rechazaría.
+
+| Tipo                                             | Variable (`.env`)            | Predeterminado | Formatos            |
+| ------------------------------------------------ | ---------------------------- | -------------- | ------------------- |
+| Logotipos e íconos (negocio, Fidelidad, favicon) | `DASTI_MEDIOS_LOGO_MAX_KB`   | 5120 (5 MB)    | PNG, JPG, WEBP      |
+| Fotografías, fondos y portadas                   | `DASTI_MEDIOS_IMAGEN_MAX_KB` | 10240 (10 MB)  | PNG, JPG, WEBP, GIF |
+| Video de fondo (Página de enlaces)               | `DASTI_MEDIOS_VIDEO_MAX_KB`  | 20480 (20 MB)  | MP4, WEBM           |
+
+- El video se limita a 20 MB (no a 50 MB) porque el servidor no lo re-codifica y se descarga completo en el teléfono de cada visitante.
+- Las imágenes se decodifican, se reducen (lado mayor de 600 a 2000 px según su uso) y se vuelven a codificar en WEBP sin metadatos; se rechazan las de más de 40 megapíxeles. Durante el procesamiento se amplía `memory_limit` solo lo necesario (hasta 768 MB).
+- **PHP** (`php.ini` de FPM o `public/.user.ini`, ya incluido): `upload_max_filesize = 21M` y `post_max_size = 24M`.
+- **Nginx**: `client_max_body_size 24m;`.
+- Si PHP acepta menos (por ejemplo, los 2 MB predeterminados de PHP), la interfaz mostrará «Tamaño máximo: 2 MB» y el servidor responderá con ese mensaje en español; no hay errores técnicos como «413».
 
 ## Tareas programadas y colas
 

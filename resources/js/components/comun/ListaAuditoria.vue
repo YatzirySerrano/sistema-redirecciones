@@ -21,6 +21,7 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
     notas_internas: 'Notas internas',
     estado: 'Estado',
     motivo: 'Motivo',
+    realizado_por_dasti: 'Realizado por personal DASTI',
     url_destino: 'URL de destino',
     nombre: 'Nombre',
     name: 'Nombre',
@@ -56,9 +57,13 @@ const ETIQUETAS_CAMPO: Record<string, string> = {
     fondo: 'Color de fondo',
 };
 
-const valor = (v: unknown): string => {
+// Campos explicativos opcionales: vacíos se guardan como nulo y aquí se
+// muestran como «No especificado».
+const EXPLICATIVOS = new Set(['motivo', 'nota', 'motivo_original']);
+
+const valor = (v: unknown, campo?: string): string => {
     if (v === null || v === undefined || v === '') {
-        return '—';
+        return campo && EXPLICATIVOS.has(campo) ? 'No especificado' : '—';
     }
 
     if (typeof v === 'boolean') {
@@ -163,10 +168,17 @@ const campos = (r: RegistroAuditoria) =>
                                 <td
                                     class="px-3 py-1.5 break-all text-muted-foreground"
                                 >
-                                    {{ valor(r.valores_anteriores?.[campo]) }}
+                                    {{
+                                        valor(
+                                            r.valores_anteriores?.[campo],
+                                            campo,
+                                        )
+                                    }}
                                 </td>
                                 <td class="px-3 py-1.5 break-all">
-                                    {{ valor(r.valores_nuevos?.[campo]) }}
+                                    {{
+                                        valor(r.valores_nuevos?.[campo], campo)
+                                    }}
                                 </td>
                             </tr>
                             <tr v-if="r.ip" class="border-t">

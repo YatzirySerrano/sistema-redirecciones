@@ -9,6 +9,7 @@ import {
     Globe,
     Inbox,
     Info,
+    LayoutTemplate,
     Link2,
     MousePointerClick,
     Palette,
@@ -243,7 +244,19 @@ const urlQr = (formato: 'png' | 'svg', descargar = false) =>
             <Palette class="size-5 text-primary" />
             <p class="mt-2 text-sm font-semibold">Editor visual</p>
             <p class="text-xs text-muted-foreground">
-                Contenido, diseño, plantillas y subpáginas.
+                Contenido, diseño y subpáginas.
+            </p>
+        </Link>
+        <Link
+            v-if="puede.editar"
+            :href="editor({ query: { plantillas: 1 } })"
+            class="group rounded-xl border bg-card p-4 shadow-xs transition hover:border-primary/40"
+        >
+            <LayoutTemplate class="size-5 text-primary" />
+            <p class="mt-2 text-sm font-semibold">Plantillas de diseño</p>
+            <p class="text-xs text-muted-foreground">
+                Diseños listos para tu tipo de negocio. Elige uno y
+                personalízalo.
             </p>
         </Link>
         <Link

@@ -10,10 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
-import { disponible, update } from '@/routes/cliente/paginas/direccion';
-import { index as dominios } from '@/routes/cliente/paginas/dominios';
 import { api, ErrorApi } from './api';
 import { usarEditor } from './contexto';
+import { conConsulta } from './rutas';
 import SelectorMedio from './SelectorMedio.vue';
 import type { ResumenPagina } from './useEditorPagina';
 
@@ -24,6 +23,11 @@ const editor = usarEditor();
 const ajustes = computed(() => editor.documento.value.ajustes);
 const perfil = computed(() => editor.documento.value.perfil);
 const off = computed(() => !editor.editable);
+const rutas = editor.rutas;
+// Fuera del panel del negocio la dirección y el dominio no se administran aquí.
+const direccionDisponible = computed(
+    () => !!rutas.direccion_disponible && !!rutas.direccion_update,
+);
 
 // ---- Dirección pública ----
 const slug = ref(editor.pagina.value.slug);
@@ -35,9 +39,13 @@ const cambiando = ref(false);
 const confirmar = ref(false);
 
 const revisar = useDebounceFn(async (valor: string) => {
+    if (!rutas.direccion_disponible) {
+        return;
+    }
+
     try {
         const r = await api<{ disponible: boolean; mensaje: string | null }>(
-            disponible({ query: { slug: valor } }).url,
+            conConsulta(rutas.direccion_disponible, { slug: valor }),
         );
         revision.value = {
             estado: r.disponible ? 'libre' : 'ocupado',
@@ -71,11 +79,15 @@ watch(slug, (valor) => {
 });
 
 const guardarSlug = async () => {
+    if (!rutas.direccion_update) {
+        return;
+    }
+
     cambiando.value = true;
 
     try {
         const r = await api<{ pagina: ResumenPagina; mensaje: string }>(
-            update().url,
+            rutas.direccion_update,
             { metodo: 'PUT', datos: { slug: slug.value.trim().toLowerCase() } },
         );
         editor.pagina.value = r.pagina;
@@ -97,7 +109,19 @@ const guardarSlug = async () => {
 
 <template>
     <div class="grid grid-cols-1 gap-6">
-        <section class="grid grid-cols-1 gap-3">
+        <section
+            v-if="!direccionDisponible"
+            class="grid grid-cols-1 gap-1 rounded-lg border bg-muted/40 p-3"
+        >
+            <h3 class="text-sm font-semibold">Dirección de tu página</h3>
+            <p class="font-mono text-xs break-all text-muted-foreground">
+                {{ editor.pagina.value.url_canonica }}
+            </p>
+            <p class="text-xs text-muted-foreground">
+                La dirección pública y el dominio los administra el negocio.
+            </p>
+        </section>
+        <section v-else class="grid grid-cols-1 gap-3">
             <div>
                 <h3 class="text-sm font-semibold">Dirección de tu página</h3>
                 <p class="text-xs text-muted-foreground">
@@ -169,12 +193,12 @@ const guardarSlug = async () => {
                 Cambiar dirección
             </Button>
             <Button
-                v-if="props.puedeDominios"
+                v-if="props.puedeDominios && rutas.dominios"
                 variant="ghost"
                 class="h-11 justify-start"
                 as-child
             >
-                <Link :href="dominios()"
+                <Link :href="rutas.dominios"
                     ><Globe /> Conectar mi propio dominio</Link
                 >
             </Button>

@@ -31,9 +31,68 @@ class EditorController extends ControladorPaginas
             'documento' => $pagina->borrador,
             'tema_por_defecto' => DocumentoPagina::temaPorDefecto(),
             'plantillas' => $plantillas->todas($this->negocio($request)),
+            'categorias_plantillas' => ['giros' => PlantillasPagina::GIROS, 'estilos' => PlantillasPagina::ESTILOS],
             'limites' => config('dasti.paginas.limites'),
             'reservadas' => CatalogoPagina::SUBPAGINAS_RESERVADAS,
+            'rutas' => $this->rutasEditor($request),
         ]);
+    }
+
+    /**
+     * Todas las URL que usa el editor (relativas). Las que llevan un id usan
+     * el marcador __ID__. Las que son exclusivas del panel del negocio
+     * (dirección pública, dominios, QR, inicio) pueden ser null en otros
+     * contextos; el editor oculta entonces esos controles.
+     *
+     * @return array<string, string|null>
+     */
+    protected function rutasEditor(Request $request): array
+    {
+        // Personal DASTI («Diseño para clientes»): rutas administrativas del
+        // negocio elegido; la dirección pública, el dominio y el QR los
+        // administra el negocio.
+        if ($this->esDasti()) {
+            $n = ['negocio' => $this->negocio($request)->id];
+            $admin = fn (string $nombre, array $parametros = []) => route('admin.disenos.paginas.'.$nombre, [...$n, ...$parametros], false);
+
+            return [
+                'editor' => $admin('editor'),
+                'borrador' => $admin('borrador'),
+                'publicar' => $admin('publicar'),
+                'despublicar' => $admin('despublicar'),
+                'versiones' => $admin('versiones'),
+                'version' => $admin('versiones.show', ['version' => '__ID__']),
+                'restaurar' => $admin('versiones.restaurar', ['version' => '__ID__']),
+                'medios' => $admin('medios.index'),
+                'medios_subir' => $admin('medios.store'),
+                'medios_eliminar' => $admin('medios.destroy', ['uuid' => '__ID__']),
+                'direccion_disponible' => null,
+                'direccion_update' => null,
+                'qr' => null,
+                'dominios' => null,
+                'inicio' => route('admin.disenos.index', $n, false),
+            ];
+        }
+
+        $ruta = fn (string $nombre, array $parametros = []) => route('cliente.paginas.'.$nombre, $parametros, false);
+
+        return [
+            'editor' => $ruta('editor'),
+            'borrador' => $ruta('borrador'),
+            'publicar' => $ruta('publicar'),
+            'despublicar' => $ruta('despublicar'),
+            'versiones' => $ruta('versiones'),
+            'version' => $ruta('versiones.show', ['version' => '__ID__']),
+            'restaurar' => $ruta('versiones.restaurar', ['version' => '__ID__']),
+            'medios' => $ruta('medios.index'),
+            'medios_subir' => $ruta('medios.store'),
+            'medios_eliminar' => $ruta('medios.destroy', ['uuid' => '__ID__']),
+            'direccion_disponible' => $ruta('direccion.disponible'),
+            'direccion_update' => $ruta('direccion.update'),
+            'qr' => $ruta('qr'),
+            'dominios' => $ruta('dominios.index'),
+            'inicio' => $ruta('inicio'),
+        ];
     }
 
     public function guardar(Request $request, GestorPaginas $gestor): JsonResponse

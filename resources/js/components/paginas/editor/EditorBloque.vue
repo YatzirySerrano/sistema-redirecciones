@@ -12,6 +12,7 @@ import {
 import { computed, ref } from 'vue';
 import CampoFormulario from '@/components/comun/CampoFormulario.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
+import SelectorIconoCatalogo from '@/components/iconos/SelectorIconoCatalogo.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -23,7 +24,6 @@ import { uuid } from './bloques';
 import CampoColor from './CampoColor.vue';
 import { usarEditor } from './contexto';
 import ListaBloques from './ListaBloques.vue';
-import SelectorIcono from './SelectorIcono.vue';
 import SelectorMedio from './SelectorMedio.vue';
 
 /** Campos de un elemento según su tipo. */
@@ -339,15 +339,13 @@ const alternarProgramacion = (activo: boolean) => {
                     />
                 </CampoFormulario>
 
-                <div class="grid grid-cols-1 gap-1.5">
-                    <span class="text-xs font-medium text-muted-foreground"
-                        >Ícono</span
-                    >
-                    <SelectorIcono
-                        v-model="bloque.icono"
-                        :deshabilitado="deshabilitado"
-                    />
-                </div>
+                <SelectorIconoCatalogo
+                    v-model="bloque.icono"
+                    v-model:color="bloque.icono_color"
+                    v-model:tamano="bloque.icono_tamano"
+                    etiqueta="Ícono"
+                    :deshabilitado="deshabilitado"
+                />
                 <SelectorMedio
                     v-model="bloque.miniatura"
                     etiqueta="Miniatura (reemplaza al ícono)"
@@ -925,6 +923,9 @@ const alternarProgramacion = (activo: boolean) => {
                         :opciones="[
                             { value: 'linea', label: 'Línea' },
                             { value: 'puntos', label: 'Puntos' },
+                            { value: 'ornamento', label: 'Ornamento' },
+                            { value: 'zigzag', label: 'Zigzag' },
+                            { value: 'doble', label: 'Línea doble' },
                             { value: 'espacio', label: 'Solo espacio' },
                         ]"
                         class="[&_select]:h-11"

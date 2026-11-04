@@ -8,6 +8,7 @@ use App\Models\Negocio;
 use App\Models\Paginas\PaginaEnlaces;
 use App\Models\Servicio;
 use App\Models\User;
+use App\Services\Autorizacion\NegocioDeTrabajo;
 use App\Services\Paginas\GestorPaginas;
 use App\Services\Servicios\AccesoServicios;
 use Illuminate\Database\Eloquent\Model;
@@ -28,12 +29,24 @@ abstract class ControladorPaginas extends Controller
         return $usuario;
     }
 
+    /**
+     * Negocio de trabajo: el del usuario o, para el personal DASTI en
+     * «Diseño para clientes», el negocio autorizado de la ruta.
+     */
     protected function negocio(Request $request): Negocio
     {
-        $negocio = $this->usuario($request)->negocio;
+        $negocio = app(NegocioDeTrabajo::class)->negocio($request);
         abort_if($negocio === null, 404);
 
         return $negocio;
+    }
+
+    /**
+     * ¿Es el personal DASTI diseñando para el negocio?
+     */
+    protected function esDasti(): bool
+    {
+        return app(NegocioDeTrabajo::class)->esDasti();
     }
 
     protected function pagina(Request $request): PaginaEnlaces
@@ -52,7 +65,7 @@ abstract class ControladorPaginas extends Controller
      */
     protected function delNegocio(Request $request, Model $modelo): Model
     {
-        abort_unless((int) $modelo->getAttribute('negocio_id') === $this->usuario($request)->negocio_id, 404);
+        abort_unless((int) $modelo->getAttribute('negocio_id') === $this->negocio($request)->id, 404);
 
         return $modelo;
     }
@@ -71,15 +84,39 @@ abstract class ControladorPaginas extends Controller
         $estado = $acceso->estado($negocio, Servicio::PAGINA_ENLACES);
         $opera = $acceso->puedeOperar($negocio, Servicio::PAGINA_ENLACES);
 
+        // Personal DASTI («Diseño para clientes»): solo editar y publicar
+        // con su permiso de plataforma; nada de dominios ni mensajes.
+        if ($this->esDasti()) {
+            $disena = $opera && $usuario->tienePermiso('paginas.disenar_negocios');
+
+            return [
+                'servicio' => [...$estado, 'opera' => $opera],
+                'contexto_dasti' => [
+                    'negocio_id' => $negocio->id,
+                    'negocio' => $negocio->nombre_comercial,
+                    'volver' => route('admin.disenos.index', ['negocio' => $negocio->id], absolute: false),
+                ],
+                'puede' => [
+                    'editar' => $disena,
+                    'publicar' => $disena,
+                    'dominios' => false,
+                    'ver_dominios' => false,
+                    'mensajes' => false,
+                    'estadisticas' => false,
+                ],
+            ];
+        }
+
         return [
             'servicio' => [...$estado, 'opera' => $opera],
+            'contexto_dasti' => null,
             'puede' => [
                 'editar' => $opera && $usuario->tienePermiso('paginas.editar'),
                 'publicar' => $opera && $usuario->tienePermiso('paginas.publicar'),
                 'dominios' => $opera && $usuario->tienePermiso('paginas.dominios'),
                 'ver_dominios' => $usuario->tienePermiso('paginas.dominios'),
                 'mensajes' => $usuario->tienePermiso('paginas.mensajes'),
-                'estadisticas' => $usuario->tienePermiso('paginas.ver'),
+                'estadisticas' => $usuario->tienePermiso('paginas.estadisticas'),
             ],
         ];
     }

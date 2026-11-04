@@ -1,3 +1,5 @@
+import type { MapaIconos } from '@/components/iconos/contexto';
+
 /**
  * Documento de una Página de enlaces. Refleja la forma que produce
  * App\Services\Paginas\DocumentoPagina (el servidor valida y sanea todo
@@ -30,6 +32,15 @@ export type ColoresTema = {
     acento: string;
 };
 
+export type Encabezado =
+    | 'centrado'
+    | 'izquierda'
+    | 'portada'
+    | 'banda'
+    | 'tarjeta'
+    | 'dividido'
+    | 'editorial';
+
 export type Tema = {
     colores: ColoresTema;
     fondo: {
@@ -46,7 +57,10 @@ export type Tema = {
             | 'lineas'
             | 'diagonales'
             | 'ondas'
-            | 'rombos';
+            | 'rombos'
+            | 'cruces'
+            | 'cuadros'
+            | 'aurora';
         color_textura: string;
         video: Medio | null;
         poster: Medio | null;
@@ -63,7 +77,13 @@ export type Tema = {
         escala_titulos: number;
     };
     botones: {
-        estilo: 'solido' | 'contorno' | 'suave' | 'vidrio';
+        estilo:
+            | 'solido'
+            | 'contorno'
+            | 'suave'
+            | 'vidrio'
+            | 'degradado'
+            | 'subrayado';
         radio: number;
         sombra: 'ninguna' | 'suave' | 'media' | 'marcada';
         borde: number;
@@ -71,12 +91,20 @@ export type Tema = {
         animacion: Animacion;
         icono: 'izquierda' | 'derecha' | 'oculto';
         alineacion: 'centro' | 'izquierda';
+        /** Opciones añadidas después: pueden faltar en documentos antiguos. */
+        icono_fondo?: 'ninguno' | 'suave' | 'solido';
+        mayusculas?: boolean;
     };
     disposicion: {
         ancho: 'estrecho' | 'normal' | 'amplio';
         espaciado: 'compacto' | 'normal' | 'amplio';
-        encabezado: 'centrado' | 'izquierda' | 'portada';
+        encabezado: Encabezado;
         forma_foto: 'circulo' | 'redondeada' | 'cuadrada';
+        monograma?: boolean;
+        forma_imagen?: 'tema' | 'recta' | 'marco' | 'arco';
+        tarjetas?: 'borde' | 'sombra' | 'plana';
+        lienzo?: 'libre' | 'panel';
+        titulos?: 'simple' | 'linea' | 'etiqueta' | 'barra' | 'resaltado';
     };
 };
 
@@ -107,6 +135,9 @@ export type CamposBoton = {
     titulo: string;
     subtitulo: string;
     icono: string | null;
+    /** Color y tamaño (px) propios del ícono; null = los del tema. */
+    icono_color?: string | null;
+    icono_tamano?: number | null;
     miniatura: Medio | null;
     destacado: boolean;
     insignia: string;
@@ -226,4 +257,6 @@ export type DatosPublicos = {
     contacto: { accion: string; marca: string };
     qr: string;
     url_publica: string;
+    /** Trazos de los íconos de la biblioteca que usa la página. */
+    iconos?: MapaIconos;
 };

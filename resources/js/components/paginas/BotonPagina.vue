@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { primerPlano } from '@/lib/color';
-import { componenteIcono } from './catalogo';
+import IconoCatalogo from '@/components/iconos/IconoCatalogo.vue';
 import { hex, urlMedio, variablesBoton } from './tema';
 import type { Bloque, Tema } from './tipos';
 
@@ -26,11 +26,22 @@ const ICONOS_TIPO: Record<string, string> = {
     subpagina: 'flecha',
 };
 
-const icono = computed(() =>
-    componenteIcono(props.bloque.icono ?? ICONOS_TIPO[props.bloque.tipo]),
+const icono = computed(
+    () => props.bloque.icono ?? ICONOS_TIPO[props.bloque.tipo] ?? null,
 );
+const estiloIcono = computed(() => {
+    const tamano = props.bloque.icono_tamano;
+
+    return {
+        color: props.bloque.icono_color ?? undefined,
+        width: tamano ? `${tamano}px` : undefined,
+        height: tamano ? `${tamano}px` : undefined,
+    };
+});
 const miniatura = computed(() => urlMedio(props.bloque.miniatura));
 const posicion = computed(() => props.tema.botones.icono);
+// Fondo detrás del ícono (opción del tema; «ninguno» = como siempre).
+const iconoFondo = computed(() => props.tema.botones.icono_fondo ?? 'ninguno');
 const animacion = computed(() =>
     !props.bloque.animacion || props.bloque.animacion === 'tema'
         ? props.tema.botones.animacion
@@ -111,12 +122,31 @@ const alPulsar = (evento: MouseEvent) => {
             class="pe-boton-lado"
             :class="posicion === 'derecha' && !compacto ? 'order-3' : ''"
         >
-            <component :is="icono" class="size-5" aria-hidden="true" />
+            <span
+                v-if="iconoFondo !== 'ninguno'"
+                class="pe-boton-icono"
+                :data-fondo="iconoFondo"
+            >
+                <IconoCatalogo
+                    :valor="icono"
+                    class="size-5 shrink-0"
+                    :style="estiloIcono"
+                />
+            </span>
+            <IconoCatalogo
+                v-else
+                :valor="icono"
+                class="size-5 shrink-0"
+                :style="estiloIcono"
+            />
         </span>
         <span v-else-if="!compacto" class="pe-boton-lado" aria-hidden="true" />
 
-        <span class="pe-boton-texto">
-            <span class="block leading-snug font-semibold">{{
+        <span
+            class="pe-boton-texto"
+            :class="posicion === 'derecha' && !compacto ? 'order-2' : ''"
+        >
+            <span class="pe-boton-titulo block leading-snug font-semibold">{{
                 bloque.titulo || 'Sin título'
             }}</span>
             <span

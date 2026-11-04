@@ -3,7 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Servicio;
-use App\Models\User;
+use App\Services\Autorizacion\NegocioDeTrabajo;
 use App\Services\Servicios\AccesoServicios;
 use Closure;
 use Illuminate\Http\Request;
@@ -11,7 +11,8 @@ use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Exige que el NEGOCIO del usuario tenga contratado el servicio (los
+ * Exige que el NEGOCIO de trabajo (el del usuario o, en «Diseño para
+ * clientes», el elegido por el personal DASTI) tenga contratado el servicio (los
  * permisos del rol no bastan). Cada servicio adicional se comprueba por
  * separado.
  *
@@ -21,29 +22,42 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RequiereServicio
 {
-    public function __construct(private readonly AccesoServicios $acceso) {}
+    public function __construct(
+        private readonly AccesoServicios $acceso,
+        private readonly NegocioDeTrabajo $contexto,
+    ) {}
 
     /**
      * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string $servicio, string $modo = 'consultar'): Response
     {
-        $usuario = $request->user();
-        $negocio = $usuario instanceof User ? $usuario->negocio : null;
+        $negocio = $this->contexto->negocio($request);
+        $dasti = $this->contexto->esDasti();
 
         abort_if($negocio === null || ! Servicio::esAdicional($servicio), 403, 'No tienes permiso para realizar esta acción.');
 
         $nombre = $servicio === Servicio::FIDELIDAD ? 'Fidelidad' : 'Página de enlaces';
 
         if ($modo === 'operar' && ! $this->acceso->puedeOperar($negocio, $servicio)) {
-            abort(403, $this->acceso->puedeConsultar($negocio, $servicio)
-                ? "{$nombre} está en modo de solo lectura: el servicio venció o está en revisión. Contacta a DASTI."
-                : "Tu negocio no tiene {$nombre} contratado.");
+            abort(403, match (true) {
+                $this->acceso->puedeConsultar($negocio, $servicio) => $dasti
+                    ? "{$nombre} de este negocio está en solo lectura (venció o está en revisión): no se pueden guardar cambios."
+                    : "{$nombre} está en modo de solo lectura: el servicio venció o está en revisión. Contacta a DASTI.",
+                $dasti => "Este negocio no tiene {$nombre} contratado.",
+                default => "Tu negocio no tiene {$nombre} contratado.",
+            });
         }
 
         if (! $this->acceso->puedeConsultar($negocio, $servicio)) {
             if ($request->expectsJson()) {
-                abort(403, "Tu negocio no tiene {$nombre} contratado.");
+                abort(403, $dasti ? "Este negocio no tiene {$nombre} contratado." : "Tu negocio no tiene {$nombre} contratado.");
+            }
+
+            if ($dasti) {
+                Inertia::flash('toast', ['type' => 'info', 'message' => "«{$negocio->nombre_comercial}» no tiene {$nombre} contratado. Actívalo desde Servicios antes de diseñar."]);
+
+                return redirect()->route('admin.disenos.index');
             }
 
             Inertia::flash('toast', ['type' => 'info', 'message' => "{$nombre} no está activo para tu negocio. Aquí puedes conocerlo y contratarlo."]);

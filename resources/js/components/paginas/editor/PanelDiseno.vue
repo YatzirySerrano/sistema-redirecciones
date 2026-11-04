@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Plus, RotateCcw, TriangleAlert, X } from '@lucide/vue';
+import { LayoutTemplate, Plus, RotateCcw, TriangleAlert, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import Ayuda from '@/components/comun/Ayuda.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import SelectNativo from '@/components/comun/SelectNativo.vue';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FUENTES, TEXTURAS } from '../catalogo';
 import { avisosContraste, estiloFondo, variablesTema } from '../tema';
-import type { ColoresTema, Documento, Tema } from '../tipos';
-import { duplicarBloque } from './bloques';
+import type { ColoresTema, Tema } from '../tipos';
 import CampoColor from './CampoColor.vue';
 import { usarEditor } from './contexto';
 import ControlSegmentado from './ControlSegmentado.vue';
@@ -16,16 +16,12 @@ import Deslizador from './Deslizador.vue';
 import SelectorMedio from './SelectorMedio.vue';
 
 /**
- * Diseño: plantillas, colores (con avisos de contraste WCAG), fondo,
- * tipografía, botones y disposición.
+ * Diseño: acceso al catálogo de plantillas, colores (con avisos de
+ * contraste WCAG), fondo, tipografía, botones, títulos y disposición. Todo
+ * lo que define una plantilla se puede ajustar aquí.
  */
 const props = defineProps<{
-    plantillas: {
-        clave: string;
-        nombre: string;
-        descripcion: string;
-        documento: Documento;
-    }[];
+    totalPlantillas: number;
     temaPorDefecto: Tema;
 }>();
 
@@ -41,6 +37,14 @@ const avisoDe = (clave: string) => {
 };
 const err = (campo: string) => editor.errores.value[`tema.${campo}`];
 const off = computed(() => !editor.editable);
+// Opciones nuevas del tema (el editor completa los documentos anteriores
+// con sus valores por defecto al abrirse).
+const botonesExtra = computed(
+    () => tema.value.botones as Required<Tema['botones']>,
+);
+const disposicionExtra = computed(
+    () => tema.value.disposicion as Required<Tema['disposicion']>,
+);
 
 const COLORES: { clave: keyof ColoresTema; etiqueta: string }[] = [
     { clave: 'fondo', etiqueta: 'Fondo de la página' },
@@ -62,44 +66,6 @@ const OPC_FUENTES = Object.entries(FUENTES).map(([value, f]) => ({
     value,
     label: `${f.etiqueta}${f.categoria === 'serif' ? ' (con remates)' : ''}`,
 }));
-
-// ---- Plantillas ----
-const plantillaElegida = ref<(typeof props.plantillas)[number] | null>(null);
-const conContenido = ref(false);
-
-const aplicarPlantilla = () => {
-    const p = plantillaElegida.value;
-
-    if (!p) {
-        return;
-    }
-
-    const plantilla = JSON.parse(JSON.stringify(p.documento)) as Documento;
-    editor.cambiarConDeshacer(() => {
-        const doc = editor.documento.value;
-        doc.tema = plantilla.tema;
-
-        if (conContenido.value) {
-            const inicio =
-                doc.paginas.find((x) => x.slug === 'inicio') ?? doc.paginas[0];
-            // Identificadores nuevos: nunca se mezclan con estadísticas anteriores.
-            inicio.bloques = [
-                ...inicio.bloques,
-                ...plantilla.paginas[0].bloques.map(duplicarBloque),
-            ];
-
-            if (!doc.perfil.descripcion) {
-                doc.perfil.descripcion = plantilla.perfil.descripcion;
-            }
-        }
-    }, `Plantilla «${p.nombre}» aplicada.`);
-    plantillaElegida.value = null;
-};
-
-const muestra = (p: (typeof props.plantillas)[number]) => ({
-    ...variablesTema(p.documento.tema),
-    ...estiloFondo(p.documento.tema),
-});
 
 // ---- Restablecer ----
 const confirmarRestablecer = ref(false);
@@ -127,65 +93,31 @@ const agregarParada = () => {
 <template>
     <div class="grid grid-cols-1 gap-6">
         <!-- Plantillas -->
-        <section class="grid grid-cols-1 gap-3">
-            <div>
-                <h3 class="text-sm font-semibold">Plantillas</h3>
-                <p class="text-xs text-muted-foreground">
-                    Un punto de partida. Puedes deshacerlo.
-                </p>
+        <section
+            class="grid grid-cols-1 gap-3 rounded-xl border bg-gradient-to-br from-primary/10 to-transparent p-4"
+        >
+            <div class="flex items-start gap-3">
+                <span
+                    class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+                    ><LayoutTemplate class="size-5"
+                /></span>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold">Plantillas de diseño</h3>
+                    <p class="text-xs text-muted-foreground">
+                        {{ props.totalPlantillas }} diseños para cafeterías,
+                        estéticas, talleres, consultorios y más. Puedes
+                        deshacerlo.
+                    </p>
+                </div>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <button
-                    v-for="p in plantillas"
-                    :key="p.clave"
-                    type="button"
-                    class="group overflow-hidden rounded-xl border text-left transition hover:border-primary/60 focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                    :disabled="off"
-                    @click="
-                        plantillaElegida = p;
-                        conContenido = false;
-                    "
-                >
-                    <span
-                        class="flex h-20 flex-col items-center justify-center gap-1.5 px-3"
-                        :style="muestra(p)"
-                    >
-                        <span
-                            class="h-1.5 w-12 rounded-full"
-                            :style="{
-                                background: p.documento.tema.colores.titulos,
-                            }"
-                        />
-                        <span
-                            v-for="n in 2"
-                            :key="n"
-                            class="h-4 w-full max-w-[7rem]"
-                            :style="{
-                                background:
-                                    p.documento.tema.botones.estilo ===
-                                    'contorno'
-                                        ? 'transparent'
-                                        : p.documento.tema.colores.boton_fondo,
-                                opacity:
-                                    p.documento.tema.botones.estilo === 'vidrio'
-                                        ? 0.35
-                                        : 1,
-                                border: `1px solid ${p.documento.tema.colores.boton_borde}`,
-                                borderRadius: `${Math.min(p.documento.tema.botones.radio, 10)}px`,
-                            }"
-                        />
-                    </span>
-                    <span class="block border-t px-2.5 py-2">
-                        <span class="block text-xs font-semibold">{{
-                            p.nombre
-                        }}</span>
-                        <span
-                            class="line-clamp-2 block text-[11px] leading-snug text-muted-foreground"
-                            >{{ p.descripcion }}</span
-                        >
-                    </span>
-                </button>
-            </div>
+            <Button
+                type="button"
+                class="h-11 w-full"
+                :disabled="off"
+                @click="editor.abrirPlantillas()"
+            >
+                <LayoutTemplate /> Explorar plantillas
+            </Button>
         </section>
 
         <!-- Colores -->
@@ -515,6 +447,8 @@ const agregarParada = () => {
                     { value: 'contorno', label: 'Contorno' },
                     { value: 'suave', label: 'Suave' },
                     { value: 'vidrio', label: 'Cristal' },
+                    { value: 'degradado', label: 'Degradado' },
+                    { value: 'subrayado', label: 'Subrayado' },
                 ]"
             />
             <Deslizador
@@ -586,6 +520,22 @@ const agregarParada = () => {
                     { value: 'izquierda', label: 'A la izquierda' },
                 ]"
             />
+            <ControlSegmentado
+                v-model="botonesExtra.icono_fondo"
+                etiqueta="Fondo del ícono"
+                :deshabilitado="off"
+                :opciones="[
+                    { value: 'ninguno', label: 'Sin fondo' },
+                    { value: 'suave', label: 'Suave' },
+                    { value: 'solido', label: 'Color de acento' },
+                ]"
+            />
+            <label
+                class="flex min-h-11 items-center justify-between gap-3 text-sm"
+            >
+                <span class="font-medium">Texto en mayúsculas</span>
+                <Switch v-model="botonesExtra.mayusculas" :disabled="off" />
+            </label>
             <p class="text-xs text-muted-foreground">
                 Las animaciones se desactivan si el visitante pidió «reducir
                 movimiento» en su dispositivo.
@@ -603,8 +553,24 @@ const agregarParada = () => {
                     { value: 'centrado', label: 'Centrado' },
                     { value: 'izquierda', label: 'Foto al lado' },
                     { value: 'portada', label: 'Portada amplia' },
+                    { value: 'banda', label: 'Banda de color' },
+                    { value: 'tarjeta', label: 'Tarjeta flotante' },
+                    { value: 'dividido', label: 'Dividido' },
+                    { value: 'editorial', label: 'Editorial' },
                 ]"
             />
+            <label
+                class="flex min-h-11 items-center justify-between gap-3 text-sm"
+            >
+                <span
+                    ><span class="font-medium">Iniciales si no hay foto</span
+                    ><span class="block text-xs text-muted-foreground"
+                        >Muestra las iniciales del nombre en el color de
+                        acento.</span
+                    ></span
+                >
+                <Switch v-model="disposicionExtra.monograma" :disabled="off" />
+            </label>
             <ControlSegmentado
                 v-model="tema.disposicion.forma_foto"
                 etiqueta="Forma de la foto"
@@ -613,6 +579,48 @@ const agregarParada = () => {
                     { value: 'circulo', label: 'Círculo' },
                     { value: 'redondeada', label: 'Redondeada' },
                     { value: 'cuadrada', label: 'Cuadrada' },
+                ]"
+            />
+            <ControlSegmentado
+                v-model="disposicionExtra.titulos"
+                etiqueta="Títulos de sección"
+                :deshabilitado="off"
+                :opciones="[
+                    { value: 'simple', label: 'Simples' },
+                    { value: 'linea', label: 'Con línea' },
+                    { value: 'etiqueta', label: 'Etiqueta' },
+                    { value: 'barra', label: 'Con barra' },
+                    { value: 'resaltado', label: 'Resaltados' },
+                ]"
+            />
+            <ControlSegmentado
+                v-model="disposicionExtra.tarjetas"
+                etiqueta="Tarjetas y mapas"
+                :deshabilitado="off"
+                :opciones="[
+                    { value: 'borde', label: 'Con borde' },
+                    { value: 'sombra', label: 'Con sombra' },
+                    { value: 'plana', label: 'Planas' },
+                ]"
+            />
+            <ControlSegmentado
+                v-model="disposicionExtra.forma_imagen"
+                etiqueta="Imágenes"
+                :deshabilitado="off"
+                :opciones="[
+                    { value: 'tema', label: 'Redondeadas' },
+                    { value: 'recta', label: 'Rectas' },
+                    { value: 'marco', label: 'Con marco' },
+                    { value: 'arco', label: 'En arco' },
+                ]"
+            />
+            <ControlSegmentado
+                v-model="disposicionExtra.lienzo"
+                etiqueta="Contenido"
+                :deshabilitado="off"
+                :opciones="[
+                    { value: 'libre', label: 'Sobre el fondo' },
+                    { value: 'panel', label: 'En un panel' },
                 ]"
             />
             <ControlSegmentado
@@ -637,38 +645,21 @@ const agregarParada = () => {
             />
         </section>
 
-        <Button
-            type="button"
-            variant="outline"
-            class="h-11 w-full"
-            :disabled="off"
-            @click="confirmarRestablecer = true"
-        >
-            <RotateCcw /> Restablecer diseño
-        </Button>
-
-        <DialogoConfirmacion
-            :open="plantillaElegida !== null"
-            :titulo="`¿Aplicar la plantilla «${plantillaElegida?.nombre ?? ''}»?`"
-            descripcion="Se reemplazarán los colores, el fondo, la tipografía y los botones. Puedes deshacerlo."
-            confirmar="Aplicar plantilla"
-            @update:open="(v: boolean) => !v && (plantillaElegida = null)"
-            @confirmar="aplicarPlantilla"
-        >
-            <label
-                class="flex min-h-11 items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+        <div class="flex items-center gap-2">
+            <Button
+                type="button"
+                variant="outline"
+                class="h-11 flex-1"
+                :disabled="off"
+                @click="confirmarRestablecer = true"
             >
-                <span
-                    ><span class="font-medium"
-                        >Agregar contenido de ejemplo</span
-                    ><span class="block text-xs text-muted-foreground"
-                        >Se suma al final de tu página de inicio; nada se
-                        borra.</span
-                    ></span
-                >
-                <Switch v-model="conContenido" />
-            </label>
-        </DialogoConfirmacion>
+                <RotateCcw /> Restablecer diseño
+            </Button>
+            <Ayuda
+                texto="Recupera los colores originales. Los cambios sin guardar se perderán, aunque puedes usar «Deshacer»."
+                etiqueta="Qué hace Restablecer diseño"
+            />
+        </div>
 
         <DialogoConfirmacion
             v-model:open="confirmarRestablecer"

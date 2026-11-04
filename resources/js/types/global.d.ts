@@ -37,6 +37,10 @@ declare module '@inertiajs/core' {
                 isotipo_oscuro: string | null;
                 temporal: boolean;
             };
+            limites_archivos: Record<
+                'logo' | 'imagen' | 'video',
+                import('@/lib/archivos').LimiteArchivo
+            > | null;
             [key: string]: unknown;
         };
     }

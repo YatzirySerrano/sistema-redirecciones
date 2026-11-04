@@ -21,7 +21,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Fidelidad', href: inicio() },
-            { title: 'Personal', href: index() },
+            { title: 'Personal autorizado', href: index() },
         ],
     },
 });
@@ -66,16 +66,16 @@ const puedeAsignar = (rolId: number | null) =>
 </script>
 
 <template>
-    <Head title="Personal" />
-
-    <EncabezadoPagina
-        titulo="Personal"
-        descripcion="Quién puede registrar visitas y entregar recompensas en tu negocio."
-        ayuda="Cada visita y canje queda registrado con el nombre de quien lo autorizó. Revisa la sección Actividad para detectar patrones extraños."
-        :icono="UserCog"
-    />
+    <Head title="Personal autorizado" />
 
     <NavFidelidad :servicio="servicio" />
+
+    <EncabezadoPagina
+        titulo="Personal autorizado"
+        descripcion="Quién puede registrar visitas y entregar recompensas en tu negocio."
+        ayuda="Cada visita y canje queda registrado con el nombre de quien lo autorizó. Revisa «Historial y actividad» para detectar patrones extraños."
+        :icono="UserCog"
+    />
 
     <div
         class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]"

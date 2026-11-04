@@ -106,7 +106,7 @@ const alternarOculto = () => {
             <button
                 v-if="editor.editable"
                 type="button"
-                class="flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
+                class="flex h-11 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing sm:w-11"
                 :aria-label="`Mover «${tituloBloque(bloque)}». Arrastra o usa las flechas arriba y abajo.`"
                 @pointerdown="emit('arrastrar', $event)"
                 @keydown="emit('teclado', $event)"
@@ -115,12 +115,12 @@ const alternarOculto = () => {
             </button>
             <button
                 type="button"
-                class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-md px-1 text-left"
+                class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-md px-1 text-left hover:bg-accent/50"
                 :aria-expanded="abierto"
                 @click="abierto = !abierto"
             >
                 <span
-                    class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                    class="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary min-[400px]:flex"
                 >
                     <component
                         :is="meta.icono"
@@ -153,6 +153,11 @@ const alternarOculto = () => {
                     class="hidden shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary sm:inline"
                     >Destacado</span
                 >
+                <EyeOff
+                    v-if="bloque.oculto"
+                    class="size-4 shrink-0 text-muted-foreground sm:hidden"
+                    aria-label="Oculto"
+                />
                 <ChevronDown
                     class="size-4 shrink-0 text-muted-foreground transition-transform"
                     :class="abierto ? 'rotate-180' : ''"
@@ -161,13 +166,16 @@ const alternarOculto = () => {
             </button>
 
             <template v-if="editor.editable">
-                <div class="hidden items-center sm:flex">
+                <!-- Subir y bajar siempre visibles: en pantallas táctiles
+                     arrastrar puede ser incómodo. -->
+                <div class="flex items-center">
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        class="size-9"
-                        aria-label="Subir"
+                        class="size-10 sm:size-9"
+                        :aria-label="`Subir «${tituloBloque(bloque)}»`"
+                        title="Subir"
                         :disabled="indice === 0"
                         @click="emit('mover', -1)"
                         ><ArrowUp
@@ -176,8 +184,9 @@ const alternarOculto = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        class="size-9"
-                        aria-label="Bajar"
+                        class="size-10 sm:size-9"
+                        :aria-label="`Bajar «${tituloBloque(bloque)}»`"
+                        title="Bajar"
                         :disabled="indice === total - 1"
                         @click="emit('mover', 1)"
                         ><ArrowDown
@@ -187,7 +196,7 @@ const alternarOculto = () => {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    class="size-11 sm:size-9"
+                    class="hidden size-9 sm:inline-flex"
                     :aria-label="
                         bloque.oculto
                             ? 'Mostrar en la página'
@@ -205,7 +214,7 @@ const alternarOculto = () => {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            class="size-11 sm:size-9"
+                            class="size-10 sm:size-9"
                             aria-label="Más acciones"
                             ><Ellipsis
                         /></Button>
@@ -213,16 +222,15 @@ const alternarOculto = () => {
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem
                             class="sm:hidden"
-                            :disabled="indice === 0"
-                            @select="emit('mover', -1)"
-                            ><ArrowUp /> Subir</DropdownMenuItem
+                            @select="alternarOculto"
                         >
-                        <DropdownMenuItem
-                            class="sm:hidden"
-                            :disabled="indice === total - 1"
-                            @select="emit('mover', 1)"
-                            ><ArrowDown /> Bajar</DropdownMenuItem
-                        >
+                            <template v-if="bloque.oculto"
+                                ><Eye /> Mostrar en la página</template
+                            >
+                            <template v-else
+                                ><EyeOff /> Ocultar de la página</template
+                            >
+                        </DropdownMenuItem>
                         <DropdownMenuItem @select="emit('duplicar')"
                             ><Copy /> Duplicar</DropdownMenuItem
                         >

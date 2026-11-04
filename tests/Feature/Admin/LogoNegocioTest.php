@@ -66,10 +66,15 @@ class LogoNegocioTest extends TestCase
             ->assertHeader('Content-Type', 'image/png');
     }
 
-    public function test_rechaza_imagenes_de_mas_de_1_mb(): void
+    public function test_rechaza_imagenes_que_superan_el_limite_de_logotipos(): void
     {
-        $this->subir(UploadedFile::fake()->image('grande.png', 500, 500)->size(1500))
-            ->assertSessionHasErrors(['logo' => 'El logotipo no debe pesar más de 1 MB.']);
+        // El límite es el de LimitesArchivos (5 MB, o menos si PHP acepta
+        // menos en este servidor) y el mensaje lo dice en español.
+        $config = 300;
+        config(['dasti.medios.logo_max_kb' => $config]);
+
+        $this->subir(UploadedFile::fake()->image('grande.png', 500, 500)->size($config + 50))
+            ->assertSessionHasErrors(['logo' => 'El logotipo no debe pesar más de 300 KB.']);
 
         $this->assertNull($this->negocio->fresh()->logo_path);
     }
@@ -80,7 +85,7 @@ class LogoNegocioTest extends TestCase
         $ruta = tempnam(sys_get_temp_dir(), 'logo');
         $archivo = new UploadedFile((string) $ruta, 'foto.png', 'image/png', UPLOAD_ERR_INI_SIZE, true);
 
-        $this->subir($archivo)->assertSessionHasErrors(['logo' => LogoNegocioRequest::MENSAJE_GENERAL]);
+        $this->subir($archivo)->assertSessionHasErrors(['logo' => LogoNegocioRequest::mensajeGeneral()]);
         $this->assertNull($this->negocio->fresh()->logo_path);
     }
 

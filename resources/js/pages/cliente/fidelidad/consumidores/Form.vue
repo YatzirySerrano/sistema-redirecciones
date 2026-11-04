@@ -57,13 +57,13 @@ const guardar = () =>
 <template>
     <Head :title="consumidor ? 'Editar consumidor' : 'Registrar consumidor'" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina
         :titulo="consumidor ? 'Editar consumidor' : 'Registrar consumidor'"
         descripcion="Nombre y al menos un medio de contacto: teléfono o correo."
         ayuda="El teléfono sirve para encontrar al cliente; el correo, una vez confirmado, le permite recuperar su enlace por sí mismo."
     />
-
-    <NavFidelidad :servicio="servicio" />
 
     <form class="max-w-2xl space-y-6" novalidate @submit.prevent="guardar">
         <Panel titulo="Datos">

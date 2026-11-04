@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Medios\LimitesArchivos;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -104,13 +105,17 @@ class MensajesEnEspanolTest extends TestCase
 
     public function test_un_archivo_que_supera_el_limite_del_servidor_se_explica_en_espanol(): void
     {
+        // El mensaje indica el máximo real que acepta PHP en este servidor.
+        $mensaje = app(LimitesArchivos::class)->mensajeExcedido();
+        $this->assertStringStartsWith('El archivo es demasiado grande. El máximo que acepta el servidor es ', $mensaje);
+
         $this->postJson('__prueba/413')->assertStatus(413)
-            ->assertJson(['message' => 'El archivo es demasiado grande. Elige una imagen PNG, JPG o WEBP de hasta 1 MB.']);
+            ->assertJson(['message' => $mensaje]);
 
         $this->post('__prueba/413')->assertStatus(413)->assertInertia(fn (AssertableInertia $pagina) => $pagina
             ->component('Error')
             ->where('estado', 413)
-            ->where('mensaje', 'El archivo es demasiado grande. Elige una imagen PNG, JPG o WEBP de hasta 1 MB.'));
+            ->where('mensaje', $mensaje));
     }
 
     private function flashToast(): ?string

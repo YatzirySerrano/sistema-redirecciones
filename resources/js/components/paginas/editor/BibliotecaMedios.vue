@@ -11,6 +11,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
+import InfoArchivo from '@/components/comun/InfoArchivo.vue';
+import { useLimitesArchivos, validarArchivo } from '@/lib/archivos';
 import type { Medio } from '../tipos';
 import {
     biblioteca,
@@ -45,6 +47,19 @@ const lista = computed(() =>
 );
 const mb = (bytes: number) => `${(bytes / 1048576).toFixed(1)} MB`;
 
+// Límites reales (servidor) y validación antes de subir.
+const { limite } = useLimitesArchivos();
+const tipoLimite = computed(() =>
+    props.tipo === 'video'
+        ? 'video'
+        : props.uso === 'favicon'
+          ? 'logo'
+          : 'imagen',
+);
+const datosLimite = computed(() => limite(tipoLimite.value));
+const errorArchivo = ref<string | null>(null);
+watch(abierto, () => (errorArchivo.value = null));
+
 watch(abierto, (v) => {
     if (v) {
         void cargarBiblioteca();
@@ -57,6 +72,12 @@ const alElegirArchivo = async (e: Event) => {
     entrada.value = '';
 
     if (!elegido) {
+        return;
+    }
+
+    errorArchivo.value = await validarArchivo(elegido, datosLimite.value);
+
+    if (errorArchivo.value) {
         return;
     }
 
@@ -106,6 +127,14 @@ const eliminar = async () => {
                 </DialogDescription>
             </DialogHeader>
 
+            <InfoArchivo :tipo="tipoLimite" />
+            <p
+                v-if="errorArchivo"
+                class="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                role="alert"
+            >
+                {{ errorArchivo }}
+            </p>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p v-if="biblioteca.uso" class="text-xs text-muted-foreground">
                     {{ biblioteca.uso.usados }} de
@@ -117,11 +146,7 @@ const eliminar = async () => {
                     ref="archivo"
                     type="file"
                     class="sr-only"
-                    :accept="
-                        tipo === 'video'
-                            ? 'video/mp4,video/webm'
-                            : 'image/png,image/jpeg,image/webp,image/gif'
-                    "
+                    :accept="datosLimite.aceptar"
                     @change="alElegirArchivo"
                 />
                 <Button

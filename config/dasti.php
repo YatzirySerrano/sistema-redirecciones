@@ -93,8 +93,12 @@ return [
     */
 
     'medios' => [
-        'imagen_max_kb' => (int) env('DASTI_MEDIOS_IMAGEN_MAX_KB', 5120),
-        'video_max_kb' => (int) env('DASTI_MEDIOS_VIDEO_MAX_KB', 15360),
+        // Límites por tipo (KB). El efectivo es el menor entre estos y lo que
+        // acepta PHP (upload_max_filesize/post_max_size): ver
+        // App\Services\Medios\LimitesArchivos y docs/despliegue.md.
+        'logo_max_kb' => (int) env('DASTI_MEDIOS_LOGO_MAX_KB', 5120),
+        'imagen_max_kb' => (int) env('DASTI_MEDIOS_IMAGEN_MAX_KB', 10240),
+        'video_max_kb' => (int) env('DASTI_MEDIOS_VIDEO_MAX_KB', 20480),
         'max_archivos' => (int) env('DASTI_MEDIOS_MAX_ARCHIVOS', 300),
         'cuota_mb' => (int) env('DASTI_MEDIOS_CUOTA_MB', 250),
     ],

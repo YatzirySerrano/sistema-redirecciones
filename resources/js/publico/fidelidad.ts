@@ -8,6 +8,7 @@ import { createApp, h } from 'vue';
 import { cargarFuentes } from '@/components/fidelidad-diseno/catalogo';
 import PaginaConsumidor from '@/components/fidelidad-diseno/PaginaConsumidor.vue';
 import type { DatosPublicos } from '@/components/fidelidad-diseno/tipos';
+import { proveerIconos } from '@/components/iconos/contexto';
 
 function leerDatos(): DatosPublicos | null {
     const nodo = document.getElementById('datos-fidelidad');
@@ -39,7 +40,14 @@ const datos = leerDatos();
 if (destino && datos) {
     cargarFuentes([datos.disenos.general, ...datos.disenos.variantes]);
     document.body.style.background = datos.disenos.general.pagina.color1;
-    createApp({ render: () => h(PaginaConsumidor, { datos }) }).mount(destino);
+    createApp({
+        setup() {
+            // Solo los trazos de los íconos usados (incrustados por el servidor).
+            proveerIconos(datos.iconos);
+
+            return () => h(PaginaConsumidor, { datos });
+        },
+    }).mount(destino);
     destino.removeAttribute('style');
     destino.classList.remove('min-h-screen');
 }

@@ -39,17 +39,23 @@ final class CatalogoPermisos
     private const PN = [self::AMBITO_PLATAFORMA, self::AMBITO_NEGOCIO];
 
     /**
-     * @var array<string, array{etiqueta: string, permisos: array<string, array{etiqueta: string, descripcion: string, ambitos: list<string>}>}>
+     * Módulos del catálogo. `descripcion` explica el módulo en la matriz;
+     * `seccion` (opcional) agrupa permisos relacionados dentro de un módulo
+     * grande (p. ej. Fidelidad: Mostrador, Consumidores, Campañas, Diseño).
+     *
+     * @var array<string, array{etiqueta: string, descripcion: string, permisos: array<string, array{etiqueta: string, descripcion: string, ambitos: list<string>, seccion?: string}>}>
      */
     public const MODULOS = [
         'panel' => [
-            'etiqueta' => 'Panel',
+            'etiqueta' => 'Panel de inicio',
+            'descripcion' => 'Pantalla principal con indicadores.',
             'permisos' => [
-                'panel.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Pantalla de inicio con indicadores.', 'ambitos' => self::PN],
+                'panel.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Pantalla de inicio con indicadores (los clientes, solo de su negocio).', 'ambitos' => self::PN],
             ],
         ],
         'negocios' => [
             'etiqueta' => 'Negocios',
+            'descripcion' => 'Clientes de DASTI y sus datos de contacto.',
             'permisos' => [
                 'negocios.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Listado y ficha de negocios.', 'ambitos' => self::P],
                 'negocios.crear' => ['etiqueta' => 'Crear', 'descripcion' => 'Registrar negocios nuevos.', 'ambitos' => self::P],
@@ -60,6 +66,7 @@ final class CatalogoPermisos
         ],
         'usuarios' => [
             'etiqueta' => 'Usuarios',
+            'descripcion' => 'Cuentas de acceso del personal DASTI y de los clientes.',
             'permisos' => [
                 'usuarios.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Listado de usuarios y accesos.', 'ambitos' => self::P],
                 'usuarios.crear' => ['etiqueta' => 'Crear', 'descripcion' => 'Dar de alta accesos.', 'ambitos' => self::P],
@@ -67,8 +74,20 @@ final class CatalogoPermisos
                 'usuarios.gestionar_accesos' => ['etiqueta' => 'Gestionar accesos', 'descripcion' => 'Suspender, reactivar, enviar enlaces y contraseñas temporales.', 'ambitos' => self::P],
             ],
         ],
+        'roles' => [
+            'etiqueta' => 'Roles y permisos',
+            'descripcion' => 'Qué puede hacer cada tipo de usuario. Nadie otorga permisos que no tiene.',
+            'permisos' => [
+                'roles.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Roles, permisos y usuarios de cada rol.', 'ambitos' => self::P],
+                'roles.crear' => ['etiqueta' => 'Crear', 'descripcion' => 'Crear roles nuevos.', 'ambitos' => self::P],
+                'roles.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Nombre y descripción; eliminar roles sin usuarios.', 'ambitos' => self::P],
+                'roles.administrar_permisos' => ['etiqueta' => 'Administrar permisos', 'descripcion' => 'Asignar y retirar permisos de los roles (solo los que uno mismo tiene).', 'ambitos' => self::P],
+                'roles.asignar' => ['etiqueta' => 'Asignar a usuarios', 'descripcion' => 'Cambiar el rol de otros usuarios (sin superar los permisos propios).', 'ambitos' => self::P],
+            ],
+        ],
         'productos' => [
-            'etiqueta' => 'Productos',
+            'etiqueta' => 'Productos QR/NFC',
+            'descripcion' => 'Tarjetas, etiquetas y códigos con enlace permanente.',
             'permisos' => [
                 'productos.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Productos QR y NFC (los clientes, solo los de su negocio).', 'ambitos' => self::PN],
                 'productos.crear' => ['etiqueta' => 'Crear', 'descripcion' => 'Registrar productos con su enlace permanente.', 'ambitos' => self::P],
@@ -81,13 +100,15 @@ final class CatalogoPermisos
         ],
         'redirecciones' => [
             'etiqueta' => 'Redirecciones',
+            'descripcion' => 'Página que se abre al escanear el QR o acercar la tarjeta NFC.',
             'permisos' => [
                 'redirecciones.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Listado global de enlaces y destinos.', 'ambitos' => self::P],
-                'redirecciones.modificar_destino' => ['etiqueta' => 'Modificar destino', 'descripcion' => 'Cambiar la URL a la que redirige un producto.', 'ambitos' => self::PN],
+                'redirecciones.modificar_destino' => ['etiqueta' => 'Modificar destino', 'descripcion' => 'Cambiar la página a la que lleva un producto.', 'ambitos' => self::PN],
             ],
         ],
         'qr' => [
             'etiqueta' => 'Códigos QR',
+            'descripcion' => 'Diseño y descarga de los códigos QR de los productos.',
             'permisos' => [
                 'qr.descargar' => ['etiqueta' => 'Ver y descargar', 'descripcion' => 'Vista previa y descarga en PNG o SVG.', 'ambitos' => self::PN],
                 'qr.disenar' => ['etiqueta' => 'Diseñar', 'descripcion' => 'Guardar colores, margen y logotipo del QR.', 'ambitos' => self::PN],
@@ -95,78 +116,81 @@ final class CatalogoPermisos
         ],
         'estadisticas' => [
             'etiqueta' => 'Estadísticas',
+            'descripcion' => 'Accesos a los enlaces QR/NFC.',
             'permisos' => [
-                'estadisticas.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Accesos y dispositivos (los clientes, solo de su negocio).', 'ambitos' => self::PN],
+                'estadisticas.ver' => ['etiqueta' => 'Consultar estadísticas', 'descripcion' => 'Accesos y dispositivos (los clientes, solo de su negocio).', 'ambitos' => self::PN],
             ],
         ],
         'auditoria' => [
             'etiqueta' => 'Auditoría',
+            'descripcion' => 'Bitácora de operaciones de la plataforma.',
             'permisos' => [
                 'auditoria.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Bitácora de operaciones sensibles.', 'ambitos' => self::P],
             ],
         ],
         'configuracion' => [
             'etiqueta' => 'Configuración',
+            'descripcion' => 'Ajustes generales de la plataforma.',
             'permisos' => [
                 'configuracion.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Ajustes de la plataforma.', 'ambitos' => self::P],
                 'configuracion.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Modificar los ajustes de la plataforma.', 'ambitos' => self::P],
             ],
         ],
         'personalizacion' => [
-            'etiqueta' => 'Personalización',
+            'etiqueta' => 'Apariencia',
+            'descripcion' => 'Colores de la interfaz del panel.',
             'permisos' => [
                 'personalizacion.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Colores de la interfaz.', 'ambitos' => self::P],
                 'personalizacion.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Cambiar y restablecer los colores.', 'ambitos' => self::P],
             ],
         ],
         'servicios' => [
-            'etiqueta' => 'Servicios contratados',
+            'etiqueta' => 'Servicios',
+            'descripcion' => 'Servicios adicionales (Fidelidad, Página de enlaces) y su contratación. Un permiso nunca sustituye la contratación.',
             'permisos' => [
                 'servicios.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Servicios, contrataciones y su historial.', 'ambitos' => self::P],
-                'servicios.gestionar' => ['etiqueta' => 'Gestionar', 'descripcion' => 'Activar, suspender, registrar pagos fuera de línea y configurar precio y vigencia.', 'ambitos' => self::P],
+                'servicios.gestionar' => ['etiqueta' => 'Administrar', 'descripcion' => 'Activar, suspender, reactivar y configurar precio y vigencia.', 'ambitos' => self::P],
                 'servicios.contratar' => ['etiqueta' => 'Contratar', 'descripcion' => 'Contratar servicios adicionales con pago en línea.', 'ambitos' => self::N],
             ],
         ],
         'pagos' => [
             'etiqueta' => 'Pagos',
+            'descripcion' => 'Órdenes de pago en línea (Openpay), reembolsos y disputas.',
             'permisos' => [
                 'pagos.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Pagos, reembolsos y disputas.', 'ambitos' => self::P],
+                'pagos.gestionar' => ['etiqueta' => 'Revisar incidencias', 'descripcion' => 'Consultar el estado en Openpay y marcar incidencias como revisadas.', 'ambitos' => self::P],
+                'pagos.reembolsar' => ['etiqueta' => 'Reembolsar', 'descripcion' => 'Enviar reembolsos totales o parciales a Openpay.', 'ambitos' => self::P],
             ],
         ],
         'fidelidad' => [
             'etiqueta' => 'Fidelidad',
+            'descripcion' => 'Programa de visitas y recompensas del negocio. Requiere el servicio contratado.',
             'permisos' => [
-                'fidelidad.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Resumen, buscar consumidores y consultar su progreso.', 'ambitos' => self::N],
-                'fidelidad.visitas' => ['etiqueta' => 'Registrar visitas', 'descripcion' => 'Confirmar visitas o compras válidas.', 'ambitos' => self::N],
-                'fidelidad.canjear' => ['etiqueta' => 'Canjear recompensas', 'descripcion' => 'Entregar recompensas disponibles.', 'ambitos' => self::N],
-                'fidelidad.consumidores' => ['etiqueta' => 'Administrar consumidores', 'descripcion' => 'Registrar y editar consumidores.', 'ambitos' => self::N],
-                'fidelidad.credenciales' => ['etiqueta' => 'Credenciales', 'descripcion' => 'Emitir, reemplazar y revocar tarjetas y enlaces; fusionar duplicados.', 'ambitos' => self::N],
-                'fidelidad.ajustes' => ['etiqueta' => 'Ajustes', 'descripcion' => 'Corregir o anular visitas y recompensas con motivo.', 'ambitos' => self::N],
-                'fidelidad.campanas' => ['etiqueta' => 'Campañas', 'descripcion' => 'Crear y modificar campañas y recompensas.', 'ambitos' => self::N],
-                'fidelidad.personal' => ['etiqueta' => 'Personal', 'descripcion' => 'Administrar empleados del negocio.', 'ambitos' => self::N],
-                'fidelidad.auditoria' => ['etiqueta' => 'Auditoría', 'descripcion' => 'Actividad del programa y visitas por empleado.', 'ambitos' => self::N],
-                'fidelidad.diseno' => ['etiqueta' => 'Diseño de tarjeta', 'descripcion' => 'Personalizar y publicar la tarjeta digital que ven los consumidores.', 'ambitos' => self::N],
+                'fidelidad.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Resumen, buscar consumidores y consultar su progreso.', 'ambitos' => self::N, 'seccion' => 'General'],
+                'fidelidad.visitas' => ['etiqueta' => 'Registrar visitas', 'descripcion' => 'Confirmar visitas o compras válidas en el mostrador.', 'ambitos' => self::N, 'seccion' => 'Mostrador'],
+                'fidelidad.canjear' => ['etiqueta' => 'Canjear recompensas', 'descripcion' => 'Entregar recompensas disponibles.', 'ambitos' => self::N, 'seccion' => 'Mostrador'],
+                'fidelidad.consumidores' => ['etiqueta' => 'Administrar consumidores', 'descripcion' => 'Registrar y editar consumidores.', 'ambitos' => self::N, 'seccion' => 'Consumidores'],
+                'fidelidad.credenciales' => ['etiqueta' => 'Credenciales', 'descripcion' => 'Emitir, reemplazar y revocar tarjetas y enlaces; fusionar duplicados.', 'ambitos' => self::N, 'seccion' => 'Consumidores'],
+                'fidelidad.ajustes' => ['etiqueta' => 'Ajustes de visitas', 'descripcion' => 'Corregir o anular visitas y recompensas (siempre con motivo).', 'ambitos' => self::N, 'seccion' => 'Consumidores'],
+                'fidelidad.campanas' => ['etiqueta' => 'Campañas', 'descripcion' => 'Crear y modificar campañas, metas y recompensas.', 'ambitos' => self::N, 'seccion' => 'Campañas'],
+                'fidelidad.diseno' => ['etiqueta' => 'Diseñar el programa', 'descripcion' => 'Personalizar y publicar la página que ven los consumidores.', 'ambitos' => self::N, 'seccion' => 'Diseño'],
+                'fidelidad.disenar_negocios' => ['etiqueta' => 'Diseñar para negocios', 'descripcion' => 'Personal DASTI: abrir el diseñador de Fidelidad de un negocio y guardar o publicar su diseño.', 'ambitos' => self::P, 'seccion' => 'Diseño'],
+                'fidelidad.personal' => ['etiqueta' => 'Personal autorizado', 'descripcion' => 'Administrar empleados del negocio.', 'ambitos' => self::N, 'seccion' => 'Administración'],
+                'fidelidad.auditoria' => ['etiqueta' => 'Historial y actividad', 'descripcion' => 'Actividad del programa y visitas por empleado.', 'ambitos' => self::N, 'seccion' => 'Administración'],
             ],
         ],
         'paginas' => [
             'etiqueta' => 'Página de enlaces',
+            'descripcion' => 'Página pública del negocio con sus enlaces. Requiere el servicio contratado.',
             'permisos' => [
-                'paginas.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Consultar la página, su dirección pública y sus estadísticas.', 'ambitos' => self::N],
-                'paginas.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Diseño, contenido, imágenes y borradores.', 'ambitos' => self::N],
-                'paginas.publicar' => ['etiqueta' => 'Publicar', 'descripcion' => 'Publicar, despublicar y cambiar la dirección pública.', 'ambitos' => self::N],
-                'paginas.dominios' => ['etiqueta' => 'Dominio propio', 'descripcion' => 'Conectar, verificar y desvincular dominios del negocio.', 'ambitos' => self::N],
-                'paginas.mensajes' => ['etiqueta' => 'Mensajes', 'descripcion' => 'Leer los mensajes enviados desde el formulario de contacto.', 'ambitos' => self::N],
-                'paginas.supervisar' => ['etiqueta' => 'Supervisar', 'descripcion' => 'Negocios con el servicio, publicación, dominios e incidencias (sin mensajes de visitantes).', 'ambitos' => self::P],
-            ],
-        ],
-        'roles' => [
-            'etiqueta' => 'Roles y permisos',
-            'permisos' => [
-                'roles.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Roles, permisos y usuarios de cada rol.', 'ambitos' => self::P],
-                'roles.crear' => ['etiqueta' => 'Crear', 'descripcion' => 'Crear roles nuevos.', 'ambitos' => self::P],
-                'roles.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Nombre y descripción; eliminar roles sin usuarios.', 'ambitos' => self::P],
-                'roles.administrar_permisos' => ['etiqueta' => 'Administrar permisos', 'descripcion' => 'Asignar y retirar permisos de los roles.', 'ambitos' => self::P],
-                'roles.asignar' => ['etiqueta' => 'Asignar a usuarios', 'descripcion' => 'Cambiar el rol de otros usuarios.', 'ambitos' => self::P],
+                'paginas.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Consultar la página y su dirección pública.', 'ambitos' => self::N, 'seccion' => 'General'],
+                'paginas.editar' => ['etiqueta' => 'Editar', 'descripcion' => 'Editor visual: diseño, plantillas, contenido, imágenes y borradores.', 'ambitos' => self::N, 'seccion' => 'Editor'],
+                'paginas.publicar' => ['etiqueta' => 'Publicar', 'descripcion' => 'Publicar, despublicar y cambiar la dirección pública.', 'ambitos' => self::N, 'seccion' => 'Editor'],
+                'paginas.disenar_negocios' => ['etiqueta' => 'Diseñar para negocios', 'descripcion' => 'Personal DASTI: editar, guardar y publicar la página de un negocio.', 'ambitos' => self::P, 'seccion' => 'Editor'],
+                'paginas.estadisticas' => ['etiqueta' => 'Consultar estadísticas', 'descripcion' => 'Visitas y clics de la página; exportarlos.', 'ambitos' => self::N, 'seccion' => 'Estadísticas'],
+                'paginas.mensajes' => ['etiqueta' => 'Mensajes', 'descripcion' => 'Leer los mensajes enviados desde el formulario de contacto.', 'ambitos' => self::N, 'seccion' => 'Mensajes'],
+                'paginas.dominios' => ['etiqueta' => 'Dominio propio', 'descripcion' => 'Conectar, verificar y desvincular dominios del negocio.', 'ambitos' => self::N, 'seccion' => 'Dominios personalizados'],
+                'paginas.supervisar' => ['etiqueta' => 'Supervisar', 'descripcion' => 'Negocios con el servicio, publicación, dominios e incidencias (sin mensajes de visitantes).', 'ambitos' => self::P, 'seccion' => 'Supervisión'],
             ],
         ],
     ];
@@ -234,7 +258,7 @@ final class CatalogoPermisos
     }
 
     /**
-     * @return array{etiqueta: string, descripcion: string, ambitos: list<string>}|null
+     * @return array{etiqueta: string, descripcion: string, ambitos: list<string>, seccion?: string}|null
      */
     public static function definicion(string $permiso): ?array
     {
@@ -280,9 +304,11 @@ final class CatalogoPermisos
     }
 
     /**
-     * Matriz para la interfaz: módulos con sus permisos.
+     * Matriz para la interfaz: módulos con sus permisos. `grupo` separa los
+     * módulos de administración de la plataforma (solo personal DASTI) de los
+     * operativos del negocio y de los compartidos.
      *
-     * @return list<array{clave: string, etiqueta: string, permisos: list<array{nombre: string, etiqueta: string, descripcion: string, ambitos: list<string>}>}>
+     * @return list<array{clave: string, etiqueta: string, descripcion: string, grupo: string, permisos: list<array{nombre: string, etiqueta: string, descripcion: string, ambitos: list<string>, seccion?: string}>}>
      */
     public static function matriz(): array
     {
@@ -290,12 +316,22 @@ final class CatalogoPermisos
 
         foreach (self::MODULOS as $clave => $modulo) {
             $permisos = [];
+            $ambitos = [];
 
             foreach ($modulo['permisos'] as $nombre => $definicion) {
                 $permisos[] = ['nombre' => $nombre, ...$definicion];
+                $ambitos = [...$ambitos, ...$definicion['ambitos']];
             }
 
-            $matriz[] = ['clave' => $clave, 'etiqueta' => $modulo['etiqueta'], 'permisos' => $permisos];
+            $ambitos = array_unique($ambitos);
+
+            $matriz[] = [
+                'clave' => $clave,
+                'etiqueta' => $modulo['etiqueta'],
+                'descripcion' => $modulo['descripcion'],
+                'grupo' => count($ambitos) > 1 ? 'mixto' : (string) reset($ambitos),
+                'permisos' => $permisos,
+            ];
         }
 
         return $matriz;

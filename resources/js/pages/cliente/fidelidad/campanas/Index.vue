@@ -50,6 +50,8 @@ const cambiarEstado = (id: number, valor: string) =>
 <template>
     <Head title="Campañas" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina
         titulo="Campañas"
         descripcion="Reglas de tus programas: cuántas visitas se necesitan y qué recompensa se entrega."
@@ -62,8 +64,6 @@ const cambiarEstado = (id: number, valor: string) =>
             </Button>
         </template>
     </EncabezadoPagina>
-
-    <NavFidelidad :servicio="servicio" />
 
     <div
         v-if="campanas.length"

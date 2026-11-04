@@ -29,7 +29,7 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
         Route::patch('contrataciones/{contratacion}/estado', [ContratacionController::class, 'estado'])->middleware('can:servicios.gestionar')->name('contrataciones.estado');
 
         Route::get('pagos', [PagoController::class, 'index'])->middleware('can:pagos.ver')->name('pagos.index');
-        Route::patch('pagos/{pago}/revision', [PagoController::class, 'revision'])->middleware('can:servicios.gestionar')->name('pagos.revision');
-        Route::post('pagos/{pago}/consulta', [PagoController::class, 'consulta'])->middleware(['can:servicios.gestionar', 'throttle:20,1'])->name('pagos.consulta');
-        Route::post('pagos/{pago}/reembolso', [PagoController::class, 'reembolso'])->middleware(['can:servicios.gestionar', 'throttle:10,1'])->name('pagos.reembolso');
+        Route::patch('pagos/{pago}/revision', [PagoController::class, 'revision'])->middleware('can:pagos.gestionar')->name('pagos.revision');
+        Route::post('pagos/{pago}/consulta', [PagoController::class, 'consulta'])->middleware(['can:pagos.gestionar', 'throttle:20,1'])->name('pagos.consulta');
+        Route::post('pagos/{pago}/reembolso', [PagoController::class, 'reembolso'])->middleware(['can:pagos.reembolsar', 'throttle:10,1'])->name('pagos.reembolso');
     });

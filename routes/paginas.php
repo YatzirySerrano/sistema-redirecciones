@@ -58,8 +58,8 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
         Route::get('qr', [DireccionController::class, 'qr'])->middleware(['can:paginas.ver', $consultar, 'throttle:qr'])->name('qr');
 
         // Estadísticas
-        Route::get('estadisticas', [EstadisticaController::class, 'index'])->middleware(['can:paginas.ver', $consultar])->name('estadisticas.index');
-        Route::get('estadisticas/exportar', [EstadisticaController::class, 'exportar'])->middleware(['can:paginas.ver', $consultar, 'throttle:20,1'])->name('estadisticas.exportar');
+        Route::get('estadisticas', [EstadisticaController::class, 'index'])->middleware(['can:paginas.estadisticas', $consultar])->name('estadisticas.index');
+        Route::get('estadisticas/exportar', [EstadisticaController::class, 'exportar'])->middleware(['can:paginas.estadisticas', $consultar, 'throttle:20,1'])->name('estadisticas.exportar');
 
         // Mensajes del formulario de contacto
         Route::get('mensajes', [MensajeController::class, 'index'])->middleware(['can:paginas.mensajes', $consultar])->name('mensajes.index');

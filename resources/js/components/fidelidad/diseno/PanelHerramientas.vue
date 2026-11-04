@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { Gift, Plus, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
+import Ayuda from '@/components/comun/Ayuda.vue';
 import {
-    DECORACIONES,
     familia,
     fondoCss,
     FUENTES,
-    ICONOS,
     PRESENTACIONES,
     SOMBRAS,
     TIPOS_FONDO,
@@ -14,12 +13,12 @@ import {
 import type {
     ClaveDecoracion,
     ClaveFuente,
-    ClaveIcono,
     DocumentoDiseno,
     Presentacion,
     Sombra,
     TipoFondo,
 } from '@/components/fidelidad-diseno/tipos';
+import IconoCatalogo from '@/components/iconos/IconoCatalogo.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -28,30 +27,45 @@ import CampoColor from './CampoColor.vue';
 import CampoRango from './CampoRango.vue';
 import type { AvisoLegibilidad } from './legibilidad';
 import OpcionesVisuales from './OpcionesVisuales.vue';
+import type { ClaveHerramienta } from './pasos';
+import SelectorDecoracion from './SelectorDecoracion.vue';
+import SelectorIconoSello from './SelectorIconoSello.vue';
 import SelectorImagen from './SelectorImagen.vue';
 import type { ArchivoImagen, PlantillaDiseno } from './tipos';
 
 /**
- * Herramientas del editor por sección. Edita el documento en memoria; el
- * servidor vuelve a validar todo al guardar o publicar.
+ * Propiedades de la herramienta elegida en el editor «Diseñar mi
+ * programa». Edita el documento en memoria; el servidor vuelve a validar
+ * todo al guardar o publicar. Nada aquí cambia visitas, metas ni
+ * recompensas: esas vienen de las campañas.
  */
 const doc = defineModel<DocumentoDiseno>('documento', { required: true });
 
 const props = defineProps<{
-    seccion: string;
+    herramienta: ClaveHerramienta;
     archivos: ArchivoImagen[];
     plantillas: PlantillaDiseno[];
     esVariante: boolean;
     avisos: AvisoLegibilidad[];
+    urlSubida: string;
+    medios: Record<string, string>;
+    /** Fondo de la página cuando se edita una variante (viene del general). */
+    general: DocumentoDiseno | null;
 }>();
 
 const emit = defineEmits<{
     subida: [archivo: ArchivoImagen];
     plantilla: [plantilla: PlantillaDiseno];
+    previsualizar: [
+        cambio: {
+            ruta: 'pagina.decoracion' | 'tarjeta.decoracion';
+            valor: ClaveDecoracion;
+        } | null,
+    ];
 }>();
 
-const avisosSeccion = computed(() =>
-    props.avisos.filter((a) => a.seccion === props.seccion),
+const avisosHerramienta = computed(() =>
+    props.avisos.filter((a) => a.herramienta === props.herramienta),
 );
 
 const fondos = Object.entries(TIPOS_FONDO).map(([valor, nombre]) => ({
@@ -63,10 +77,6 @@ const fuentes = Object.entries(FUENTES).map(([valor, f]) => ({
     nombre: f.nombre,
     estilo: f.estilo,
 }));
-const decoraciones = Object.entries(DECORACIONES).map(([valor, nombre]) => ({
-    valor: valor as ClaveDecoracion,
-    nombre,
-}));
 const sombras = Object.entries(SOMBRAS).map(([valor, s]) => ({
     valor: valor as Sombra,
     nombre: s.nombre,
@@ -76,10 +86,30 @@ const presentaciones = Object.entries(PRESENTACIONES).map(([valor, p]) => ({
     nombre: p.nombre,
     descripcion: p.descripcion,
 }));
-const iconos = Object.entries(ICONOS).map(([valor, i]) => ({
-    valor: valor as ClaveIcono,
-    nombre: i.nombre,
-}));
+
+const pagina = computed(() => props.general ?? doc.value);
+const fondoPagina = computed(() =>
+    fondoCss(
+        pagina.value.pagina.fondo_tipo,
+        pagina.value.pagina.color1,
+        pagina.value.pagina.color2,
+        pagina.value.pagina.angulo,
+        pagina.value.pagina.imagen,
+        props.medios,
+        20,
+    ),
+);
+const fondoTarjeta = computed(() =>
+    fondoCss(
+        doc.value.tarjeta.fondo_tipo,
+        doc.value.tarjeta.color1,
+        doc.value.tarjeta.color2,
+        doc.value.tarjeta.angulo,
+        doc.value.tarjeta.imagen,
+        props.medios,
+        doc.value.tarjeta.oscurecer,
+    ),
+);
 
 const insertar = (
     campo: 'mensaje_progreso' | 'mensaje_meta' | 'mensaje_canje',
@@ -110,16 +140,34 @@ const agregarSeccion = () => {
         });
     }
 };
+
+const mensajes = [
+    {
+        clave: 'mensaje_progreso' as const,
+        etiqueta: 'Mientras acumula visitas',
+        marcadores: ['{faltan}', '{meta}', '{visitas}', '{recompensa}'],
+    },
+    {
+        clave: 'mensaje_meta' as const,
+        etiqueta: 'Al completar la meta',
+        marcadores: ['{recompensa}'],
+    },
+    {
+        clave: 'mensaje_canje' as const,
+        etiqueta: 'Después de canjear la recompensa',
+        marcadores: ['{faltan}', '{meta}'],
+    },
+];
 </script>
 
 <template>
     <div class="space-y-6">
         <ul
-            v-if="avisosSeccion.length"
+            v-if="avisosHerramienta.length"
             class="space-y-1.5 rounded-lg border border-warning/30 bg-warning-soft p-3 text-xs text-warning"
             role="status"
         >
-            <li v-for="(a, i) in avisosSeccion" :key="i" class="flex gap-2">
+            <li v-for="(a, i) in avisosHerramienta" :key="i" class="flex gap-2">
                 <TriangleAlert
                     class="mt-0.5 size-3.5 shrink-0"
                     aria-hidden="true"
@@ -128,18 +176,21 @@ const agregarSeccion = () => {
             </li>
         </ul>
 
-        <!-- Plantillas -->
-        <template v-if="seccion === 'plantillas'">
+        <!-- 1. Plantillas -->
+        <template v-if="herramienta === 'plantillas'">
             <p class="text-sm text-muted-foreground">
-                Elige un punto de partida y personalízalo. Se conservan tu
-                logotipo, tus imágenes, tus secciones y tus términos.
+                Elige un punto de partida y personalízalo en los siguientes
+                pasos. Se conservan tu logotipo, tus imágenes, tu información y
+                tus términos.
             </p>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div
+                class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-3"
+            >
                 <button
                     v-for="p in plantillas"
                     :key="p.clave"
                     type="button"
-                    class="group overflow-hidden rounded-xl border bg-background text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-60 aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30"
+                    class="group relative overflow-hidden rounded-xl border-2 bg-background text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-60 aria-pressed:border-primary aria-pressed:shadow-[0_0_0_3px] aria-pressed:shadow-primary/20"
                     :aria-pressed="doc.plantilla === p.clave"
                     @click="emit('plantilla', p)"
                 >
@@ -185,11 +236,9 @@ const agregarSeccion = () => {
                                           }
                                 "
                             >
-                                <component
-                                    :is="
-                                        ICONOS[p.documento.progreso.icono].icono
-                                    "
+                                <IconoCatalogo
                                     v-if="n <= 4"
+                                    :valor="p.documento.progreso.icono"
                                     class="size-3"
                                 />
                             </span>
@@ -201,12 +250,17 @@ const agregarSeccion = () => {
                             {{ p.descripcion }}
                         </p>
                     </div>
+                    <span
+                        v-if="doc.plantilla === p.clave"
+                        class="absolute top-2 right-2 rounded-full bg-primary px-2 py-0.5 text-[0.68rem] font-semibold text-primary-foreground"
+                        >En uso</span
+                    >
                 </button>
             </div>
         </template>
 
-        <!-- Identidad -->
-        <template v-else-if="seccion === 'identidad'">
+        <!-- 2. Logotipo y nombre -->
+        <template v-else-if="herramienta === 'encabezado'">
             <div class="space-y-1.5">
                 <label for="d-nombre" class="text-sm font-medium"
                     >Nombre del programa</label
@@ -214,6 +268,7 @@ const agregarSeccion = () => {
                 <Input
                     id="d-nombre"
                     v-model="doc.programa.nombre"
+                    class="h-10"
                     maxlength="60"
                     placeholder="Ej. Club del café"
                 />
@@ -225,6 +280,7 @@ const agregarSeccion = () => {
                 <Input
                     id="d-lema"
                     v-model="doc.programa.lema"
+                    class="h-10"
                     maxlength="120"
                     placeholder="Ej. Cada visita suma."
                 />
@@ -234,80 +290,120 @@ const agregarSeccion = () => {
                 etiqueta="Logotipo"
                 ayuda="Cuadrado, de preferencia con fondo."
                 uso="logo"
+                :url="urlSubida"
                 :archivos="archivos"
                 @subida="emit('subida', $event)"
             />
-            <SelectorImagen
-                v-if="!esVariante"
-                v-model="doc.identidad.portada"
-                etiqueta="Imagen principal"
-                ayuda="Foto horizontal de tu local o producto."
-                uso="portada"
-                :archivos="archivos"
-                @subida="emit('subida', $event)"
-            />
-            <label
-                v-if="!esVariante"
-                class="flex items-center justify-between gap-3 text-sm"
-            >
-                Mostrar el nombre del negocio
-                <Switch v-model="doc.identidad.mostrar_negocio" />
-            </label>
-            <OpcionesVisuales
-                v-if="!esVariante"
-                v-model="doc.contenido.saludo"
-                etiqueta="Saludo al cliente"
-                :opciones="[
-                    { valor: 'alias', nombre: 'Saludar por su nombre' },
-                    { valor: 'oculto', nombre: 'Sin nombre' },
-                ]"
-            />
-            <p v-if="!esVariante" class="-mt-3 text-xs text-muted-foreground">
-                Se usa el alias o solo el primer nombre. Nunca se muestran
-                teléfono ni correo.
+            <template v-if="!esVariante">
+                <SelectorImagen
+                    v-model="doc.identidad.portada"
+                    etiqueta="Imagen principal"
+                    ayuda="Foto horizontal de tu local o producto, arriba de la página."
+                    uso="portada"
+                    :url="urlSubida"
+                    :archivos="archivos"
+                    @subida="emit('subida', $event)"
+                />
+                <label
+                    class="flex min-h-10 items-center justify-between gap-3 text-sm"
+                >
+                    Mostrar el nombre del negocio
+                    <Switch v-model="doc.identidad.mostrar_negocio" />
+                </label>
+                <div class="space-y-1.5">
+                    <OpcionesVisuales
+                        v-model="doc.contenido.saludo"
+                        etiqueta="Saludo al cliente"
+                        :opciones="[
+                            { valor: 'alias', nombre: 'Saludar por su nombre' },
+                            { valor: 'oculto', nombre: 'Sin nombre' },
+                        ]"
+                    />
+                    <p class="text-xs text-muted-foreground">
+                        Se usa el alias o solo el primer nombre. Nunca se
+                        muestran teléfono ni correo.
+                    </p>
+                </div>
+            </template>
+        </template>
+
+        <!-- 2. Colores de la página -->
+        <template v-else-if="herramienta === 'colores'">
+            <p class="text-sm text-muted-foreground">
+                Colores de los textos y recuadros de la página. Los de la
+                tarjeta están en «Tarjeta».
             </p>
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div class="space-y-1.5">
-                    <label for="d-titulos" class="text-sm font-medium"
-                        >Tipografía de títulos</label
-                    >
-                    <select
-                        id="d-titulos"
-                        v-model="doc.tipografia.titulos"
-                        class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                    >
-                        <option
-                            v-for="f in fuentes"
-                            :key="f.valor"
-                            :value="f.valor"
-                        >
-                            {{ f.nombre }} — {{ f.estilo }}
-                        </option>
-                    </select>
-                </div>
-                <div class="space-y-1.5">
-                    <label for="d-texto" class="text-sm font-medium"
-                        >Tipografía del texto</label
-                    >
-                    <select
-                        id="d-texto"
-                        v-model="doc.tipografia.texto"
-                        class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                    >
-                        <option
-                            v-for="f in fuentes"
-                            :key="f.valor"
-                            :value="f.valor"
-                        >
-                            {{ f.nombre }} — {{ f.estilo }}
-                        </option>
-                    </select>
-                </div>
+            <div class="space-y-3">
+                <CampoColor
+                    v-model="doc.colores.primario"
+                    etiqueta="Color principal"
+                    ayuda="Viñetas y detalles"
+                />
+                <CampoColor
+                    v-model="doc.colores.secundario"
+                    etiqueta="Color secundario"
+                />
+                <CampoColor v-model="doc.colores.texto" etiqueta="Texto" />
+                <CampoColor
+                    v-model="doc.colores.texto_suave"
+                    etiqueta="Texto secundario"
+                />
+                <CampoColor
+                    v-model="doc.colores.superficie"
+                    etiqueta="Recuadros informativos"
+                />
+                <CampoColor v-model="doc.colores.borde" etiqueta="Bordes" />
             </div>
         </template>
 
-        <!-- Tarjeta -->
-        <template v-else-if="seccion === 'tarjeta'">
+        <!-- 2. Fondo de la página -->
+        <template v-else-if="herramienta === 'fondo'">
+            <OpcionesVisuales
+                v-model="doc.pagina.fondo_tipo"
+                etiqueta="Fondo de la página"
+                :columnas="3"
+                :opciones="fondos"
+            />
+            <div class="space-y-3 rounded-lg border p-3">
+                <CampoColor
+                    v-model="doc.pagina.color1"
+                    :etiqueta="
+                        doc.pagina.fondo_tipo === 'solido'
+                            ? 'Color de fondo'
+                            : 'Color inicial'
+                    "
+                />
+                <CampoColor
+                    v-if="doc.pagina.fondo_tipo !== 'solido'"
+                    v-model="doc.pagina.color2"
+                    etiqueta="Color final"
+                />
+                <CampoRango
+                    v-if="doc.pagina.fondo_tipo === 'degradado'"
+                    v-model="doc.pagina.angulo"
+                    etiqueta="Dirección del degradado"
+                    :min="0"
+                    :max="360"
+                    unidad="°"
+                />
+                <SelectorImagen
+                    v-if="doc.pagina.fondo_tipo === 'imagen'"
+                    v-model="doc.pagina.imagen"
+                    etiqueta="Imagen de fondo"
+                    uso="fondo"
+                    :url="urlSubida"
+                    :archivos="archivos"
+                    @subida="emit('subida', $event)"
+                />
+            </div>
+        </template>
+
+        <!-- 2. Tarjeta -->
+        <template v-else-if="herramienta === 'tarjeta'">
+            <p class="text-sm text-muted-foreground">
+                La tarjeta aparece dentro de la página, con el avance de cada
+                cliente.
+            </p>
             <OpcionesVisuales
                 v-model="doc.tarjeta.orientacion"
                 etiqueta="Orientación"
@@ -353,6 +449,7 @@ const agregarSeccion = () => {
                         v-model="doc.tarjeta.imagen"
                         etiqueta="Imagen de fondo"
                         uso="fondo"
+                        :url="urlSubida"
                         :archivos="archivos"
                         @subida="emit('subida', $event)"
                     />
@@ -366,7 +463,10 @@ const agregarSeccion = () => {
                 </template>
             </div>
             <div class="space-y-3">
-                <CampoColor v-model="doc.tarjeta.texto" etiqueta="Texto" />
+                <CampoColor
+                    v-model="doc.tarjeta.texto"
+                    etiqueta="Texto de la tarjeta"
+                />
                 <CampoColor
                     v-model="doc.tarjeta.texto_suave"
                     etiqueta="Texto secundario"
@@ -399,50 +499,116 @@ const agregarSeccion = () => {
                 :columnas="3"
                 :opciones="sombras"
             />
-            <OpcionesVisuales
+        </template>
+
+        <!-- 2. Tipografía -->
+        <template v-else-if="herramienta === 'tipografia'">
+            <div
+                v-for="campo in [
+                    {
+                        clave: 'titulos' as const,
+                        etiqueta: 'Letra de los títulos',
+                    },
+                    { clave: 'texto' as const, etiqueta: 'Letra del texto' },
+                ]"
+                :key="campo.clave"
+                class="space-y-1.5"
+            >
+                <label :for="`d-${campo.clave}`" class="text-sm font-medium">{{
+                    campo.etiqueta
+                }}</label>
+                <select
+                    :id="`d-${campo.clave}`"
+                    v-model="doc.tipografia[campo.clave]"
+                    class="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                    <option
+                        v-for="f in fuentes"
+                        :key="f.valor"
+                        :value="f.valor"
+                    >
+                        {{ f.nombre }} — {{ f.estilo }}
+                    </option>
+                </select>
+                <p
+                    class="truncate text-lg"
+                    :style="{
+                        fontFamily: familia(doc.tipografia[campo.clave]),
+                    }"
+                    aria-hidden="true"
+                >
+                    {{ doc.programa.nombre || 'Programa de recompensas' }}
+                </p>
+            </div>
+        </template>
+
+        <!-- 2. Decoración -->
+        <template v-else-if="herramienta === 'decoracion'">
+            <p class="text-sm text-muted-foreground">
+                Pasa el cursor (o enfoca con el teclado) sobre una opción para
+                verla en tu página. Toca o haz clic para elegirla.
+            </p>
+            <SelectorDecoracion
+                v-if="!esVariante"
+                v-model="doc.pagina.decoracion"
+                etiqueta="Decoración del fondo de la página"
+                :fondo="fondoPagina"
+                :color="doc.colores.primario"
+                :opacidad="10"
+                @previsualizar="
+                    emit(
+                        'previsualizar',
+                        $event
+                            ? { ruta: 'pagina.decoracion', valor: $event }
+                            : null,
+                    )
+                "
+            />
+            <SelectorDecoracion
                 v-model="doc.tarjeta.decoracion"
-                etiqueta="Decoración"
-                :columnas="3"
-                :opciones="decoraciones"
+                etiqueta="Decoración de la tarjeta"
+                :fondo="fondoTarjeta"
+                :color="doc.tarjeta.texto"
+                :opacidad="doc.tarjeta.decoracion_opacidad"
+                @previsualizar="
+                    emit(
+                        'previsualizar',
+                        $event
+                            ? { ruta: 'tarjeta.decoracion', valor: $event }
+                            : null,
+                    )
+                "
             />
             <CampoRango
                 v-if="doc.tarjeta.decoracion !== 'ninguna'"
                 v-model="doc.tarjeta.decoracion_opacidad"
-                etiqueta="Intensidad de la decoración"
+                etiqueta="Intensidad en la tarjeta"
                 :min="0"
                 :max="60"
                 unidad="%"
             />
         </template>
 
-        <!-- Progreso -->
-        <template v-else-if="seccion === 'progreso'">
+        <!-- 3. Avance de visitas -->
+        <template v-else-if="herramienta === 'progreso'">
             <p class="text-sm text-muted-foreground">
                 La cantidad de sellos siempre es la meta real de cada campaña;
-                el diseño solo cambia cómo se ve.
+                aquí solo eliges cómo se ve.
             </p>
-            <OpcionesVisuales
-                v-model="doc.progreso.presentacion"
-                etiqueta="Presentación del avance"
-                :opciones="presentaciones"
-            />
-            <p class="-mt-3 text-xs text-muted-foreground">
-                {{ PRESENTACIONES[doc.progreso.presentacion].descripcion }}
-            </p>
-            <OpcionesVisuales
+            <div class="space-y-1.5">
+                <OpcionesVisuales
+                    v-model="doc.progreso.presentacion"
+                    etiqueta="Forma del avance"
+                    :opciones="presentaciones"
+                />
+                <p class="text-xs text-muted-foreground">
+                    {{ PRESENTACIONES[doc.progreso.presentacion].descripcion }}
+                </p>
+            </div>
+            <SelectorIconoSello
                 v-model="doc.progreso.icono"
-                etiqueta="Icono de los sellos"
-                :columnas="6"
-                :opciones="iconos"
-            >
-                <template #vista="{ opcion }">
-                    <component
-                        :is="ICONOS[opcion.valor as ClaveIcono].icono"
-                        class="size-5"
-                        aria-hidden="true"
-                    />
-                </template>
-            </OpcionesVisuales>
+                etiqueta="Ícono de los sellos"
+            />
             <div class="space-y-3 rounded-lg border p-3">
                 <p class="text-sm font-medium">Sello completado</p>
                 <CampoColor
@@ -451,7 +617,7 @@ const agregarSeccion = () => {
                 />
                 <CampoColor
                     v-model="doc.progreso.completo_icono"
-                    etiqueta="Color del icono"
+                    etiqueta="Color del ícono"
                 />
             </div>
             <div class="space-y-3 rounded-lg border p-3">
@@ -472,14 +638,18 @@ const agregarSeccion = () => {
                 />
                 <CampoColor
                     v-model="doc.progreso.pendiente_icono"
-                    etiqueta="Color del icono"
+                    etiqueta="Color del ícono"
                 />
             </div>
-            <label class="flex items-center justify-between gap-3 text-sm">
+            <label
+                class="flex min-h-10 items-center justify-between gap-3 text-sm"
+            >
                 Mostrar contador (6 de 10 visitas)
                 <Switch v-model="doc.progreso.mostrar_contador" />
             </label>
-            <label class="flex items-center justify-between gap-3 text-sm">
+            <label
+                class="flex min-h-10 items-center justify-between gap-3 text-sm"
+            >
                 Agregar barra de progreso
                 <Switch v-model="doc.progreso.mostrar_barra" />
             </label>
@@ -501,39 +671,34 @@ const agregarSeccion = () => {
             </div>
         </template>
 
-        <!-- Mensajes -->
-        <template v-else-if="seccion === 'mensajes'">
-            <label class="flex items-center justify-between gap-3 text-sm">
+        <!-- 3. Recompensa y mensajes -->
+        <template v-else-if="herramienta === 'mensajes'">
+            <p
+                class="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+            >
+                <Gift class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <span>
+                    La meta y la recompensa se toman de la campaña.
+                    <Ayuda
+                        texto="La campaña define cuántas visitas necesita un cliente y qué recompensa recibirá. Para cambiarlas, edita la campaña en «Programas › Campañas»."
+                        etiqueta="Campaña"
+                    />
+                </span>
+            </p>
+            <label
+                class="flex min-h-10 items-center justify-between gap-3 text-sm"
+            >
                 Mostrar nombre de la campaña
                 <Switch v-model="doc.contenido.mostrar_campana" />
             </label>
-            <label class="flex items-center justify-between gap-3 text-sm">
+            <label
+                class="flex min-h-10 items-center justify-between gap-3 text-sm"
+            >
                 Mostrar la recompensa en la tarjeta
                 <Switch v-model="doc.contenido.mostrar_recompensa" />
             </label>
             <div
-                v-for="campo in [
-                    {
-                        clave: 'mensaje_progreso' as const,
-                        etiqueta: 'Mientras acumula visitas',
-                        marcadores: [
-                            '{faltan}',
-                            '{meta}',
-                            '{visitas}',
-                            '{recompensa}',
-                        ],
-                    },
-                    {
-                        clave: 'mensaje_meta' as const,
-                        etiqueta: 'Al completar la meta',
-                        marcadores: ['{recompensa}'],
-                    },
-                    {
-                        clave: 'mensaje_canje' as const,
-                        etiqueta: 'Después de canjear la recompensa',
-                        marcadores: ['{faltan}', '{meta}'],
-                    },
-                ]"
+                v-for="campo in mensajes"
                 :key="campo.clave"
                 class="space-y-1.5"
             >
@@ -552,7 +717,7 @@ const agregarSeccion = () => {
                         v-for="m in campo.marcadores"
                         :key="m"
                         type="button"
-                        class="rounded-md border px-1.5 py-0.5 font-mono text-[0.7rem] hover:bg-muted disabled:opacity-50"
+                        class="inline-flex h-8 items-center rounded-md border px-2 font-mono text-[0.7rem] hover:bg-muted disabled:opacity-50"
                         @click="insertar(campo.clave, m)"
                     >
                         {{ m }}
@@ -563,90 +728,21 @@ const agregarSeccion = () => {
                     >
                 </div>
             </div>
-            <p class="flex items-start gap-2 text-xs text-muted-foreground">
-                <Gift class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                La recompensa y la meta se toman de la campaña. Para cambiarlas,
-                edita la campaña.
-            </p>
         </template>
 
-        <!-- Página -->
-        <template v-else-if="seccion === 'pagina'">
-            <OpcionesVisuales
-                v-model="doc.pagina.fondo_tipo"
-                etiqueta="Fondo de la página"
-                :columnas="3"
-                :opciones="fondos"
-            />
-            <div class="space-y-3 rounded-lg border p-3">
-                <CampoColor
-                    v-model="doc.pagina.color1"
-                    :etiqueta="
-                        doc.pagina.fondo_tipo === 'solido'
-                            ? 'Color de fondo'
-                            : 'Color inicial'
-                    "
-                />
-                <CampoColor
-                    v-if="doc.pagina.fondo_tipo !== 'solido'"
-                    v-model="doc.pagina.color2"
-                    etiqueta="Color final"
-                />
-                <CampoRango
-                    v-if="doc.pagina.fondo_tipo === 'degradado'"
-                    v-model="doc.pagina.angulo"
-                    etiqueta="Dirección del degradado"
-                    :min="0"
-                    :max="360"
-                    unidad="°"
-                />
-                <SelectorImagen
-                    v-if="doc.pagina.fondo_tipo === 'imagen'"
-                    v-model="doc.pagina.imagen"
-                    etiqueta="Imagen de fondo"
-                    uso="fondo"
-                    :archivos="archivos"
-                    @subida="emit('subida', $event)"
-                />
-            </div>
-            <OpcionesVisuales
-                v-model="doc.pagina.decoracion"
-                etiqueta="Decoración del fondo"
-                :columnas="3"
-                :opciones="decoraciones"
-            />
+        <!-- 3. Información y condiciones -->
+        <template v-else-if="herramienta === 'informacion'">
             <div class="space-y-3">
-                <CampoColor
-                    v-model="doc.colores.primario"
-                    etiqueta="Color principal"
-                />
-                <CampoColor
-                    v-model="doc.colores.secundario"
-                    etiqueta="Color secundario"
-                />
-                <CampoColor v-model="doc.colores.texto" etiqueta="Texto" />
-                <CampoColor
-                    v-model="doc.colores.texto_suave"
-                    etiqueta="Texto secundario"
-                />
-                <CampoColor
-                    v-model="doc.colores.superficie"
-                    etiqueta="Recuadros informativos"
-                />
-                <CampoColor v-model="doc.colores.borde" etiqueta="Bordes" />
-            </div>
-
-            <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <p class="text-sm font-medium">Secciones informativas</p>
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-sm font-medium">Información del programa</p>
                     <Button
                         type="button"
-                        size="sm"
                         variant="outline"
+                        class="h-10"
                         :disabled="doc.contenido.secciones.length >= 4"
                         @click="agregarSeccion"
                     >
-                        <Plus /> Agregar
+                        <Plus /> Agregar sección
                     </Button>
                 </div>
                 <div
@@ -657,6 +753,7 @@ const agregarSeccion = () => {
                     <div class="flex gap-2">
                         <Input
                             v-model="s.titulo"
+                            class="h-10"
                             maxlength="60"
                             :aria-label="`Título de la sección ${i + 1}`"
                             placeholder="Título"
@@ -665,6 +762,7 @@ const agregarSeccion = () => {
                             type="button"
                             size="icon"
                             variant="ghost"
+                            class="size-10"
                             :aria-label="`Quitar la sección ${i + 1}`"
                             @click="doc.contenido.secciones.splice(i, 1)"
                         >
@@ -683,9 +781,10 @@ const agregarSeccion = () => {
                 </div>
                 <p
                     v-if="doc.contenido.secciones.length === 0"
-                    class="text-xs text-muted-foreground"
+                    class="rounded-lg border border-dashed px-3 py-4 text-center text-xs text-muted-foreground"
                 >
-                    Ej. «¿Cómo funciona?», horarios o beneficios del programa.
+                    Opcional. Ej. «¿Cómo funciona?», horarios o beneficios del
+                    programa.
                 </p>
             </div>
 

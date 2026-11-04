@@ -65,6 +65,7 @@ final class CatalogoAcciones
         'pago.disputa_ganada' => 'Disputa ganada',
         'pago.disputa_perdida' => 'Disputa perdida',
         'pago.revisado' => 'Incidencia de pago revisada',
+        'diseno.acceso_dasti' => 'Personal DASTI abrió un editor del negocio',
         'fidelidad.campana_creada' => 'Alta de campaña',
         'fidelidad.campana_actualizada' => 'Campaña actualizada',
         'fidelidad.campana_estado' => 'Estado de campaña',

@@ -11,6 +11,8 @@ export type ContextoEditor = EditorPagina & {
     recienAgregado: Ref<string | null>;
     /** Abre el catálogo para agregar un elemento. */
     abrirCatalogo: () => void;
+    /** Abre el catálogo de plantillas de diseño. */
+    abrirPlantillas: () => void;
 };
 
 const CLAVE: InjectionKey<ContextoEditor> = Symbol('editor-pagina');

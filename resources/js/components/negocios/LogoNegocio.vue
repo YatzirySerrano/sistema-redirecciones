@@ -11,6 +11,11 @@ import {
     destroy as eliminarLogo,
     store as subirLogo,
 } from '@/routes/admin/negocios/logo';
+import {
+    textoLimite,
+    useLimitesArchivos,
+    validarArchivo,
+} from '@/lib/archivos';
 import type { Negocio } from '@/types';
 
 /**
@@ -23,12 +28,14 @@ const props = withDefaults(
     { puedeEditar: true },
 );
 
-const TIPOS = ['image/png', 'image/jpeg', 'image/webp'];
-const TAMANO_MAXIMO = 1024 * 1024;
 const LADO_MINIMO = 64;
 const LADO_MAXIMO = 4000;
-const MENSAJE_GENERAL =
-    'No pudimos subir la imagen. Verifica que sea PNG, JPG o WEBP y que no supere 1 MB.';
+// Límites reales del servidor (LimitesArchivos::LOGO).
+const { limite } = useLimitesArchivos();
+const datosLimite = computed(() => limite('logo'));
+const MENSAJE_GENERAL = computed(
+    () => `No pudimos subir la imagen. ${textoLimite(datosLimite.value)}`,
+);
 
 const selector = useTemplateRef<HTMLInputElement>('selector');
 const archivo = ref<File | null>(null);
@@ -79,17 +86,10 @@ const alElegir = async (evento: Event) => {
         return;
     }
 
-    if (!TIPOS.includes(elegido.type)) {
-        error.value = 'El logotipo debe ser una imagen PNG, JPG o WEBP.';
+    const problema = await validarArchivo(elegido, datosLimite.value);
 
-        return;
-    }
-
-    if (elegido.size > TAMANO_MAXIMO) {
-        const mb = (elegido.size / 1024 / 1024).toLocaleString('es-MX', {
-            maximumFractionDigits: 1,
-        });
-        error.value = `La imagen pesa ${mb} MB. El máximo permitido es 1 MB.`;
+    if (problema) {
+        error.value = problema;
 
         return;
     }
@@ -142,7 +142,7 @@ const confirmarSubida = () => {
             onError: (errores) => {
                 // Se conserva la vista previa para que pueda corregirse.
                 error.value =
-                    errores.logo ?? errores.archivo ?? MENSAJE_GENERAL;
+                    errores.logo ?? errores.archivo ?? MENSAJE_GENERAL.value;
             },
             onFinish: () => {
                 subiendo.value = false;
@@ -259,7 +259,8 @@ const quitar = () => {
                         </Button>
                     </div>
                     <p class="text-xs text-muted-foreground">
-                        PNG, JPG o WEBP · máx. 1 MB · mínimo 64 × 64 px.
+                        {{ textoLimite(datosLimite) }} Entre 64 y 4000 px por
+                        lado; de preferencia cuadrado y con fondo transparente.
                     </p>
                 </template>
 

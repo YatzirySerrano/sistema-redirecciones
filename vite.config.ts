@@ -78,6 +78,8 @@ export default defineConfig({
             'composer.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
+            // Catálogo generado por scripts/generar-catalogo-iconos.mjs (compacto a propósito).
+            'resources/iconos/*',
         ],
         sortTailwindcss: {
             functions: ['clsx', 'cn', 'cva'],

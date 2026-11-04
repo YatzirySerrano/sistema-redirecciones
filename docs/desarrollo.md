@@ -50,7 +50,7 @@ Los correos (invitaciones y recuperación de contraseña) se envían **en cola**
 
 El idioma de la interfaz está fijado a español en `config/app.php` (no depende de `APP_LOCALE`).
 
-El servidor PHP de desarrollo usa los límites del `php.ini` (`upload_max_filesize`, `post_max_size`). El logotipo admite hasta 1 MB, por debajo del valor por defecto de 2 MB; en producción conviene `upload_max_filesize=2M` y `post_max_size=8M` como mínimo (y `client_max_body_size 8m` en Nginx).
+El servidor PHP de desarrollo (`php artisan serve`) usa los límites del `php.ini` (`upload_max_filesize`, `post_max_size`; el `public/.user.ini` solo aplica a PHP-FPM). Con los valores predeterminados de PHP (2 MB) la interfaz muestra «Tamaño máximo: 2 MB». Para probar los límites completos (5 MB logotipos, 10 MB imágenes, 20 MB video), ajusta en el `php.ini` que indica `php --ini`: `upload_max_filesize = 21M` y `post_max_size = 24M`. Ver «Límites de archivos» en `docs/despliegue.md`.
 
 En desarrollo, el plugin `@inertiajs/vite` renderiza también en el servidor (SSR). En móvil, la consola muestra avisos de _hydration mismatch_ del sidebar del starter kit (el servidor no conoce el ancho de pantalla) y de los tiempos relativos («hace 1 minuto»). Son solo de desarrollo: en producción no se ejecuta el SSR.
 

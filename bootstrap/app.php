@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnrutarDominiosPagina;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Services\Medios\LimitesArchivos;
 use App\Services\Paginas\RespuestaPublica;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
@@ -64,7 +65,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // El cuerpo supera post_max_size: PHP descarta todos los campos. Se
         // responde con un mensaje comprensible en lugar de la página 413.
         $exceptions->render(function (PostTooLargeException $e, Request $request) {
-            $mensaje = 'El archivo es demasiado grande. Elige una imagen PNG, JPG o WEBP de hasta 1 MB.';
+            $mensaje = app(LimitesArchivos::class)->mensajeExcedido();
 
             if ($request->expectsJson() && ! $request->header('X-Inertia')) {
                 return response()->json(['message' => $mensaje], 413);

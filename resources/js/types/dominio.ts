@@ -221,11 +221,16 @@ export type PermisoCatalogo = {
     etiqueta: string;
     descripcion: string;
     ambitos: ('plataforma' | 'negocio')[];
+    /** Agrupa permisos relacionados dentro de un módulo grande. */
+    seccion?: string;
 };
 
 export type ModuloPermisos = {
     clave: string;
     etiqueta: string;
+    descripcion: string;
+    /** plataforma (solo DASTI), negocio (clientes) o mixto. */
+    grupo: 'plataforma' | 'negocio' | 'mixto';
     permisos: PermisoCatalogo[];
 };
 

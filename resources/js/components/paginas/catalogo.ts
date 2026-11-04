@@ -311,4 +311,7 @@ export const TEXTURAS: Record<string, string> = {
     diagonales: 'Diagonales',
     ondas: 'Ondas',
     rombos: 'Rombos',
+    cruces: 'Cruces',
+    cuadros: 'Cuadros',
+    aurora: 'Resplandor',
 };

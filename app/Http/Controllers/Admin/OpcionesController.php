@@ -29,7 +29,7 @@ class OpcionesController extends Controller
      */
     public function negocios(Request $request): JsonResponse
     {
-        $this->exigirAlguno($request, ['negocios.ver', 'productos.ver', 'productos.crear', 'productos.transferir', 'usuarios.ver', 'usuarios.crear', 'redirecciones.ver', 'estadisticas.ver', 'auditoria.ver']);
+        $this->exigirAlguno($request, ['negocios.ver', 'productos.ver', 'productos.crear', 'productos.transferir', 'usuarios.ver', 'usuarios.crear', 'redirecciones.ver', 'estadisticas.ver', 'auditoria.ver', 'fidelidad.disenar_negocios', 'paginas.disenar_negocios']);
         ['buscar' => $buscar, 'pagina' => $pagina] = $this->parametros($request);
 
         $consulta = Negocio::query()

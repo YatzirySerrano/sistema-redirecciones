@@ -56,7 +56,7 @@ const enlace = (href?: string | null) =>
                         :src="urlMedio(e.archivo) ?? undefined"
                         :alt="e.alt"
                         :class="proporcion(bloque.proporcion)"
-                        class="w-full rounded-(--pe-radio) border border-(--pe-borde) object-cover"
+                        class="pe-imagen w-full rounded-(--pe-radio) border border-(--pe-borde) object-cover"
                         loading="lazy"
                         decoding="async"
                     />

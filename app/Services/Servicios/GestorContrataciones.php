@@ -110,12 +110,12 @@ class GestorContrataciones
         });
     }
 
-    public function suspender(Contratacion $contratacion, string $motivo, ?User $actor = null, bool $automatica = false): Contratacion
+    public function suspender(Contratacion $contratacion, ?string $motivo, ?User $actor = null, bool $automatica = false): Contratacion
     {
         return $this->cambiarEstado($contratacion, EstadoContratacion::Suspendida, $motivo, $actor, $automatica ? 'servicio.suspendido_automaticamente' : 'servicio.suspendido');
     }
 
-    public function reactivar(Contratacion $contratacion, string $motivo, User $actor): Contratacion
+    public function reactivar(Contratacion $contratacion, ?string $motivo, User $actor): Contratacion
     {
         if ($contratacion->estaVencida()) {
             throw ValidationException::withMessages(['contratacion' => 'El periodo ya venció. Registra una nueva contratación para reactivarlo.']);
@@ -130,7 +130,7 @@ class GestorContrataciones
      * Disputa o revisión: solo lectura hasta que se resuelva. Con
      * `$manual` DASTI decide mantenerla aunque Stripe falle a favor.
      */
-    public function restringir(Contratacion $contratacion, string $motivo, ?User $actor = null, bool $manual = false): Contratacion
+    public function restringir(Contratacion $contratacion, ?string $motivo, ?User $actor = null, bool $manual = false): Contratacion
     {
         if ($contratacion->estado === EstadoContratacion::Suspendida || $contratacion->estado === EstadoContratacion::Cancelada) {
             return $contratacion;
@@ -141,7 +141,7 @@ class GestorContrataciones
         return $this->cambiarEstado($contratacion, EstadoContratacion::Restringida, $motivo, $actor, 'servicio.restringido');
     }
 
-    public function levantarRestriccion(Contratacion $contratacion, string $motivo, ?User $actor = null): Contratacion
+    public function levantarRestriccion(Contratacion $contratacion, ?string $motivo, ?User $actor = null): Contratacion
     {
         if ($contratacion->estado !== EstadoContratacion::Restringida) {
             return $contratacion;
@@ -152,7 +152,7 @@ class GestorContrataciones
         return $this->cambiarEstado($contratacion, EstadoContratacion::Activa, $motivo, $actor, 'servicio.restriccion_levantada');
     }
 
-    public function cancelar(Contratacion $contratacion, string $motivo, ?User $actor = null): Contratacion
+    public function cancelar(Contratacion $contratacion, ?string $motivo, ?User $actor = null): Contratacion
     {
         return $this->cambiarEstado($contratacion, EstadoContratacion::Cancelada, $motivo, $actor, 'servicio.cancelado');
     }
@@ -186,7 +186,7 @@ class GestorContrataciones
             ->exists();
     }
 
-    private function cambiarEstado(Contratacion $contratacion, EstadoContratacion $estado, string $motivo, ?User $actor, string $accion): Contratacion
+    private function cambiarEstado(Contratacion $contratacion, EstadoContratacion $estado, ?string $motivo, ?User $actor, string $accion): Contratacion
     {
         if ($contratacion->estado === $estado) {
             if ($contratacion->isDirty('restriccion_manual')) {
@@ -199,7 +199,7 @@ class GestorContrataciones
         $anterior = $contratacion->estado;
         $contratacion->forceFill([
             'estado' => $estado,
-            'motivo' => mb_substr($motivo, 0, 255),
+            'motivo' => $motivo === null ? null : mb_substr($motivo, 0, 255),
             'estado_cambiado_en' => now(),
         ])->save();
         $contratacion->loadMissing(['negocio', 'servicio']);

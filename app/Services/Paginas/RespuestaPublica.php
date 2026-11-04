@@ -51,7 +51,9 @@ class RespuestaPublica
             "default-src 'none'",
             'script-src '.implode(' ', $script),
             'style-src '.implode(' ', $estilo),
-            'font-src https://fonts.bunny.net',
+            // Bunny entrega algunas familias (p. ej. DM Sans) desde Fontsource
+            // en jsDelivr: solo esa ruta.
+            'font-src https://fonts.bunny.net https://cdn.jsdelivr.net/fontsource/',
             "img-src 'self' data:",
             "media-src 'self'",
             'frame-src '.implode(' ', Insertados::ORIGENES),

@@ -4,6 +4,7 @@ namespace App\Services\Fidelidad\Diseno;
 
 use App\Models\ArchivoPublico;
 use App\Models\Negocio;
+use App\Services\Iconos\CatalogoIconos;
 use App\Services\Medios\AlmacenMedios;
 
 /**
@@ -119,7 +120,8 @@ final class DocumentoDiseno
         'tarjeta.decoracion_opacidad' => ['entero', 0, 60],
 
         'progreso.presentacion' => ['opcion', self::PRESENTACIONES],
-        'progreso.icono' => ['opcion', self::ICONOS],
+        // Clave heredada (ICONOS) o ícono de la biblioteca («i:<nombre>»).
+        'progreso.icono' => ['icono'],
         'progreso.completo_fondo' => ['color'],
         'progreso.completo_icono' => ['color'],
         'progreso.pendiente_fondo' => ['color'],
@@ -283,6 +285,7 @@ final class DocumentoDiseno
                 : [$predeterminado, null],
             'opcion' => in_array($valor, $regla[1], true) ? [$valor, null] : [$predeterminado, 'Algunas opciones no eran válidas y se restablecieron.'],
             'fuente' => is_string($valor) && isset(self::FUENTES[$valor]) ? [$valor, null] : [$predeterminado, 'Algunas opciones no eran válidas y se restablecieron.'],
+            'icono' => is_string($valor) && app(CatalogoIconos::class)->existe($valor) ? [$valor, null] : [$predeterminado, 'Algunas opciones no eran válidas y se restablecieron.'],
             'imagen' => $this->imagen($valor, $negocio),
             default => [$predeterminado, null],
         };

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\User;
 use App\Services\Apariencia\MarcaDasti;
 use App\Services\Apariencia\TemaVisual;
+use App\Services\Medios\LimitesArchivos;
 use App\Services\Servicios\AccesoServicios;
 use App\Services\Usuarios\PreferenciasUsuario;
 use Illuminate\Http\Request;
@@ -83,6 +84,8 @@ class HandleInertiaRequests extends Middleware
             // Identidad de DASTI (logotipo oficial cuando se coloque en
             // public/marca; mientras tanto, recurso neutral temporal).
             'marca' => fn () => app(MarcaDasti::class)->datos(),
+            // Límites reales de carga (formatos y tamaño máximo por tipo).
+            'limites_archivos' => fn () => $usuario !== null ? app(LimitesArchivos::class)->todos() : null,
             'preferencias' => [
                 'vistas' => $usuario === null ? (object) [] : (object) PreferenciasUsuario::vistas($usuario),
             ],

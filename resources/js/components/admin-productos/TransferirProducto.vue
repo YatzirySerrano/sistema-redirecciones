@@ -102,7 +102,7 @@ const enviar = () => {
                     etiqueta="Motivo de la transferencia"
                     para="transferir-motivo"
                     :error="form.errors.motivo"
-                    ayuda="Mínimo 5 caracteres. Queda registrado en la auditoría."
+                    ayuda="Obligatorio (mínimo 5 caracteres): cambiar el negocio propietario de un enlace permanente es una operación sensible y debe quedar justificada en la auditoría."
                 >
                     <Textarea
                         id="transferir-motivo"

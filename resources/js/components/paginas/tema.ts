@@ -1,4 +1,4 @@
-import { contraste, mezclar } from '@/lib/color';
+import { contraste, mezclar, primerPlano } from '@/lib/color';
 import { familiaCss } from './catalogo';
 import type { Bloque, Medio, Tema } from './tipos';
 
@@ -59,6 +59,7 @@ export function variablesTema(tema: Tema): Record<string, string> {
         '--pe-tarjeta-texto': hex(c.tarjeta_texto, '#1f1f1f'),
         '--pe-borde': hex(c.borde, '#e5e5e5'),
         '--pe-acento': hex(c.acento, '#111111'),
+        '--pe-acento-texto': primerPlano(hex(c.acento, '#111111')),
         '--pe-fuente': familiaCss(t.fuente_texto),
         '--pe-fuente-titulos': familiaCss(t.fuente_titulos),
         '--pe-tamano': `${Math.min(20, Math.max(14, t.tamano))}px`,
@@ -101,7 +102,11 @@ export function estiloFondo(tema: Tema): Record<string, string> {
         case 'textura':
             return {
                 backgroundColor: base,
-                ...textura(f.textura, hex(f.color_textura, base)),
+                ...textura(
+                    f.textura,
+                    hex(f.color_textura, base),
+                    hex(tema.colores.acento, base),
+                ),
             };
         default:
             return { backgroundColor: base };
@@ -111,8 +116,27 @@ export function estiloFondo(tema: Tema): Record<string, string> {
 function textura(
     clave: Tema['fondo']['textura'],
     color: string,
+    acento: string,
 ): Record<string, string> {
     switch (clave) {
+        case 'cruces': {
+            // SVG propio; el color ya viene validado como #rrggbb.
+            const trazo = encodeURIComponent(color);
+
+            return {
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M13 8v10M8 13h10' stroke='${trazo}' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                backgroundSize: '26px 26px',
+            };
+        }
+        case 'cuadros':
+            return {
+                backgroundImage: `linear-gradient(90deg, color-mix(in srgb, ${color} 60%, transparent) 50%, transparent 50%), linear-gradient(color-mix(in srgb, ${color} 60%, transparent) 50%, transparent 50%)`,
+                backgroundSize: '32px 32px',
+            };
+        case 'aurora':
+            return {
+                backgroundImage: `radial-gradient(60% 45% at 12% 8%, ${color}, transparent 70%), radial-gradient(55% 40% at 92% 28%, color-mix(in srgb, ${acento} 45%, transparent), transparent 70%), radial-gradient(70% 45% at 50% 105%, ${color}, transparent 72%)`,
+            };
         case 'cuadricula':
             return {
                 backgroundImage: `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`,
@@ -141,6 +165,61 @@ function textura(
                 backgroundSize: '18px 18px',
             };
     }
+}
+
+/**
+ * Opciones de estilo añadidas después de la primera versión. Un documento
+ * guardado antes no las tiene: estos valores reproducen exactamente su
+ * diseño original.
+ */
+export function extrasTema(tema: Tema) {
+    const d = tema.disposicion;
+    const b = tema.botones;
+
+    return {
+        monograma: d.monograma === true,
+        formaImagen: d.forma_imagen ?? 'tema',
+        tarjetas: d.tarjetas ?? 'borde',
+        lienzo: d.lienzo ?? 'libre',
+        titulos: d.titulos ?? 'simple',
+        iconoFondo: b.icono_fondo ?? 'ninguno',
+        mayusculas: b.mayusculas === true,
+    };
+}
+
+/**
+ * Completa (sin cambiar nada de lo existente) las claves del tema que no
+ * existían cuando se guardó el documento.
+ */
+export function completarTema(tema: Tema, porDefecto: Tema): Tema {
+    const salida = { ...tema } as Record<string, unknown>;
+
+    for (const [seccion, valores] of Object.entries(porDefecto)) {
+        const actual = (tema as Record<string, unknown>)[seccion];
+
+        salida[seccion] =
+            actual && typeof actual === 'object' && !Array.isArray(actual)
+                ? { ...(valores as object), ...(actual as object) }
+                : (actual ?? valores);
+    }
+
+    return salida as Tema;
+}
+
+/** Iniciales para el monograma (cuando no hay foto ni logotipo). */
+export function iniciales(nombre: string): string {
+    const palabras = nombre
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+        .split(/\s+/)
+        .filter(Boolean);
+
+    return (
+        palabras
+            .slice(0, 2)
+            .map((p) => p[0])
+            .join('')
+            .toUpperCase() || '•'
+    );
 }
 
 /** Colores del botón: los del elemento (si los tiene) o los del tema. */
@@ -212,7 +291,10 @@ export function fondoBoton(tema: Tema, colorBoton?: string | null): string {
 
     switch (tema.botones.estilo) {
         case 'contorno':
+        case 'subrayado':
             return fondo;
+        case 'degradado':
+            return mezclar(boton, hex(tema.colores.acento, boton), 0.5);
         case 'suave':
             return mezclar(boton, fondo, 0.22);
         case 'vidrio':

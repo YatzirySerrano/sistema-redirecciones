@@ -1,8 +1,11 @@
+import { usePage } from '@inertiajs/vue3';
+import { mensajeErrorSubida } from '@/lib/archivos';
+import type { LimiteArchivo, TipoLimite } from '@/lib/archivos';
 import { reactive } from 'vue';
 import { toast } from 'vue-sonner';
-import { destroy, index, store } from '@/routes/cliente/paginas/medios';
 import type { Medio } from '../tipos';
 import { api, ErrorApi } from './api';
+import { conId } from './rutas';
 
 export type MedioBiblioteca = Medio & {
     tipo: 'imagen' | 'video';
@@ -29,6 +32,27 @@ export const biblioteca = reactive({
     subiendo: false,
 });
 
+/** URL de la biblioteca; el editor las configura al abrirse. */
+const rutas = { medios: '', subir: '', eliminar: '' };
+
+/**
+ * Configura las URL (vienen en la prop `rutas` del editor). Si cambian
+ * (otro negocio), se descarta la lista cargada.
+ */
+export function configurarBiblioteca(nuevas: {
+    medios: string;
+    subir: string;
+    eliminar: string;
+}): void {
+    if (nuevas.medios !== rutas.medios) {
+        biblioteca.medios = [];
+        biblioteca.uso = null;
+        biblioteca.cargada = false;
+    }
+
+    Object.assign(rutas, nuevas);
+}
+
 export async function cargarBiblioteca(forzar = false): Promise<void> {
     if ((biblioteca.cargada && !forzar) || biblioteca.cargando) {
         return;
@@ -38,7 +62,7 @@ export async function cargarBiblioteca(forzar = false): Promise<void> {
 
     try {
         const respuesta = await api<{ medios: MedioBiblioteca[]; uso: Uso }>(
-            index().url,
+            rutas.medios,
         );
         biblioteca.medios = respuesta.medios;
         biblioteca.uso = respuesta.uso;
@@ -66,7 +90,7 @@ export async function subirMedio(
     biblioteca.subiendo = true;
 
     try {
-        const respuesta = await api<{ medio: MedioBiblioteca }>(store().url, {
+        const respuesta = await api<{ medio: MedioBiblioteca }>(rutas.subir, {
             metodo: 'POST',
             formulario: datos,
         });
@@ -79,9 +103,16 @@ export async function subirMedio(
 
         return respuesta.medio;
     } catch (e) {
+        const limites = (usePage().props.limites_archivos ?? null) as Record<
+            TipoLimite,
+            LimiteArchivo
+        > | null;
+        const limite = limites?.[tipo === 'video' ? 'video' : 'imagen'];
         toast.error(
             e instanceof ErrorApi
-                ? (e.errores.archivo ?? e.message)
+                ? e.estado === 413 && limite
+                    ? mensajeErrorSubida(413, limite)
+                    : (e.errores.archivo ?? e.message)
                 : 'No pudimos subir el archivo.',
         );
 
@@ -93,7 +124,7 @@ export async function subirMedio(
 
 export async function eliminarMedio(medio: MedioBiblioteca): Promise<boolean> {
     try {
-        await api(destroy(medio.id).url, { metodo: 'DELETE' });
+        await api(conId(rutas.eliminar, medio.id), { metodo: 'DELETE' });
         biblioteca.medios = biblioteca.medios.filter((m) => m.id !== medio.id);
 
         if (biblioteca.uso) {

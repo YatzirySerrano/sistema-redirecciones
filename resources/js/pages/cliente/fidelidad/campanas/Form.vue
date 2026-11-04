@@ -82,12 +82,12 @@ const guardar = () => {
 <template>
     <Head :title="campana ? 'Editar campaña' : 'Nueva campaña'" />
 
+    <NavFidelidad :servicio="servicio" />
+
     <EncabezadoPagina
         :titulo="campana ? `Editar «${campana.nombre}»` : 'Nueva campaña'"
         descripcion="Define la meta, la recompensa y las reglas que protegen tu programa."
     />
-
-    <NavFidelidad :servicio="servicio" />
 
     <p
         v-if="campana && campana.participantes > 0"

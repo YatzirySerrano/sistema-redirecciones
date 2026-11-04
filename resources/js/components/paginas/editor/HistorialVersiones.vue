@@ -13,11 +13,10 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { fechaHora, relativo } from '@/lib/formato';
-import { versiones as rutaVersiones } from '@/routes/cliente/paginas';
-import { restaurar } from '@/routes/cliente/paginas/versiones';
 import type { Documento } from '../tipos';
 import { api, ErrorApi } from './api';
 import { usarEditor } from './contexto';
+import { conId } from './rutas';
 import type { ResumenPagina } from './useEditorPagina';
 
 /** Historial de versiones (publicaciones y guardados importantes). */
@@ -45,7 +44,7 @@ watch(abierto, async (v) => {
 
     try {
         lista.value = (
-            await api<{ versiones: Version[] }>(rutaVersiones().url)
+            await api<{ versiones: Version[] }>(editor.rutas.versiones)
         ).versiones;
     } catch (e) {
         toast.error(
@@ -70,7 +69,7 @@ const confirmar = async () => {
             documento: Documento;
             pagina: ResumenPagina;
             mensaje: string;
-        }>(restaurar(elegida.value.id).url, {
+        }>(conId(editor.rutas.restaurar, elegida.value.id), {
             metodo: 'POST',
             datos: { version: editor.pagina.value.version },
         });

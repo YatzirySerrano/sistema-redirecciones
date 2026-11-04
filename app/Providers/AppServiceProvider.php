@@ -17,6 +17,7 @@ use App\Models\Servicio;
 use App\Models\User;
 use App\Services\Apariencia\TemaVisual;
 use App\Services\Autorizacion\CatalogoPermisos;
+use App\Services\Autorizacion\NegocioDeTrabajo;
 use App\Services\Configuracion\AjustesPlataforma;
 use App\Services\Pagos\PasarelaOpenpay;
 use App\Services\Pagos\PasarelaPago;
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(AjustesPlataforma::class);
         $this->app->scoped(TemaVisual::class);
         $this->app->scoped(AccesoServicios::class);
+        $this->app->scoped(NegocioDeTrabajo::class);
         $this->app->bind(PasarelaPago::class, PasarelaOpenpay::class);
     }
 
@@ -127,6 +129,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('administrar-plataforma', fn (User $usuario) => $usuario->esAdministrador());
+        // «Diseño para clientes»: personal DASTI con permiso para diseñar
+        // en al menos un módulo.
+        Gate::define('disenar-para-negocios', fn (User $usuario) => $usuario->esAdministrador()
+            && ($usuario->tienePermiso('fidelidad.disenar_negocios') || $usuario->tienePermiso('paginas.disenar_negocios')));
         Gate::define('usar-panel-cliente', fn (User $usuario) => $usuario->esCliente() && $usuario->negocio_id !== null);
         Gate::define('ver-estadisticas-cliente', fn (User $usuario) => $usuario->esCliente()
             && $usuario->tienePermiso('estadisticas.ver')

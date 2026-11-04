@@ -124,7 +124,7 @@ const activar = () =>
         },
     });
 
-// Cambios de estado con motivo
+// Cambios de estado (motivo opcional)
 const accionPendiente = ref<{
     contratacion: Contratacion;
     accion: string;
@@ -452,12 +452,10 @@ void router;
     <DialogoConfirmacion
         v-model:open="dialogoActivar"
         titulo="Activar servicio"
-        descripcion="Activa un servicio para un negocio sin pago en línea. Solo se activa el servicio elegido y queda registrado con tu nombre, la fecha y el motivo."
+        descripcion="Activa un servicio para un negocio sin pago en línea. Solo se activa el servicio elegido; tu nombre, la fecha y la operación quedan registrados automáticamente."
         confirmar="Activar"
         :procesando="formActivar.processing"
-        :deshabilitado="
-            !formActivar.negocio_id || formActivar.motivo.trim().length < 5
-        "
+        :deshabilitado="!formActivar.negocio_id"
         @confirmar="activar"
     >
         <div class="space-y-3">
@@ -533,6 +531,8 @@ void router;
             <CampoFormulario
                 etiqueta="Motivo"
                 para="motivo-activar"
+                opcional
+                ayuda="Puedes agregar un motivo para facilitar el seguimiento."
                 :error="formActivar.errors.motivo"
             >
                 <Textarea
@@ -556,13 +556,14 @@ void router;
         confirmar="Confirmar"
         :destructivo="accionPendiente?.accion === 'suspender'"
         :procesando="formEstado.processing"
-        :deshabilitado="formEstado.motivo.trim().length < 5"
         @update:open="(v: boolean) => !v && (accionPendiente = null)"
         @confirmar="confirmarAccion"
     >
         <CampoFormulario
             etiqueta="Motivo"
             para="motivo-estado"
+            opcional
+            ayuda="Puedes agregar un motivo para facilitar el seguimiento."
             :error="
                 formEstado.errors.motivo ||
                 (formEstado.errors as Record<string, string>).contratacion

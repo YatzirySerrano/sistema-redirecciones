@@ -13,6 +13,7 @@ use App\Services\Fidelidad\Diseno\GestorDisenos;
 use App\Services\Fidelidad\Diseno\PlantillasDiseno;
 use App\Services\Fidelidad\Diseno\PresentacionPublica;
 use App\Services\Medios\AlmacenMedios;
+use App\Services\Medios\LimitesArchivos;
 use App\Services\Servicios\AccesoServicios;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Diseño de la tarjeta digital (solo apariencia). Ver y previsualizar exige
+ * «Diseñar mi programa»: apariencia de la página pública del consumidor y de
+ * la tarjeta que contiene (solo presentación). Ver y previsualizar exige
  * el permiso `fidelidad.diseno` y Fidelidad en modo consulta; guardar,
  * publicar, restaurar y subir imágenes exigen además la contratación activa
  * (`RequiereServicio:fidelidad,operar`).
@@ -48,6 +50,7 @@ class DisenoController extends ControladorFidelidad
 
         return Inertia::render('cliente/fidelidad/Diseno', [
             ...$this->contexto($request),
+            'rutas' => $this->rutasEditor($negocio, $campana),
             'negocio' => $negocio->nombre_comercial,
             'edicion' => [
                 'puede' => $opera,
@@ -95,7 +98,7 @@ class DisenoController extends ControladorFidelidad
         [$negocio, $campana, $datos] = $this->entrada($request);
         $resultado = $this->gestor->publicar($negocio, $campana, $datos['documento'], (int) $datos['version'], $this->usuario($request));
 
-        return $this->respuesta($resultado['diseno'], $resultado['avisos'], 'Diseño publicado. Tus clientes ya ven la nueva tarjeta.');
+        return $this->respuesta($resultado['diseno'], $resultado['avisos'], 'Diseño publicado. Tus clientes ya ven la nueva página de su programa.');
     }
 
     public function restaurar(Request $request, DisenoVersion $version): JsonResponse
@@ -126,6 +129,7 @@ class DisenoController extends ControladorFidelidad
         ], [
             'imagen.required' => 'Elige una imagen.',
             'imagen.file' => 'No recibimos la imagen. Inténtalo nuevamente.',
+            'imagen.uploaded' => 'La imagen es demasiado grande. '.app(LimitesArchivos::class)->texto($request->input('uso') === 'logo' ? LimitesArchivos::LOGO : LimitesArchivos::IMAGEN),
         ]);
 
         $archivo = $medios->guardarImagen(
@@ -135,12 +139,55 @@ class DisenoController extends ControladorFidelidad
             $this->usuario($request),
             $datos['uso'] === 'logo' ? 600 : 1600,
             'imagen',
+            $datos['uso'] === 'logo' ? LimitesArchivos::LOGO : LimitesArchivos::IMAGEN,
         );
 
         return response()->json(['archivo' => $archivo->resumen(), 'mensaje' => 'Imagen lista. Se limpiaron sus datos ocultos (como la ubicación).']);
     }
 
     // ---------------------------------------------------------------
+
+    /**
+     * TODAS las URL que usa el editor (Diseno.vue no construye rutas por su
+     * cuenta). Las que llevan un identificador usan el marcador `__ID__`.
+     * Se puede sobrescribir para abrir el editor en otro contexto (p. ej.
+     * la administración de DASTI para un negocio concreto).
+     *
+     * @return array<string, string>
+     */
+    protected function rutasEditor(Negocio $negocio, ?Campana $campana): array
+    {
+        // Personal DASTI («Diseño para clientes»): mismas acciones sobre las
+        // rutas administrativas del negocio elegido.
+        if ($this->esDasti()) {
+            $n = ['negocio' => $negocio->id];
+            $volver = route('admin.disenos.index', $n, absolute: false);
+
+            return [
+                'editar' => route('admin.disenos.fidelidad.edit', $n, absolute: false),
+                'editar_campana' => route('admin.disenos.fidelidad.edit', [...$n, 'campana' => '__ID__'], absolute: false),
+                'guardar' => route('admin.disenos.fidelidad.update', $n, absolute: false),
+                'publicar' => route('admin.disenos.fidelidad.publicar', $n, absolute: false),
+                'restaurar' => route('admin.disenos.fidelidad.restaurar', [...$n, 'version' => '__ID__'], absolute: false),
+                'quitar_variante' => route('admin.disenos.fidelidad.variantes.destroy', [...$n, 'campana' => '__ID__'], absolute: false),
+                'subir_imagen' => route('admin.disenos.fidelidad.imagenes.store', $n, absolute: false),
+                'inicio' => $volver,
+                'campanas' => $volver,
+            ];
+        }
+
+        return [
+            'editar' => route('cliente.fidelidad.diseno.edit', absolute: false),
+            'editar_campana' => route('cliente.fidelidad.diseno.edit', ['campana' => '__ID__'], absolute: false),
+            'guardar' => route('cliente.fidelidad.diseno.update', absolute: false),
+            'publicar' => route('cliente.fidelidad.diseno.publicar', absolute: false),
+            'restaurar' => route('cliente.fidelidad.diseno.restaurar', '__ID__', absolute: false),
+            'quitar_variante' => route('cliente.fidelidad.diseno.variantes.destroy', '__ID__', absolute: false),
+            'subir_imagen' => route('cliente.fidelidad.diseno.imagenes.store', absolute: false),
+            'inicio' => route('cliente.fidelidad.inicio', absolute: false),
+            'campanas' => route('cliente.fidelidad.campanas.index', absolute: false),
+        ];
+    }
 
     /**
      * @return array{0: Negocio, 1: Campana|null, 2: array<string, mixed>}

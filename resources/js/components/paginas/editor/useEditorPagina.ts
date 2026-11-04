@@ -1,13 +1,9 @@
 import { useDebounceFn } from '@vueuse/core';
 import { computed, nextTick, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
-import {
-    borrador,
-    despublicar as rutaDespublicar,
-    publicar as rutaPublicar,
-} from '@/routes/cliente/paginas';
 import type { Documento } from '../tipos';
 import { api, ErrorApi } from './api';
+import type { RutasEditor } from './rutas';
 
 export type ResumenPagina = {
     id: number;
@@ -49,7 +45,9 @@ const LIMITE_HISTORIAL = 100;
 export function useEditorPagina(inicial: {
     documento: Documento;
     pagina: ResumenPagina;
+    rutas: RutasEditor;
 }) {
+    const rutas = inicial.rutas;
     const documento = ref<Documento>(
         JSON.parse(JSON.stringify(inicial.documento)) as Documento,
     );
@@ -217,7 +215,7 @@ export function useEditorPagina(inicial: {
         const enviado = JSON.stringify(documento.value);
 
         try {
-            const respuesta = await api<RespuestaPagina>(borrador().url, {
+            const respuesta = await api<RespuestaPagina>(rutas.borrador, {
                 metodo: 'PUT',
                 datos: {
                     documento: documento.value,
@@ -254,7 +252,7 @@ export function useEditorPagina(inicial: {
         ocupado.value = 'publicando';
 
         try {
-            const respuesta = await api<RespuestaPagina>(rutaPublicar().url, {
+            const respuesta = await api<RespuestaPagina>(rutas.publicar, {
                 metodo: 'POST',
                 datos: { version: pagina.value.version },
             });
@@ -276,10 +274,9 @@ export function useEditorPagina(inicial: {
         ocupado.value = 'despublicando';
 
         try {
-            const respuesta = await api<RespuestaPagina>(
-                rutaDespublicar().url,
-                { metodo: 'POST' },
-            );
+            const respuesta = await api<RespuestaPagina>(rutas.despublicar, {
+                metodo: 'POST',
+            });
             pagina.value = respuesta.pagina;
             toast.success(respuesta.mensaje ?? 'Página despublicada.');
 
@@ -336,6 +333,7 @@ export function useEditorPagina(inicial: {
     };
 
     return {
+        rutas,
         documento,
         pagina,
         errores,

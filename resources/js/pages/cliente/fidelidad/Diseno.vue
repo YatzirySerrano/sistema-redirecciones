@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { useElementSize } from '@vueuse/core';
 import {
-    CreditCard,
+    ArrowLeft,
+    ArrowRight,
+    Check,
     Ellipsis,
     Eye,
-    History,
-    LayoutTemplate,
     Lock,
-    MessageSquareText,
-    PanelTop,
     Palette,
+    PencilRuler,
     Redo2,
     RotateCcw,
     Save,
     Send,
-    Stamp,
-    Store,
     TriangleAlert,
     Undo2,
 } from '@lucide/vue';
@@ -28,16 +26,32 @@ import {
     watch,
 } from 'vue';
 import { toast } from 'vue-sonner';
+import Ayuda from '@/components/comun/Ayuda.vue';
 import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
 import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
 import { cargarFuentes } from '@/components/fidelidad-diseno/catalogo';
+import type { ClaveZona } from '@/components/fidelidad-diseno/edicion';
 import type {
+    ClaveDecoracion,
     DocumentoDiseno,
     EstadoPrograma,
 } from '@/components/fidelidad-diseno/tipos';
 import { enviar } from '@/components/fidelidad/diseno/api';
 import { avisosLegibilidad } from '@/components/fidelidad/diseno/legibilidad';
 import PanelHerramientas from '@/components/fidelidad/diseno/PanelHerramientas.vue';
+import {
+    herramienta as datosHerramienta,
+    herramientasCambiadas,
+    herramientasDe,
+    pasoDe,
+    PASOS,
+    ZONAS,
+} from '@/components/fidelidad/diseno/pasos';
+import type {
+    ClaveHerramienta,
+    Paso,
+} from '@/components/fidelidad/diseno/pasos';
+import RevisarPublicar from '@/components/fidelidad/diseno/RevisarPublicar.vue';
 import type {
     ArchivoImagen,
     CampanaDiseno,
@@ -47,6 +61,7 @@ import type {
     VersionDiseno,
 } from '@/components/fidelidad/diseno/tipos';
 import VistaPrevia from '@/components/fidelidad/diseno/VistaPrevia.vue';
+import AvisoDisenoDasti from '@/components/disenos/AvisoDisenoDasti.vue';
 import NavFidelidad from '@/components/fidelidad/NavFidelidad.vue';
 import type {
     EstadoServicio,
@@ -64,26 +79,40 @@ import { Spinner } from '@/components/ui/spinner';
 import { fechaHora, relativo } from '@/lib/formato';
 import { ErrorPeticion, pedir } from '@/lib/peticion';
 import { inicio } from '@/routes/cliente/fidelidad';
-import {
-    edit,
-    publicar as rutaPublicar,
-    restaurar as rutaRestaurar,
-    update as rutaGuardar,
-} from '@/routes/cliente/fidelidad/diseno';
-import { destroy as rutaQuitarVariante } from '@/routes/cliente/fidelidad/diseno/variantes';
+import { edit } from '@/routes/cliente/fidelidad/diseno';
 
 defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Fidelidad', href: inicio() },
-            { title: 'Diseño de tarjeta', href: edit() },
+            { title: 'Diseñar mi programa', href: edit() },
         ],
     },
 });
 
+/** URL que entrega el controlador (DisenoController::rutasEditor). */
+type RutasEditor = {
+    editar: string;
+    editar_campana: string;
+    guardar: string;
+    publicar: string;
+    restaurar: string;
+    quitar_variante: string;
+    subir_imagen: string;
+    inicio: string;
+    campanas: string;
+};
+
 const props = defineProps<{
     servicio: EstadoServicio;
     puede: PuedeFidelidad;
+    /** Personal DASTI diseñando para el negocio («Diseño para clientes»). */
+    contexto_dasti?: {
+        negocio_id: number;
+        negocio: string;
+        volver: string;
+    } | null;
+    rutas: RutasEditor;
     negocio: string;
     edicion: { puede: boolean; motivo: string | null };
     variante: { campana_id: number; nombre: string } | null;
@@ -98,6 +127,8 @@ const props = defineProps<{
 }>();
 
 const clonar = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+const conId = (plantilla: string, id: number | string) =>
+    plantilla.replace('__ID__', encodeURIComponent(String(id)));
 
 // ---- Estado del documento ----
 const doc = ref<DocumentoDiseno>(clonar(props.diseno.borrador));
@@ -116,6 +147,14 @@ const medios = computed<Record<string, string>>(() => ({
 }));
 const esVariante = computed(() => props.variante !== null);
 const avisos = computed(() => avisosLegibilidad(doc.value, esVariante.value));
+const puedePublicar = computed(
+    () =>
+        props.edicion.puede &&
+        ocupado.value === null &&
+        (sucio.value ||
+            !servidor.value.existe ||
+            servidor.value.cambios_sin_publicar),
+);
 
 watch(
     () => [doc.value.tipografia.titulos, doc.value.tipografia.texto],
@@ -300,6 +339,12 @@ const manejarError = (e: unknown) => {
     );
 };
 
+const cuerpo = () => ({
+    campana_id: props.variante?.campana_id ?? null,
+    version: servidor.value.version,
+    documento: doc.value,
+});
+
 const guardar = async () => {
     if (ocupado.value || !props.edicion.puede) {
         return;
@@ -308,13 +353,9 @@ const guardar = async () => {
     ocupado.value = 'guardar';
 
     try {
-        const r = await pedir(rutaGuardar.url(), {
+        const r = await pedir(props.rutas.guardar, {
             metodo: 'PUT',
-            datos: {
-                campana_id: props.variante?.campana_id ?? null,
-                version: servidor.value.version,
-                documento: doc.value,
-            },
+            datos: cuerpo(),
         });
         aplicarRespuesta((await r.json()) as RespuestaDiseno);
     } catch (e) {
@@ -333,20 +374,15 @@ const publicar = async () => {
     ocupado.value = 'publicar';
 
     try {
-        const r = await pedir(rutaPublicar.url(), {
+        const r = await pedir(props.rutas.publicar, {
             metodo: 'POST',
-            datos: {
-                campana_id: props.variante?.campana_id ?? null,
-                version: servidor.value.version,
-                documento: doc.value,
-            },
+            datos: cuerpo(),
         });
         aplicarRespuesta((await r.json()) as RespuestaDiseno);
-        dialogoPublicar.value = false;
     } catch (e) {
         manejarError(e);
-        dialogoPublicar.value = false;
     } finally {
+        dialogoPublicar.value = false;
         ocupado.value = null;
     }
 };
@@ -370,7 +406,7 @@ const restaurar = async () => {
     ocupado.value = 'restaurar';
 
     try {
-        const r = await pedir(rutaRestaurar.url(v.id), {
+        const r = await pedir(conId(props.rutas.restaurar, v.id), {
             metodo: 'POST',
             datos: { version: servidor.value.version },
         });
@@ -384,13 +420,18 @@ const restaurar = async () => {
     }
 };
 
-const descartar = () => reemplazar(JSON.parse(guardado.value));
+const dialogoDescartar = ref(false);
+const descartar = () => {
+    reemplazar(JSON.parse(guardado.value));
+    dialogoDescartar.value = false;
+};
 const volverAPublicado = () => {
     if (servidor.value.publicado) {
         reemplazar(servidor.value.publicado);
         toast.info('Se cargó el diseño publicado. Guarda para conservarlo.');
     }
 };
+const dialogoRestablecer = ref(false);
 const restablecer = () => {
     reemplazar({
         ...clonar(props.predeterminado),
@@ -399,9 +440,10 @@ const restablecer = () => {
             logo: doc.value.identidad.logo,
         },
     });
-    toast.info(
-        'Se aplicó el diseño predeterminado. Puedes deshacerlo con Ctrl+Z.',
-    );
+    dialogoRestablecer.value = false;
+    toast.info('Se recuperaron los colores y estilos originales.', {
+        action: { label: 'Deshacer', onClick: deshacer },
+    });
 };
 
 const usarPlantilla = (p: PlantillaDiseno) => {
@@ -421,14 +463,17 @@ const usarPlantilla = (p: PlantillaDiseno) => {
         },
     });
     toast.success(`Plantilla «${p.nombre}» aplicada.`, {
-        description: 'Puedes deshacerlo con el botón Deshacer.',
+        description: 'Sigue con el paso 2 para ponerle tu identidad.',
+        action: { label: 'Deshacer', onClick: deshacer },
     });
 };
 
-// ---- Variantes por campaña ----
+// ---- Diseño general o de una campaña ----
 const cambiarVariante = (valor: string) => {
     router.get(
-        edit.url(valor === '' ? undefined : { query: { campana: valor } }),
+        valor === ''
+            ? props.rutas.editar
+            : conId(props.rutas.editar_campana, valor),
     );
 };
 const dialogoQuitarVariante = ref(false);
@@ -441,12 +486,12 @@ const quitarVariante = async () => {
 
     try {
         const r = await enviar<{ mensaje: string }>(
-            rutaQuitarVariante.url(props.variante.campana_id),
+            conId(props.rutas.quitar_variante, props.variante.campana_id),
             'DELETE',
         );
         toast.success(r.mensaje);
         saltarAviso = true;
-        router.get(edit.url());
+        router.get(props.rutas.editar);
     } catch (e) {
         manejarError(e);
     } finally {
@@ -460,22 +505,95 @@ const recargar = () => {
     window.location.reload();
 };
 
-// ---- Secciones y vista en móvil ----
-const secciones = computed(() =>
-    [
-        { clave: 'plantillas', nombre: 'Plantillas', icono: LayoutTemplate },
-        { clave: 'identidad', nombre: 'Identidad', icono: Store },
-        { clave: 'tarjeta', nombre: 'Tarjeta', icono: CreditCard },
-        { clave: 'progreso', nombre: 'Sellos', icono: Stamp },
-        { clave: 'mensajes', nombre: 'Mensajes', icono: MessageSquareText },
-        { clave: 'pagina', nombre: 'Página', icono: PanelTop },
-        { clave: 'historial', nombre: 'Historial', icono: History },
-    ].filter((s) => !(esVariante.value && s.clave === 'pagina')),
+// ---- Pasos y herramientas ----
+const raiz = ref<HTMLElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
+const { width: anchoEditor } = useElementSize(raiz);
+/** Mismo corte que `@2xl/editor` (42rem): una sola columna. */
+const angosto = computed(
+    () => anchoEditor.value > 0 && anchoEditor.value < 672,
 );
-const seccion = ref(props.diseno.existe ? 'tarjeta' : 'plantillas');
-const vistaMovil = ref<'herramientas' | 'vista'>('herramientas');
-const avisosPorSeccion = (clave: string) =>
-    avisos.value.filter((a) => a.seccion === clave).length;
+
+const herramientaActual = ref<ClaveHerramienta>(
+    props.diseno.existe ? 'encabezado' : 'plantillas',
+);
+const pasoActual = computed<Paso>(() => pasoDe(herramientaActual.value));
+const herramientasPaso = computed(() =>
+    herramientasDe(pasoActual.value, esVariante.value),
+);
+const vistaMovil = ref<'vista' | 'editar'>('editar');
+const zonaElegida = ref<ClaveZona | null>(null);
+
+/** Zona resaltada en la vista previa: la tocada o la de la herramienta. */
+const zonaSeleccionada = computed<ClaveZona | null>(() => {
+    if (
+        zonaElegida.value &&
+        ZONAS[zonaElegida.value].herramienta === herramientaActual.value
+    ) {
+        return zonaElegida.value;
+    }
+
+    const encontrada = (Object.keys(ZONAS) as ClaveZona[]).find(
+        (z) =>
+            ZONAS[z].herramienta === herramientaActual.value &&
+            !(esVariante.value && ZONAS[z].soloGeneral),
+    );
+
+    return encontrada ?? null;
+});
+
+const mostrarPanel = () => {
+    if (angosto.value) {
+        vistaMovil.value = 'editar';
+    }
+
+    void nextTick(() => {
+        const p = panel.value;
+
+        if (p && p.getBoundingClientRect().top < 60) {
+            p.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+    });
+};
+
+const abrirHerramienta = (clave: ClaveHerramienta) => {
+    herramientaActual.value = clave;
+    mostrarPanel();
+};
+
+const abrirPaso = (paso: Paso) => {
+    herramientaActual.value = herramientasDe(paso, esVariante.value)[0].clave;
+    mostrarPanel();
+};
+
+const seleccionarZona = (zona: ClaveZona) => {
+    zonaElegida.value = zona;
+    herramientaActual.value = ZONAS[zona].herramienta;
+    mostrarPanel();
+};
+
+const pasoVecino = (delta: number) =>
+    PASOS.find((p) => p.numero === pasoActual.value.numero + delta) ?? null;
+
+const avisosPaso = (paso: Paso) =>
+    avisos.value.filter((a) =>
+        herramientasDe(paso, esVariante.value).some(
+            (h) => h.clave === a.herramienta,
+        ),
+    ).length;
+const avisosHerramienta = (clave: ClaveHerramienta) =>
+    avisos.value.filter((a) => a.herramienta === clave).length;
+
+// ---- Resumen de cambios (paso 4) ----
+const referencia = computed(
+    () =>
+        servidor.value.publicado ??
+        (esVariante.value ? props.general : null) ??
+        props.predeterminado,
+);
+const cambios = computed(() =>
+    herramientasCambiadas(doc.value, referencia.value, esVariante.value),
+);
 
 // ---- Vista previa ----
 const campanaPrevia = ref<number | null>(
@@ -485,13 +603,52 @@ const metaInicial =
     props.campanas.find((c) => c.id === campanaPrevia.value)?.meta ?? 10;
 const visitasPrevia = ref(Math.round(metaInicial * 0.6));
 const estadoPrevia = ref<EstadoPrograma>('en_progreso');
-const modoPrevia = ref<'tarjeta' | 'pagina'>('tarjeta');
 const versionPrevia = ref<VersionDiseno | null>(null);
-const documentoPrevia = computed(
-    () => versionPrevia.value?.documento ?? doc.value,
-);
+/** Previsualización temporal (p. ej. una decoración bajo el cursor). */
+const previa = ref<{
+    ruta: 'pagina.decoracion' | 'tarjeta.decoracion';
+    valor: ClaveDecoracion;
+} | null>(null);
+const documentoPrevia = computed<DocumentoDiseno>(() => {
+    if (versionPrevia.value) {
+        return versionPrevia.value.documento;
+    }
+
+    const p = previa.value;
+
+    if (!p) {
+        return doc.value;
+    }
+
+    return p.ruta === 'pagina.decoracion'
+        ? { ...doc.value, pagina: { ...doc.value.pagina, decoracion: p.valor } }
+        : {
+              ...doc.value,
+              tarjeta: { ...doc.value.tarjeta, decoracion: p.valor },
+          };
+});
 
 watch(versionPrevia, (v) => v && cargarFuentes([v.documento]));
+watch(herramientaActual, () => (previa.value = null));
+
+const verVersion = (v: VersionDiseno) => {
+    versionPrevia.value = v;
+
+    if (angosto.value) {
+        vistaMovil.value = 'vista';
+    }
+};
+
+// ---- Barra inferior en teléfonos: se oculta mientras se escribe ----
+const escribiendo = ref(false);
+const alEnfocar = (e: FocusEvent) => {
+    const t = e.target as HTMLElement | null;
+    escribiendo.value =
+        !!t?.matches(
+            'input:not([type=range]):not([type=color]):not([type=checkbox]):not([type=radio]):not([type=file]), textarea',
+        ) && angosto.value;
+};
+const alDesenfocar = () => (escribiendo.value = false);
 
 const estadoTexto = computed(() => {
     if (sucio.value) {
@@ -510,19 +667,31 @@ const estadoTexto = computed(() => {
 
     return `Publicado ${relativo(servidor.value.publicado_en)}`;
 });
+
+const destino = computed(() =>
+    props.variante
+        ? `Los clientes de «${props.variante.nombre}» verán la nueva página de inmediato.`
+        : 'Todos tus clientes verán la nueva página de inmediato.',
+);
 </script>
 
 <template>
-    <Head title="Diseño de tarjeta" />
+    <Head title="Diseñar mi programa" />
+
+    <AvisoDisenoDasti
+        v-if="contexto_dasti"
+        :contexto="contexto_dasti"
+        editor="Diseñar Fidelidad"
+        class="mb-4"
+    />
+    <NavFidelidad v-else :servicio="servicio" />
 
     <EncabezadoPagina
-        titulo="Diseño de tarjeta"
-        descripcion="Personaliza la tarjeta digital y la página que ven tus clientes al escanear su tarjeta o abrir su enlace."
-        ayuda="El diseño solo cambia la apariencia. Las visitas, metas y recompensas vienen siempre de tus campañas y no se modifican al publicar."
+        titulo="Diseñar mi programa"
+        descripcion="Personaliza la página que abren tus clientes con su tarjeta o enlace: tu identidad, su tarjeta con el avance de visitas y la información del programa."
+        ayuda="El diseño solo cambia la apariencia. Las visitas, metas, recompensas y canjes vienen de tus campañas y nunca cambian al guardar o publicar."
         :icono="Palette"
     />
-
-    <NavFidelidad :servicio="servicio" />
 
     <p
         v-if="!edicion.puede && edicion.motivo"
@@ -547,300 +716,487 @@ const estadoTexto = computed(() => {
         <Button size="sm" variant="outline" @click="recargar">Recargar</Button>
     </div>
 
-    <!-- Barra de acciones -->
     <div
-        class="sticky top-0 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-xl border bg-card/95 px-3 py-2 shadow-xs backdrop-blur"
+        ref="raiz"
+        class="@container/editor"
+        @focusin="alEnfocar"
+        @focusout="alDesenfocar"
     >
-        <label class="sr-only" for="variante">Diseño que estás editando</label>
-        <select
-            id="variante"
-            class="h-9 w-full min-w-0 rounded-lg border border-input bg-background px-2 text-sm sm:w-auto sm:max-w-[14rem]"
-            :value="variante ? String(variante.campana_id) : ''"
-            @change="
-                cambiarVariante(($event.target as HTMLSelectElement).value)
-            "
-        >
-            <option value="">Diseño general</option>
-            <option v-for="c in campanas" :key="c.id" :value="String(c.id)">
-                {{ c.variante ? 'Variante: ' : 'Crear variante: '
-                }}{{ c.nombre }}
-            </option>
-        </select>
-        <span
-            class="hidden text-xs text-muted-foreground sm:inline"
-            role="status"
-            aria-live="polite"
-            >{{ estadoTexto }}</span
-        >
-        <div
-            class="ml-auto flex w-full flex-wrap items-center justify-end gap-1.5 sm:w-auto"
-        >
-            <Button
-                variant="ghost"
-                size="icon"
-                :disabled="!puedeDeshacer || !edicion.puede"
-                aria-label="Deshacer (Ctrl+Z)"
-                title="Deshacer (Ctrl+Z)"
-                @click="deshacer"
+        <div class="flex flex-col gap-4">
+            <!-- Qué diseño se edita -->
+            <section
+                class="flex flex-col gap-2 rounded-xl border bg-card px-3 py-3 shadow-xs @2xl/editor:flex-row @2xl/editor:items-center"
+                aria-label="Diseño que estás editando"
             >
-                <Undo2 />
-            </Button>
-            <Button
-                variant="ghost"
-                size="icon"
-                :disabled="!puedeRehacer || !edicion.puede"
-                aria-label="Rehacer (Ctrl+Shift+Z)"
-                title="Rehacer (Ctrl+Shift+Z)"
-                @click="rehacer"
-            >
-                <Redo2 />
-            </Button>
-            <DropdownMenu v-if="edicion.puede">
-                <DropdownMenuTrigger as-child>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Más acciones"
+                <div
+                    class="flex min-w-0 flex-1 flex-col gap-1.5 @lg/editor:flex-row @lg/editor:items-center"
+                >
+                    <label
+                        for="variante"
+                        class="flex shrink-0 items-center gap-1.5 text-sm font-medium"
                     >
-                        <Ellipsis />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-64">
-                    <DropdownMenuItem :disabled="!sucio" @select="descartar">
-                        <RotateCcw /> Descartar cambios sin guardar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        :disabled="!servidor.publicado"
-                        @select="volverAPublicado"
+                        Estás editando
+                        <Ayuda
+                            texto="El diseño general se usa en todas tus campañas. Si una campaña necesita una tarjeta distinta, crea su propio diseño: la página (fondo, imagen principal e información) sigue siendo la del diseño general."
+                        />
+                    </label>
+                    <select
+                        id="variante"
+                        class="h-10 w-full min-w-0 rounded-lg border border-input bg-background px-2 text-sm @lg/editor:max-w-xs"
+                        :value="variante ? String(variante.campana_id) : ''"
+                        @change="
+                            cambiarVariante(
+                                ($event.target as HTMLSelectElement).value,
+                            )
+                        "
                     >
-                        <Eye /> Cargar el diseño publicado
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @select="restablecer">
-                        <Palette /> Restablecer diseño predeterminado
-                    </DropdownMenuItem>
-                    <template v-if="variante && servidor.existe">
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            class="text-destructive"
-                            @select="dialogoQuitarVariante = true"
+                        <option value="">
+                            Diseño general (todas las campañas)
+                        </option>
+                        <option
+                            v-for="c in campanas"
+                            :key="c.id"
+                            :value="String(c.id)"
                         >
-                            Quitar variante (usar el diseño general)
-                        </DropdownMenuItem>
-                    </template>
-                </DropdownMenuContent>
-            </DropdownMenu>
-            <template v-if="edicion.puede">
-                <Button
-                    variant="outline"
-                    :disabled="ocupado !== null || !sucio"
-                    @click="guardar"
-                >
-                    <Spinner v-if="ocupado === 'guardar'" />
-                    <Save v-else />
-                    <span class="hidden sm:inline">Guardar borrador</span>
-                    <span class="max-[379px]:sr-only sm:hidden">Guardar</span>
-                </Button>
-                <Button
-                    :disabled="
-                        ocupado !== null ||
-                        (!sucio &&
-                            servidor.existe &&
-                            !servidor.cambios_sin_publicar)
-                    "
-                    @click="dialogoPublicar = true"
-                >
-                    <Send /> Publicar
-                </Button>
-            </template>
-        </div>
-        <span class="w-full text-xs text-muted-foreground sm:hidden">{{
-            estadoTexto
-        }}</span>
-    </div>
-
-    <p
-        v-if="variante"
-        class="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
-    >
-        Estás editando la tarjeta de «{{ variante.nombre }}». El fondo de la
-        página, la imagen principal y la información general se toman del diseño
-        general.
-    </p>
-
-    <!-- Selector de vista en móvil -->
-    <div
-        class="inline-flex w-full rounded-lg border bg-background p-0.5 lg:hidden"
-        role="group"
-        aria-label="Mostrar"
-    >
-        <button
-            type="button"
-            class="h-9 flex-1 rounded-md text-sm font-medium aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-            :aria-pressed="vistaMovil === 'herramientas'"
-            @click="vistaMovil = 'herramientas'"
-        >
-            Editar
-        </button>
-        <button
-            type="button"
-            class="h-9 flex-1 rounded-md text-sm font-medium aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-            :aria-pressed="vistaMovil === 'vista'"
-            @click="vistaMovil = 'vista'"
-        >
-            Vista previa
-        </button>
-    </div>
-
-    <div
-        class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]"
-    >
-        <!-- Herramientas -->
-        <section
-            class="min-w-0 overflow-hidden rounded-xl border bg-card shadow-xs"
-            :class="vistaMovil === 'vista' ? 'hidden lg:block' : ''"
-            aria-label="Herramientas de diseño"
-        >
-            <nav
-                class="flex gap-1 overflow-x-auto border-b px-2 py-2"
-                aria-label="Secciones del diseño"
-            >
-                <button
-                    v-for="s in secciones"
-                    :key="s.clave"
-                    type="button"
-                    class="relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground aria-[current=true]:bg-primary/10 aria-[current=true]:text-primary"
-                    :aria-current="seccion === s.clave"
-                    @click="seccion = s.clave"
-                >
-                    <component
-                        :is="s.icono"
-                        class="size-4"
-                        aria-hidden="true"
-                    />
-                    {{ s.nombre }}
-                    <span
-                        v-if="avisosPorSeccion(s.clave)"
-                        class="ml-0.5 inline-flex size-4 items-center justify-center rounded-full bg-warning text-[0.6rem] font-bold text-white"
-                        :aria-label="`${avisosPorSeccion(s.clave)} avisos de legibilidad`"
-                        >{{ avisosPorSeccion(s.clave) }}</span
-                    >
-                </button>
-            </nav>
-
-            <div class="p-4 sm:p-5">
-                <!-- Historial (también disponible en solo lectura) -->
-                <div v-if="seccion === 'historial'" class="space-y-3">
-                    <p class="text-sm text-muted-foreground">
-                        Cada publicación queda guardada. Puedes verla en la
-                        vista previa y restaurarla en tu borrador (se guarda un
-                        respaldo de lo que tengas antes).
-                    </p>
-                    <ul
-                        v-if="versiones.length"
-                        class="divide-y rounded-lg border"
-                    >
-                        <li
-                            v-for="v in versiones"
-                            :key="v.id"
-                            class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5"
-                        >
-                            <div class="min-w-0 text-sm">
-                                <p class="font-medium">{{ v.motivo }}</p>
-                                <p class="text-xs text-muted-foreground">
-                                    {{ fechaHora(v.en) }}
-                                    <template v-if="v.autor"
-                                        >· {{ v.autor }}</template
-                                    >
-                                </p>
-                            </div>
-                            <div class="flex gap-1.5">
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    :aria-pressed="versionPrevia?.id === v.id"
-                                    @click="
-                                        versionPrevia = v;
-                                        vistaMovil = 'vista';
-                                    "
-                                >
-                                    <Eye /> Ver
-                                </Button>
-                                <Button
-                                    v-if="edicion.puede"
-                                    size="sm"
-                                    variant="outline"
-                                    @click="versionARestaurar = v"
-                                >
-                                    <RotateCcw /> Restaurar
-                                </Button>
-                            </div>
-                        </li>
-                    </ul>
-                    <p
-                        v-else
-                        class="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground"
-                    >
-                        Aún no hay publicaciones. Cuando publiques, aparecerán
-                        aquí.
-                    </p>
+                            {{
+                                c.variante
+                                    ? `Diseño para «${c.nombre}»`
+                                    : `Crear diseño para «${c.nombre}»`
+                            }}
+                        </option>
+                    </select>
                 </div>
-
-                <fieldset
-                    v-else
-                    :disabled="!edicion.puede"
-                    class="min-w-0 disabled:opacity-90"
+                <p
+                    class="text-xs text-muted-foreground @2xl/editor:max-w-xs @2xl/editor:text-right"
+                    role="status"
+                    aria-live="polite"
                 >
-                    <legend class="sr-only">
-                        {{ secciones.find((s) => s.clave === seccion)?.nombre }}
-                    </legend>
-                    <PanelHerramientas
-                        v-model:documento="doc"
-                        :seccion="seccion"
-                        :archivos="archivos"
-                        :plantillas="plantillas"
-                        :es-variante="esVariante"
-                        :avisos="avisos"
-                        @subida="archivos = [$event, ...archivos]"
-                        @plantilla="usarPlantilla"
-                    />
-                </fieldset>
-            </div>
-        </section>
+                    <span class="font-medium text-foreground">{{
+                        estadoTexto
+                    }}</span>
+                    <template v-if="variante">
+                        · Solo cambia la tarjeta de «{{ variante.nombre }}».
+                    </template>
+                </p>
+            </section>
 
-        <!-- Vista previa -->
-        <section
-            class="min-w-0 lg:sticky lg:top-20 lg:self-start"
-            :class="vistaMovil === 'herramientas' ? 'hidden lg:block' : ''"
-            aria-label="Vista previa"
-        >
-            <VistaPrevia
-                v-model:campana="campanaPrevia"
-                v-model:modo="modoPrevia"
-                v-model:visitas="visitasPrevia"
-                v-model:estado="estadoPrevia"
-                :documento="documentoPrevia"
-                :general="general"
-                :negocio="negocio"
-                :campanas="campanas"
-                :medios="medios"
-                :viendo-version="
-                    versionPrevia
-                        ? `Versión del ${fechaHora(versionPrevia.en)}`
-                        : null
-                "
-                @salir-version="versionPrevia = null"
-            />
-        </section>
+            <!-- Acciones: arriba en pantallas amplias, abajo en teléfonos -->
+            <div
+                class="sticky bottom-0 z-30 order-last -mx-4 border-t bg-card/95 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-6px_18px_-12px_rgb(0_0_0/0.3)] backdrop-blur @2xl/editor:top-14 @2xl/editor:bottom-auto @2xl/editor:order-none @2xl/editor:mx-0 @2xl/editor:rounded-xl @2xl/editor:border @2xl/editor:px-3 @2xl/editor:pb-2 @2xl/editor:shadow-xs"
+                :class="escribiendo ? 'max-@2xl/editor:hidden' : ''"
+            >
+                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-2">
+                    <div
+                        class="grid basis-full grid-cols-2 gap-1 rounded-lg border bg-background p-0.5 @md/editor:max-w-xs @md/editor:flex-1 @md/editor:basis-auto @2xl/editor:hidden"
+                        role="group"
+                        aria-label="Mostrar"
+                    >
+                        <button
+                            type="button"
+                            class="inline-flex h-10 items-center justify-center gap-1.5 rounded-md text-sm font-medium aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                            :aria-pressed="vistaMovil === 'vista'"
+                            @click="vistaMovil = 'vista'"
+                        >
+                            <Eye class="size-4" aria-hidden="true" /> Vista
+                            previa
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex h-10 items-center justify-center gap-1.5 rounded-md text-sm font-medium aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                            :aria-pressed="vistaMovil === 'editar'"
+                            @click="vistaMovil = 'editar'"
+                        >
+                            <PencilRuler class="size-4" aria-hidden="true" />
+                            Editar
+                        </button>
+                    </div>
+                    <div class="flex flex-1 items-center gap-1.5">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            class="size-10"
+                            :disabled="!puedeDeshacer || !edicion.puede"
+                            aria-label="Deshacer (Ctrl+Z)"
+                            title="Deshacer (Ctrl+Z)"
+                            @click="deshacer"
+                        >
+                            <Undo2 />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            class="size-10"
+                            :disabled="!puedeRehacer || !edicion.puede"
+                            aria-label="Rehacer (Ctrl+Shift+Z)"
+                            title="Rehacer (Ctrl+Shift+Z)"
+                            @click="rehacer"
+                        >
+                            <Redo2 />
+                        </Button>
+                        <DropdownMenu v-if="edicion.puede">
+                            <DropdownMenuTrigger as-child>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="size-10"
+                                    aria-label="Más acciones"
+                                >
+                                    <Ellipsis />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" class="w-72">
+                                <DropdownMenuItem
+                                    class="min-h-10"
+                                    :disabled="!sucio"
+                                    @select="dialogoDescartar = true"
+                                >
+                                    <RotateCcw /> Descartar cambios sin guardar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    class="min-h-10"
+                                    :disabled="!servidor.publicado"
+                                    @select="volverAPublicado"
+                                >
+                                    <Eye /> Cargar el diseño publicado
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    class="min-h-10"
+                                    @select="dialogoRestablecer = true"
+                                >
+                                    <Palette /> Restablecer colores originales
+                                </DropdownMenuItem>
+                                <template v-if="variante && servidor.existe">
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        class="min-h-10 text-destructive"
+                                        @select="dialogoQuitarVariante = true"
+                                    >
+                                        Quitar el diseño de esta campaña
+                                    </DropdownMenuItem>
+                                </template>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div
+                            v-if="edicion.puede"
+                            class="ml-auto flex items-center gap-1.5"
+                        >
+                            <Button
+                                variant="outline"
+                                class="h-10"
+                                :disabled="ocupado !== null || !sucio"
+                                aria-label="Guardar borrador"
+                                @click="guardar"
+                            >
+                                <Spinner v-if="ocupado === 'guardar'" />
+                                <Save v-else />
+                                <span class="max-[379px]:hidden">Guardar</span>
+                            </Button>
+                            <Button
+                                class="h-10"
+                                :disabled="!puedePublicar"
+                                @click="dialogoPublicar = true"
+                            >
+                                <Send /> Publicar
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="grid grid-cols-1 gap-5 @2xl/editor:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] @5xl/editor:grid-cols-[13.5rem_minmax(0,1fr)_380px]"
+            >
+                <!-- Pasos (columna en pantallas muy amplias) -->
+                <nav
+                    class="hidden @5xl/editor:block"
+                    aria-label="Pasos del diseño"
+                >
+                    <ol class="sticky top-32 space-y-1">
+                        <li v-for="p in PASOS" :key="p.clave">
+                            <button
+                                type="button"
+                                class="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-muted aria-[current=step]:bg-primary/8 aria-[current=step]:font-semibold aria-[current=step]:text-primary"
+                                :aria-current="
+                                    pasoActual.clave === p.clave
+                                        ? 'step'
+                                        : undefined
+                                "
+                                @click="abrirPaso(p)"
+                            >
+                                <span
+                                    class="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
+                                    :class="
+                                        pasoActual.clave === p.clave
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'bg-background'
+                                    "
+                                    >{{ p.numero }}</span
+                                >
+                                <span class="min-w-0 flex-1">{{
+                                    p.nombre
+                                }}</span>
+                                <span
+                                    v-if="avisosPaso(p)"
+                                    class="inline-flex size-5 items-center justify-center rounded-full bg-warning text-[0.65rem] font-bold text-white"
+                                    :aria-label="`${avisosPaso(p)} avisos de legibilidad`"
+                                    >{{ avisosPaso(p) }}</span
+                                >
+                            </button>
+                            <ul
+                                v-if="
+                                    pasoActual.clave === p.clave &&
+                                    herramientasPaso.length > 1
+                                "
+                                class="mt-1 mb-2 ml-5 space-y-0.5 border-l pl-2"
+                            >
+                                <li
+                                    v-for="h in herramientasPaso"
+                                    :key="h.clave"
+                                >
+                                    <button
+                                        type="button"
+                                        class="flex min-h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=true]:bg-muted aria-[current=true]:font-medium aria-[current=true]:text-foreground"
+                                        :aria-current="
+                                            herramientaActual === h.clave
+                                        "
+                                        @click="abrirHerramienta(h.clave)"
+                                    >
+                                        <component
+                                            :is="h.icono"
+                                            class="size-4 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span
+                                            class="min-w-0 flex-1 leading-tight"
+                                            >{{ h.nombre }}</span
+                                        >
+                                        <TriangleAlert
+                                            v-if="avisosHerramienta(h.clave)"
+                                            class="size-3.5 text-warning"
+                                            aria-label="Con avisos"
+                                        />
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+                    </ol>
+                </nav>
+
+                <!-- Propiedades del paso -->
+                <section
+                    ref="panel"
+                    class="min-w-0 scroll-mt-32 overflow-hidden rounded-xl border bg-card shadow-xs"
+                    :class="
+                        vistaMovil === 'vista' ? 'max-@2xl/editor:hidden' : ''
+                    "
+                    :aria-label="`Paso ${pasoActual.numero}: ${pasoActual.nombre}`"
+                >
+                    <!-- Pasos compactos -->
+                    <nav
+                        class="border-b p-2 @5xl/editor:hidden"
+                        aria-label="Pasos del diseño"
+                    >
+                        <ol class="grid grid-cols-4 gap-1">
+                            <li v-for="p in PASOS" :key="p.clave">
+                                <button
+                                    type="button"
+                                    class="relative flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[0.7rem] leading-tight font-medium text-muted-foreground transition hover:bg-muted aria-[current=step]:bg-primary/8 aria-[current=step]:text-primary"
+                                    :aria-current="
+                                        pasoActual.clave === p.clave
+                                            ? 'step'
+                                            : undefined
+                                    "
+                                    :aria-label="`Paso ${p.numero}: ${p.nombre}`"
+                                    @click="abrirPaso(p)"
+                                >
+                                    <span
+                                        class="flex size-6 items-center justify-center rounded-full border text-xs font-bold"
+                                        :class="
+                                            pasoActual.clave === p.clave
+                                                ? 'border-primary bg-primary text-primary-foreground'
+                                                : 'bg-background'
+                                        "
+                                        >{{ p.numero }}</span
+                                    >
+                                    <span class="truncate">{{ p.corto }}</span>
+                                    <span
+                                        v-if="avisosPaso(p)"
+                                        class="absolute top-1 right-1 size-2 rounded-full bg-warning"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </li>
+                        </ol>
+                    </nav>
+
+                    <div class="space-y-4 p-4 sm:p-5">
+                        <header class="space-y-1">
+                            <p
+                                class="text-[0.68rem] font-semibold tracking-wider text-muted-foreground uppercase"
+                            >
+                                Paso {{ pasoActual.numero }} de
+                                {{ PASOS.length }}
+                            </p>
+                            <h2 class="text-lg font-semibold">
+                                {{ pasoActual.nombre }}
+                            </h2>
+                            <p class="text-sm text-muted-foreground">
+                                {{ pasoActual.descripcion }}
+                            </p>
+                        </header>
+
+                        <!-- Herramientas del paso (compactas) -->
+                        <div
+                            v-if="herramientasPaso.length > 1"
+                            class="grid grid-cols-2 gap-1.5 @sm/editor:grid-cols-3 @2xl/editor:grid-cols-2 @5xl/editor:hidden"
+                            role="tablist"
+                            aria-label="Herramientas del paso"
+                        >
+                            <button
+                                v-for="h in herramientasPaso"
+                                :key="h.clave"
+                                type="button"
+                                role="tab"
+                                :aria-selected="herramientaActual === h.clave"
+                                class="relative flex min-h-10 items-center gap-1.5 rounded-lg border bg-background px-2 text-left text-xs font-medium transition hover:bg-muted aria-selected:border-primary aria-selected:bg-primary/8 aria-selected:text-primary"
+                                @click="abrirHerramienta(h.clave)"
+                            >
+                                <component
+                                    :is="h.icono"
+                                    class="size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span class="min-w-0 flex-1 leading-tight">{{
+                                    h.nombre
+                                }}</span>
+                                <TriangleAlert
+                                    v-if="avisosHerramienta(h.clave)"
+                                    class="size-3.5 shrink-0 text-warning"
+                                    aria-label="Con avisos"
+                                />
+                            </button>
+                        </div>
+                        <h3
+                            v-if="herramientasPaso.length > 1"
+                            class="hidden items-center gap-2 border-t pt-4 text-sm font-semibold @5xl/editor:flex"
+                        >
+                            <component
+                                :is="datosHerramienta(herramientaActual).icono"
+                                class="size-4 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                            {{ datosHerramienta(herramientaActual).nombre }}
+                        </h3>
+
+                        <RevisarPublicar
+                            v-if="herramientaActual === 'revisar'"
+                            :cambios="cambios"
+                            :avisos="avisos"
+                            :servidor="servidor"
+                            :sucio="sucio"
+                            :puede-publicar="puedePublicar"
+                            :puede-editar="edicion.puede"
+                            :publicando="ocupado === 'publicar'"
+                            :destino="destino"
+                            :versiones="versiones"
+                            :version-vista="versionPrevia?.id ?? null"
+                            @ir="abrirHerramienta"
+                            @publicar="dialogoPublicar = true"
+                            @ver="verVersion"
+                            @restaurar="versionARestaurar = $event"
+                        />
+                        <fieldset
+                            v-else
+                            :disabled="!edicion.puede"
+                            class="min-w-0 disabled:opacity-90"
+                        >
+                            <legend class="sr-only">
+                                {{ datosHerramienta(herramientaActual).nombre }}
+                            </legend>
+                            <PanelHerramientas
+                                v-model:documento="doc"
+                                :herramienta="herramientaActual"
+                                :archivos="archivos"
+                                :plantillas="plantillas"
+                                :es-variante="esVariante"
+                                :avisos="avisos"
+                                :url-subida="rutas.subir_imagen"
+                                :medios="medios"
+                                :general="general"
+                                @subida="archivos = [$event, ...archivos]"
+                                @plantilla="usarPlantilla"
+                                @previsualizar="previa = $event"
+                            />
+                        </fieldset>
+
+                        <!-- Orden sugerido -->
+                        <div
+                            class="flex items-center justify-between gap-2 border-t pt-4"
+                        >
+                            <Button
+                                v-if="pasoVecino(-1)"
+                                variant="ghost"
+                                class="h-10"
+                                @click="abrirPaso(pasoVecino(-1)!)"
+                            >
+                                <ArrowLeft /> Anterior
+                            </Button>
+                            <span v-else />
+                            <Button
+                                v-if="pasoVecino(1)"
+                                variant="outline"
+                                class="h-10"
+                                @click="abrirPaso(pasoVecino(1)!)"
+                            >
+                                {{ pasoVecino(1)!.corto }}
+                                <ArrowRight />
+                            </Button>
+                            <span
+                                v-else-if="!cambios.length && !sucio"
+                                class="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                            >
+                                <Check class="size-4" aria-hidden="true" />
+                                Todo listo
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vista previa de la página completa -->
+                <section
+                    class="min-w-0 @2xl/editor:sticky @2xl/editor:top-32 @2xl/editor:self-start"
+                    :class="
+                        vistaMovil === 'editar' ? 'max-@2xl/editor:hidden' : ''
+                    "
+                    aria-label="Vista previa"
+                >
+                    <VistaPrevia
+                        v-model:campana="campanaPrevia"
+                        v-model:visitas="visitasPrevia"
+                        v-model:estado="estadoPrevia"
+                        :documento="documentoPrevia"
+                        :general="general"
+                        :negocio="negocio"
+                        :campanas="campanas"
+                        :medios="medios"
+                        :seleccionada="zonaSeleccionada"
+                        :viendo-version="
+                            versionPrevia
+                                ? `Versión del ${fechaHora(versionPrevia.en)}`
+                                : null
+                        "
+                        @salir-version="versionPrevia = null"
+                        @seleccionar="seleccionarZona"
+                    />
+                </section>
+            </div>
+        </div>
     </div>
 
     <DialogoConfirmacion
         v-model:open="dialogoPublicar"
         titulo="¿Publicar el diseño?"
-        :descripcion="
-            variante
-                ? `Los clientes de «${variante.nombre}» verán la nueva tarjeta de inmediato. Sus visitas y recompensas no cambian.`
-                : 'Tus clientes verán la nueva tarjeta de inmediato. Sus visitas, metas y recompensas no cambian.'
-        "
+        :descripcion="`${destino} Sus visitas, metas, recompensas y canjes no cambian.`"
         confirmar="Publicar"
         :procesando="ocupado === 'publicar'"
         @confirmar="publicar"
@@ -856,7 +1212,7 @@ const estadoTexto = computed(() => {
             Hay {{ avisos.length }}
             {{ avisos.length === 1 ? 'aviso' : 'avisos' }} de legibilidad.
             Puedes publicar de todos modos, pero revisarlos ayuda a que tus
-            clientes lean bien su tarjeta.
+            clientes lean bien su página.
         </p>
     </DialogoConfirmacion>
 
@@ -874,10 +1230,28 @@ const estadoTexto = computed(() => {
     />
 
     <DialogoConfirmacion
+        v-model:open="dialogoRestablecer"
+        titulo="¿Restablecer los colores originales?"
+        descripcion="Recupera los colores y estilos originales de DASTI (se conserva tu logotipo). Los cambios sin guardar se perderán, aunque puedes deshacerlo con «Deshacer»."
+        confirmar="Restablecer"
+        destructivo
+        @confirmar="restablecer"
+    />
+
+    <DialogoConfirmacion
+        v-model:open="dialogoDescartar"
+        titulo="¿Descartar los cambios sin guardar?"
+        descripcion="Volverás a lo último que guardaste. Puedes recuperarlos con «Deshacer»."
+        confirmar="Descartar"
+        destructivo
+        @confirmar="descartar"
+    />
+
+    <DialogoConfirmacion
         v-model:open="dialogoQuitarVariante"
-        titulo="¿Quitar la variante?"
-        :descripcion="`«${variante?.nombre}» volverá a usar el diseño general. Se borrará el historial de esta variante.`"
-        confirmar="Quitar variante"
+        titulo="¿Quitar el diseño de esta campaña?"
+        :descripcion="`«${variante?.nombre}» volverá a usar el diseño general. Se borrará el historial de este diseño.`"
+        confirmar="Quitar diseño"
         destructivo
         :procesando="ocupado === 'variante'"
         @confirmar="quitarVariante"
