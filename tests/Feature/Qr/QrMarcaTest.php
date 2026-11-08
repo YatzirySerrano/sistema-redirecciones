@@ -109,7 +109,8 @@ class QrMarcaTest extends TestCase
     public function test_el_svg_lleva_la_insignia_en_los_tres_ojos_sin_el_nombre_de_la_plataforma(): void
     {
         $producto = Producto::factory()->create();
-        $svg = app(GeneradorQr::class)->generar($producto, new OpcionesQr('#4C1D95'), 'svg', 512)['contenido'];
+        $opciones = new OpcionesQr('#4C1D95', estiloOjos: 'cuadrado', estiloModulos: 'cuadrado');
+        $svg = app(GeneradorQr::class)->generar($producto, $opciones, 'svg', 512)['contenido'];
 
         $this->assertStringNotContainsStringIgnoringCase('dasti', $svg);
         $this->assertStringNotContainsString('<text', $svg);
@@ -158,6 +159,79 @@ class QrMarcaTest extends TestCase
         $this->assertCount(3, $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]/s:image'));
         $this->assertSame('url(#recorte-logo)', (string) $this->buscar($xml, '/s:svg/s:path')[0]['mask']);
         $this->assertStringNotContainsStringIgnoringCase('dasti', $svg);
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function estilos(): array
+    {
+        $casos = [];
+
+        foreach (OpcionesQr::ESTILOS_OJOS as $ojos) {
+            foreach (OpcionesQr::ESTILOS_MODULOS as $modulos) {
+                $casos["ojos {$ojos}, módulos {$modulos}"] = [$ojos, $modulos];
+            }
+        }
+
+        return $casos;
+    }
+
+    #[DataProvider('estilos')]
+    public function test_cada_estilo_de_ojos_y_modulos_se_detecta_y_decodifica(string $ojos, string $modulos): void
+    {
+        $producto = Producto::factory()->create();
+        $generador = app(GeneradorQr::class);
+
+        foreach ([['#000000', '#FFFFFF', false, 'estandar', 512], ['#4C1D95', '#F5F3FF', false, 'amplio', 1024], ['#1E3A8A', '#FFFFFF', true, 'reducido', 2048]] as [$color, $fondo, $transparente, $margen, $tamano]) {
+            $opciones = new OpcionesQr($color, $fondo, $transparente, $margen, estiloOjos: $ojos, estiloModulos: $modulos);
+            $png = $generador->generar($producto, $opciones, 'png', $tamano)['contenido'];
+
+            $this->assertSame($producto->url_permanente, $this->detectarComoCamara($png), "{$ojos}/{$modulos} {$tamano}: el detector no localiza el código.");
+        }
+    }
+
+    public function test_por_defecto_los_ojos_y_los_modulos_son_redondeados(): void
+    {
+        $opciones = OpcionesQr::desdeArreglo(null);
+
+        $this->assertSame('redondeado', $opciones->estiloOjos);
+        $this->assertSame('redondeado', $opciones->estiloModulos);
+        $this->assertSame('redondeado', OpcionesQr::desdeArreglo(['estilo_ojos' => 'otro', 'estilo_modulos' => '<x>'])->estiloModulos);
+
+        $producto = Producto::factory()->create();
+        $svg = app(GeneradorQr::class)->generar($producto, $opciones, 'svg', 512)['contenido'];
+        $xml = $this->xml($svg);
+
+        // Marcos y módulos con arcos (esquinas redondeadas).
+        foreach ($this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]/s:path[1]') as $marco) {
+            $this->assertStringContainsString('A', (string) $marco['d']);
+        }
+        $this->assertStringContainsString('A', (string) $this->buscar($xml, '/s:svg/s:path')[0]['d']);
+    }
+
+    public function test_el_svg_de_puntos_dibuja_circulos_y_conserva_la_insignia(): void
+    {
+        $producto = Producto::factory()->create();
+        $svg = app(GeneradorQr::class)->generar($producto, new OpcionesQr(estiloOjos: 'hoja', estiloModulos: 'puntos'), 'svg', 512)['contenido'];
+        $xml = $this->xml($svg);
+
+        $this->assertMatchesRegularExpression('/a[\d.]+,[\d.]+ 0 1 0 /', (string) $this->buscar($xml, '/s:svg/s:path')[0]['d']);
+        $this->assertCount(3, $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]/s:image'));
+    }
+
+    public function test_los_estilos_se_validan_y_se_guardan_en_el_diseno(): void
+    {
+        $admin = User::factory()->create();
+        $producto = Producto::factory()->create();
+
+        $this->actingAs($admin)->put(route('productos.qr.update', $producto), ['estilo_ojos' => 'estrella'])->assertSessionHasErrors('estilo_ojos');
+        $this->actingAs($admin)->get(route('productos.qr.show', [$producto, 'estilo_modulos' => 'triangulos']))->assertSessionHasErrors('estilo_modulos');
+
+        $this->actingAs($admin)->put(route('productos.qr.update', $producto), ['estilo_ojos' => 'hoja', 'estilo_modulos' => 'puntos'])->assertSessionHasNoErrors();
+
+        $this->assertSame('hoja', $producto->fresh()->opciones_qr['estilo_ojos']);
+        $this->assertSame('puntos', $producto->fresh()->opciones_qr['estilo_modulos']);
     }
 
     public function test_la_respuesta_svg_incluye_la_insignia_y_respeta_la_politica_de_contenido(): void

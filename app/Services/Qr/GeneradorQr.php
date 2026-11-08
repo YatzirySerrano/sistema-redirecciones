@@ -24,8 +24,9 @@ use Throwable;
  * El QR nunca incluye el nombre de la plataforma en texto. Sus tres patrones
  * de localización («ojos») llevan la insignia (favicon) como sello, dibujada
  * de forma que los lectores sigan detectándolos (InsigniaOjosQr). El cliente
- * personaliza color, fondo, margen y, si lo cargó, el logotipo de su negocio
- * al centro.
+ * personaliza color, fondo, margen, la forma de los ojos y de los módulos
+ * (redondeados por defecto) y, si lo cargó, el logotipo de su negocio al
+ * centro.
  */
 class GeneradorQr
 {
@@ -97,9 +98,13 @@ class GeneradorQr
                     $this->recortarBajoLogo($resultado);
                 }
 
-                $this->insignia->aplicarSvg($resultado->getXml(), $resultado->getMatrix(), [$r, $g, $b]);
+                $this->insignia->aplicarSvg($resultado->getXml(), $resultado->getMatrix(), [$r, $g, $b], $opciones->estiloOjos, $opciones->estiloModulos);
             } elseif ($resultado instanceof GdResult) {
-                $this->insignia->aplicarPng($resultado->getImage(), $resultado->getMatrix(), [$r, $g, $b], [$fr, $fg, $fb], $opciones->fondoTransparente);
+                $this->insignia->aplicarPng(
+                    $resultado->getImage(), $resultado->getMatrix(), [$r, $g, $b], [$fr, $fg, $fb], $opciones->fondoTransparente,
+                    $opciones->estiloOjos, $opciones->estiloModulos,
+                    $logo !== null ? $this->zonaLogo($logo, $tamano, $resultado->getMatrix()->getOuterSize()) : null,
+                );
             }
         } catch (Throwable $e) {
             Log::warning('No se pudo aplicar la insignia al QR', ['producto_id' => $producto->id, 'error' => $e->getMessage()]);
@@ -112,6 +117,21 @@ class GeneradorQr
             'mime' => $resultado->getMimeType(),
             'nombre_archivo' => 'qr-'.Str::slug($producto->nombre).'-'.$producto->codigo.'.'.$formato,
         ];
+    }
+
+    /**
+     * Rectángulo (x, y, ancho, alto) que ocupa el logotipo en el PNG, con el
+     * mismo cálculo que endroid (GdTrait::addLogo) y un píxel de holgura.
+     *
+     * @return array{0: int, 1: int, 2: int, 3: int}
+     */
+    private function zonaLogo(string $logo, int $tamano, int $lado): array
+    {
+        $ancho = (int) round($tamano * self::PROPORCION_LOGO);
+        $medidas = @getimagesize($logo);
+        $alto = $medidas !== false && $medidas[0] > 0 ? intval($ancho * $medidas[1] / $medidas[0]) : $ancho;
+
+        return [intval($lado / 2 - $ancho / 2) - 1, intval($lado / 2 - $alto / 2) - 1, $ancho + 2, $alto + 2];
     }
 
     /**

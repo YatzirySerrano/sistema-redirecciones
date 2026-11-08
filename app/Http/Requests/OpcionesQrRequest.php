@@ -49,6 +49,8 @@ class OpcionesQrRequest extends FormRequest
             'fondo_transparente' => ['boolean'],
             'margen' => ['sometimes', Rule::in(array_keys(OpcionesQr::MARGENES))],
             'incluir_logo' => ['boolean'],
+            'estilo_ojos' => ['sometimes', Rule::in(OpcionesQr::ESTILOS_OJOS)],
+            'estilo_modulos' => ['sometimes', Rule::in(OpcionesQr::ESTILOS_MODULOS)],
             'formato' => ['sometimes', Rule::in(['png', 'svg'])],
             'tamano' => ['sometimes', 'integer', Rule::in(OpcionesQr::TAMANOS)],
             'descargar' => ['sometimes', 'boolean'],
@@ -71,7 +73,7 @@ class OpcionesQrRequest extends FormRequest
      */
     public function opciones(?array $guardadas = null): OpcionesQr
     {
-        $datos = $this->safe()->only(['color', 'fondo', 'fondo_transparente', 'margen', 'incluir_logo']);
+        $datos = $this->safe()->only(['color', 'fondo', 'fondo_transparente', 'margen', 'incluir_logo', 'estilo_ojos', 'estilo_modulos']);
 
         return OpcionesQr::desdeArreglo([...($guardadas ?? []), ...$datos]);
     }

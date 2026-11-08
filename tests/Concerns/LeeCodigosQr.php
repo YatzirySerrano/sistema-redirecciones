@@ -58,47 +58,57 @@ trait LeeCodigosQr
         $umbral = ($minimo + $maximo) / 2;
         $oscuro = fn (int $x, int $y): bool => $luz($x, $y) < $umbral;
 
-        // Esquina superior izquierda del patrón de localización.
-        [$x0, $y0] = [null, null];
-        for ($y = 0; $y < $alto && $x0 === null; $y++) {
+        // Contorno del código: funciona con ojos de esquinas rectas o
+        // redondeadas, porque los bordes rectos de los ojos marcan los límites.
+        [$x0, $y0, $x1, $y1] = [$ancho, $alto, -1, -1];
+        for ($y = 0; $y < $alto; $y++) {
             for ($x = 0; $x < $ancho; $x++) {
                 if ($oscuro($x, $y)) {
-                    [$x0, $y0] = [$x, $y];
-                    break;
+                    $x0 = min($x0, $x);
+                    $y0 = min($y0, $y);
+                    $x1 = max($x1, $x);
+                    $y1 = max($y1, $y);
                 }
             }
         }
 
-        if ($x0 === null) {
+        if ($x1 < 0) {
             return null;
         }
 
-        // El patrón mide 7 módulos; el último píxel oscuro de la fila marca el
-        // borde derecho del código.
-        $tramo = 0;
-        while ($x0 + $tramo < $ancho && $oscuro($x0 + $tramo, $y0)) {
-            $tramo++;
-        }
-        $x1 = $ancho - 1;
-        while ($x1 > $x0 && ! $oscuro($x1, $y0)) {
-            $x1--;
-        }
+        $lado = (($x1 - $x0) + ($y1 - $y0)) / 2 + 1;
 
-        $lado = $x1 - $x0 + 1;
-        $modulos = (int) round($lado / ($tramo / 7));
+        // Se prueba cada versión posible (21, 25, … módulos) y se queda con la
+        // primera rejilla que decodifica.
+        for ($modulos = 21; $modulos <= 177; $modulos += 4) {
+            $paso = $lado / $modulos;
 
-        if ($modulos < 21 || ($modulos - 17) % 4 !== 0) {
-            return null;
-        }
+            if ($paso < 1.5) {
+                break;
+            }
 
-        $paso = $lado / $modulos;
-        $matriz = [];
-        for ($i = 0; $i < $modulos; $i++) {
-            for ($j = 0; $j < $modulos; $j++) {
-                $matriz[$i][$j] = $oscuro((int) ($x0 + ($j + 0.5) * $paso), (int) ($y0 + ($i + 0.5) * $paso));
+            $matriz = [];
+            for ($i = 0; $i < $modulos; $i++) {
+                for ($j = 0; $j < $modulos; $j++) {
+                    $matriz[$i][$j] = $oscuro((int) ($x0 + ($j + 0.5) * $paso), (int) ($y0 + ($i + 0.5) * $paso));
+                }
+            }
+
+            $texto = $this->decodificarRejilla($matriz);
+
+            if ($texto !== null) {
+                return $texto;
             }
         }
 
+        return null;
+    }
+
+    /**
+     * @param  array<int, array<int, bool>>  $matriz
+     */
+    private function decodificarRejilla(array $matriz): ?string
+    {
         try {
             $resultado = (new Decoder)->decodeImage($matriz);
 

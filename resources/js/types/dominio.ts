@@ -32,8 +32,8 @@ export type Coleccion<T> = { data: T[] };
 
 export type Recurso<T> = { data: T };
 
-export type EstadoCuenta = "activo" | "suspendido";
-export type TipoProducto = "qr" | "nfc" | "combinado";
+export type EstadoCuenta = 'activo' | 'suspendido';
+export type TipoProducto = 'qr' | 'nfc' | 'combinado';
 
 export type Producto = {
     id: number;
@@ -41,8 +41,8 @@ export type Producto = {
     nombre: string;
     tipo: TipoProducto;
     tipo_etiqueta: string;
-    modalidad_destino: "compartido" | "independiente";
-    medio: "nfc" | "qr" | null;
+    modalidad_destino: 'compartido' | 'independiente';
+    medio: 'nfc' | 'qr' | null;
     medio_etiqueta: string | null;
     /** QR impresos del producto físico: 0 (NFC), 1 o 2; null en enlaces secundarios. */
     cantidad_qr: number | null;
@@ -67,7 +67,7 @@ export type Producto = {
         tiene_logo: boolean;
     };
     // Solo administrador:
-    estado_preparacion?: "pendiente" | "listo" | "entregado";
+    estado_preparacion?: 'pendiente' | 'listo' | 'entregado';
     estado_preparacion_etiqueta?: string;
     fecha_entrega?: string | null;
     referencia_comercial?: string | null;
@@ -106,7 +106,7 @@ export type Usuario = {
     id: number;
     name: string;
     email: string;
-    rol: "admin" | "cliente";
+    rol: 'admin' | 'cliente';
     rol_etiqueta: string;
     /** Rol dinámico (permisos). */
     rol_asignado?: { id: number; nombre: string } | null;
@@ -119,7 +119,7 @@ export type Usuario = {
     } | null;
     debe_cambiar_password: boolean;
     /** null si el acceso se creó con contraseña temporal. */
-    invitacion: "pendiente" | "fallida" | "aceptada" | null;
+    invitacion: 'pendiente' | 'fallida' | 'aceptada' | null;
     invitacion_enviada_en: string | null;
     two_factor: boolean;
     ultimo_acceso_en: string | null;
@@ -131,7 +131,7 @@ export type CambioDestino = {
     id: number;
     url_anterior: string | null;
     url_nueva: string | null;
-    origen: "admin" | "cliente" | "sistema";
+    origen: 'admin' | 'cliente' | 'sistema';
     origen_etiqueta: string;
     autor: string;
     producto?: {
@@ -195,7 +195,7 @@ export type ActividadProducto = {
     nombre: string;
     codigo: string;
     tipo: string;
-    tipo_clave: "qr" | "nfc" | "combinado";
+    tipo_clave: 'qr' | 'nfc' | 'combinado';
     negocio: string;
     total: number;
     nfc: number;
@@ -270,8 +270,10 @@ export type OpcionesQr = {
     color: string;
     fondo: string;
     fondo_transparente: boolean;
-    margen: "ninguno" | "reducido" | "estandar" | "amplio";
+    margen: 'ninguno' | 'reducido' | 'estandar' | 'amplio';
     incluir_logo: boolean;
+    estilo_ojos: 'redondeado' | 'hoja' | 'cuadrado';
+    estilo_modulos: 'redondeado' | 'puntos' | 'cuadrado';
 };
 
 export type Barra = {
@@ -294,7 +296,7 @@ export type Rol = {
     nombre: string;
     clave: string | null;
     descripcion: string | null;
-    ambito: "plataforma" | "negocio";
+    ambito: 'plataforma' | 'negocio';
     ambito_etiqueta: string;
     del_sistema: boolean;
     protegido: boolean;
@@ -309,7 +311,7 @@ export type PermisoCatalogo = {
     nombre: string;
     etiqueta: string;
     descripcion: string;
-    ambitos: ("plataforma" | "negocio")[];
+    ambitos: ('plataforma' | 'negocio')[];
     /** Agrupa permisos relacionados dentro de un módulo grande. */
     seccion?: string;
 };
@@ -319,7 +321,7 @@ export type ModuloPermisos = {
     etiqueta: string;
     descripcion: string;
     /** plataforma (solo DASTI), negocio (clientes) o mixto. */
-    grupo: "plataforma" | "negocio" | "mixto";
+    grupo: 'plataforma' | 'negocio' | 'mixto';
     permisos: PermisoCatalogo[];
 };
 

@@ -92,7 +92,7 @@ class QrTest extends TestCase
         $this->actingAs($admin)->put(route('productos.qr.update', $producto), ['color' => '#1E3A8A', 'fondo_transparente' => 1, 'margen' => 'reducido'])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(['color' => '#1E3A8A', 'fondo' => '#FFFFFF', 'fondo_transparente' => true, 'margen' => 'reducido', 'incluir_logo' => false], $producto->fresh()->opciones_qr);
+        $this->assertSame(['color' => '#1E3A8A', 'fondo' => '#FFFFFF', 'fondo_transparente' => true, 'margen' => 'reducido', 'incluir_logo' => false, 'estilo_ojos' => 'redondeado', 'estilo_modulos' => 'redondeado'], $producto->fresh()->opciones_qr);
     }
 
     /**

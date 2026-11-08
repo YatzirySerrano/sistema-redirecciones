@@ -52,6 +52,54 @@ const TAMANOS = [
     { value: '1024', label: '1024 px (impresión pequeña)' },
     { value: '2048', label: '2048 px (impresión grande)' },
 ];
+// Forma de los ojos y de los módulos. Cada opción lleva un icono SVG que
+// dibuja la forma con el mismo radio que usa el servidor.
+const ESTILOS_OJOS: {
+    value: OpcionesQr['estilo_ojos'];
+    label: string;
+    marco: string;
+}[] = [
+    {
+        value: 'redondeado',
+        label: 'Redondeados',
+        marco: 'M8,2H16A6,6 0 0 1 22,8V16A6,6 0 0 1 16,22H8A6,6 0 0 1 2,16V8A6,6 0 0 1 8,2Z',
+    },
+    {
+        value: 'hoja',
+        label: 'Hoja',
+        marco: 'M11,2H20.5A1.5,1.5 0 0 1 22,3.5V13A9,9 0 0 1 13,22H3.5A1.5,1.5 0 0 1 2,20.5V11A9,9 0 0 1 11,2Z',
+    },
+    { value: 'cuadrado', label: 'Cuadrados', marco: 'M2,2H22V22H2Z' },
+];
+const ESTILOS_MODULOS: {
+    value: OpcionesQr['estilo_modulos'];
+    label: string;
+}[] = [
+    { value: 'redondeado', label: 'Fluidos' },
+    { value: 'puntos', label: 'Puntos' },
+    { value: 'cuadrado', label: 'Cuadrados' },
+];
+// Patrón de muestra (5×5) para el icono de los módulos.
+const MUESTRA_MODULOS = [
+    [0, 0],
+    [1, 0],
+    [3, 0],
+    [0, 1],
+    [2, 1],
+    [3, 1],
+    [4, 1],
+    [1, 2],
+    [2, 2],
+    [4, 2],
+    [0, 3],
+    [1, 3],
+    [3, 3],
+    [0, 4],
+    [2, 4],
+    [3, 4],
+    [4, 4],
+];
+
 const PREDEFINIDOS = [
     '#000000',
     '#1F2937',
@@ -90,6 +138,8 @@ const consulta = (extra: Record<string, string | number> = {}) => ({
     fondo_transparente: diseno.fondo_transparente ? 1 : 0,
     margen: diseno.margen,
     incluir_logo: diseno.incluir_logo && tieneLogo.value ? 1 : 0,
+    estilo_ojos: diseno.estilo_ojos,
+    estilo_modulos: diseno.estilo_modulos,
     ...extra,
 });
 
@@ -205,6 +255,8 @@ const restablecer = () =>
         fondo_transparente: false,
         margen: 'estandar',
         incluir_logo: false,
+        estilo_ojos: 'redondeado',
+        estilo_modulos: 'redondeado',
     });
 
 const guardar = () => {
@@ -352,6 +404,112 @@ const guardar = () => {
                     </div>
                 </div>
 
+                <div class="grid grid-cols-1 gap-4 @md:grid-cols-2">
+                    <fieldset class="grid gap-2">
+                        <legend class="mb-2 text-sm font-medium">
+                            Esquinas
+                        </legend>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button
+                                v-for="estilo in ESTILOS_OJOS"
+                                :key="estilo.value"
+                                type="button"
+                                class="presionable group flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs transition hover:border-primary/60 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                                :class="
+                                    diseno.estilo_ojos === estilo.value
+                                        ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                                        : 'text-muted-foreground'
+                                "
+                                :aria-pressed="
+                                    diseno.estilo_ojos === estilo.value
+                                "
+                                @click="diseno.estilo_ojos = estilo.value"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    class="size-8 transition-transform group-hover:scale-110"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        :d="`${estilo.marco}M7,5H17A2,2 0 0 1 19,7V17A2,2 0 0 1 17,19H7A2,2 0 0 1 5,17V7A2,2 0 0 1 7,5Z`"
+                                        fill="currentColor"
+                                        fill-rule="evenodd"
+                                    />
+                                    <rect
+                                        x="8.5"
+                                        y="8.5"
+                                        width="7"
+                                        height="7"
+                                        :rx="
+                                            estilo.value === 'cuadrado'
+                                                ? 1
+                                                : 2.2
+                                        "
+                                        fill="currentColor"
+                                    />
+                                </svg>
+                                {{ estilo.label }}
+                            </button>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="grid gap-2">
+                        <legend class="mb-2 text-sm font-medium">
+                            Puntos del código
+                        </legend>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button
+                                v-for="estilo in ESTILOS_MODULOS"
+                                :key="estilo.value"
+                                type="button"
+                                class="presionable group flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs transition hover:border-primary/60 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                                :class="
+                                    diseno.estilo_modulos === estilo.value
+                                        ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                                        : 'text-muted-foreground'
+                                "
+                                :aria-pressed="
+                                    diseno.estilo_modulos === estilo.value
+                                "
+                                @click="diseno.estilo_modulos = estilo.value"
+                            >
+                                <svg
+                                    viewBox="0 0 25 25"
+                                    class="size-8 transition-transform group-hover:scale-110"
+                                    aria-hidden="true"
+                                >
+                                    <template
+                                        v-for="[x, y] in MUESTRA_MODULOS"
+                                        :key="`${x}-${y}`"
+                                    >
+                                        <circle
+                                            v-if="estilo.value === 'puntos'"
+                                            :cx="x * 5 + 2.5"
+                                            :cy="y * 5 + 2.5"
+                                            r="2.3"
+                                            fill="currentColor"
+                                        />
+                                        <rect
+                                            v-else
+                                            :x="x * 5"
+                                            :y="y * 5"
+                                            width="5"
+                                            height="5"
+                                            :rx="
+                                                estilo.value === 'redondeado'
+                                                    ? 2.2
+                                                    : 0
+                                            "
+                                            fill="currentColor"
+                                        />
+                                    </template>
+                                </svg>
+                                {{ estilo.label }}
+                            </button>
+                        </div>
+                    </fieldset>
+                </div>
+
                 <p
                     v-if="!legible"
                     class="flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-sm text-warning"
@@ -376,6 +534,13 @@ const guardar = () => {
                     Sin margen, deja al imprimir un espacio libre alrededor del
                     código (al menos el ancho de cuatro módulos): muchos
                     lectores lo necesitan.
+                </p>
+                <p
+                    v-if="diseno.estilo_modulos === 'puntos'"
+                    class="text-xs text-muted-foreground"
+                >
+                    Con puntos, algunos lectores antiguos tardan más en leer el
+                    código. Prueba la lectura con un teléfono antes de imprimir.
                 </p>
                 <p
                     v-if="diseno.incluir_logo && tieneLogo"

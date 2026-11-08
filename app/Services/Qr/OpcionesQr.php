@@ -13,12 +13,21 @@ final readonly class OpcionesQr
 
     public const CONTRASTE_MINIMO = 4.0;
 
+    /** Forma de los tres ojos (patrones de localización). */
+    public const ESTILOS_OJOS = ['redondeado', 'hoja', 'cuadrado'];
+
+    /** Forma de los módulos de datos. */
+    public const ESTILOS_MODULOS = ['redondeado', 'puntos', 'cuadrado'];
+
     public function __construct(
         public string $color = '#000000',
         public string $fondo = '#FFFFFF',
         public bool $fondoTransparente = false,
         public string $margen = 'estandar',
         public bool $incluirLogo = false,
+        // Por defecto el QR no usa el diseño rectangular convencional.
+        public string $estiloOjos = 'redondeado',
+        public string $estiloModulos = 'redondeado',
     ) {}
 
     /**
@@ -29,6 +38,8 @@ final readonly class OpcionesQr
         $datos ??= [];
 
         $margen = (string) ($datos['margen'] ?? 'estandar');
+        $ojos = (string) ($datos['estilo_ojos'] ?? 'redondeado');
+        $modulos = (string) ($datos['estilo_modulos'] ?? 'redondeado');
 
         return new self(
             color: self::hexValido($datos['color'] ?? null) ?? '#000000',
@@ -36,11 +47,13 @@ final readonly class OpcionesQr
             fondoTransparente: (bool) ($datos['fondo_transparente'] ?? false),
             margen: array_key_exists($margen, self::MARGENES) ? $margen : 'estandar',
             incluirLogo: (bool) ($datos['incluir_logo'] ?? false),
+            estiloOjos: in_array($ojos, self::ESTILOS_OJOS, true) ? $ojos : 'redondeado',
+            estiloModulos: in_array($modulos, self::ESTILOS_MODULOS, true) ? $modulos : 'redondeado',
         );
     }
 
     /**
-     * @return array{color: string, fondo: string, fondo_transparente: bool, margen: string, incluir_logo: bool}
+     * @return array{color: string, fondo: string, fondo_transparente: bool, margen: string, incluir_logo: bool, estilo_ojos: string, estilo_modulos: string}
      */
     public function aArreglo(): array
     {
@@ -50,6 +63,8 @@ final readonly class OpcionesQr
             'fondo_transparente' => $this->fondoTransparente,
             'margen' => $this->margen,
             'incluir_logo' => $this->incluirLogo,
+            'estilo_ojos' => $this->estiloOjos,
+            'estilo_modulos' => $this->estiloModulos,
         ];
     }
 
