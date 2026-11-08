@@ -73,6 +73,8 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
         Route::put('productos/{producto}/destino', [ProductoController::class, 'destino'])->middleware('can:redirecciones.modificar_destino')->name('productos.destino');
         Route::patch('productos/{producto}/estado', [ProductoController::class, 'estado'])->name('productos.estado');
         Route::post('productos/{producto}/transferencia', [ProductoController::class, 'transferir'])->middleware('can:productos.transferir')->name('productos.transferir');
+        // Ampliar a 2 QR o reducir a 1 (ProductoPolicy::cambiarCantidadQr).
+        Route::patch('productos/{producto}/cantidad-qr', [ProductoController::class, 'cantidadQr'])->name('productos.cantidad-qr');
 
         Route::get('enlaces', [EnlaceController::class, 'index'])->middleware('can:redirecciones.ver')->name('enlaces.index');
         Route::get('estadisticas', EstadisticaController::class)->middleware('can:estadisticas.ver')->name('estadisticas.index');

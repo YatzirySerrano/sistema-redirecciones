@@ -10,11 +10,11 @@ defineProps<{
 
 <template>
     <div
-        class="flex flex-col items-center justify-center px-6 py-12 text-center"
+        class="entrada flex flex-col items-center justify-center px-6 py-12 text-center"
     >
         <span
             v-if="icono"
-            class="mb-4 flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground"
+            class="mb-4 flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground ring-8 ring-accent/40"
             aria-hidden="true"
         >
             <component :is="icono" class="size-6" />

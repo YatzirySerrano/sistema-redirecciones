@@ -36,9 +36,14 @@ class ProductoResource extends JsonResource
             'tipo_etiqueta' => $this->tipo->etiqueta(),
             'modalidad_destino' => $this->modalidad_destino->value,
             'medio' => $this->medio?->value,
-            'medio_etiqueta' => $this->medio?->etiqueta(),
+            'medio_etiqueta' => $this->resource->etiquetaMedio(),
+            // QR impresos del producto físico (0 en NFC; null en enlaces
+            // secundarios). numero_qr: 1 o 2 cuando lleva dos QR.
+            'cantidad_qr' => $this->esEnlaceSecundario() ? null : $this->resource->cantidadQr(),
+            'numero_qr' => $this->numero_qr,
             'producto_principal_id' => $this->producto_principal_id,
-            // Reverso QR de un combinado con destinos independientes.
+            // Enlaces vigentes: reverso QR de un combinado independiente, o
+            // QR 1 / QR 2 de un producto con dos QR.
             'enlaces_secundarios' => $this->whenLoaded('enlacesSecundarios', fn () => ProductoResource::collection($this->enlacesSecundarios)->resolve($request)),
             'url_permanente' => $this->url_permanente,
             'url_destino' => $this->url_destino,
@@ -58,6 +63,7 @@ class ProductoResource extends JsonResource
                 'cambiar_destino' => $usuario?->can('cambiarDestino', $this->resource) ?? false,
                 'descargar_qr' => $usuario?->can('descargarQr', $this->resource) ?? false,
                 'disenar_qr' => $usuario?->can('disenarQr', $this->resource) ?? false,
+                'cambiar_cantidad_qr' => $this->esEnlaceSecundario() ? false : ($usuario?->can('cambiarCantidadQr', $this->resource) ?? false),
             ],
         ];
 

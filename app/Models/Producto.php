@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property TipoProducto $tipo
  * @property ModalidadDestino $modalidad_destino
  * @property MedioEnlace|null $medio
+ * @property int|null $cantidad_qr
+ * @property int|null $numero_qr
  * @property string|null $url_destino
  * @property EstadoProducto $estado
  * @property EstadoPreparacion $estado_preparacion
@@ -43,12 +45,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $ultimo_acceso_en
  * @property CarbonImmutable|null $destino_actualizado_en
  * @property CarbonImmutable|null $suspendido_en
+ * @property CarbonImmutable|null $archivado_en
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read string $url_permanente
  * @property-read Negocio $negocio
  * @property-read Producto|null $principal
  * @property-read Collection<int, Producto> $enlacesSecundarios
+ * @property-read Collection<int, Producto> $todosLosEnlacesSecundarios
  */
 #[Fillable(['nombre', 'tipo', 'estado_preparacion', 'fecha_entrega', 'referencia_comercial', 'notas_internas'])]
 class Producto extends Model
@@ -82,6 +86,9 @@ class Producto extends Model
             'ultimo_acceso_en' => 'datetime',
             'destino_actualizado_en' => 'datetime',
             'suspendido_en' => 'datetime',
+            'archivado_en' => 'datetime',
+            'cantidad_qr' => 'integer',
+            'numero_qr' => 'integer',
         ];
     }
 
@@ -105,11 +112,78 @@ class Producto extends Model
     }
 
     /**
+     * Enlaces secundarios vigentes (reverso QR de un combinado independiente,
+     * QR 1 / QR 2). Excluye los archivados al reducir de 2 a 1 QR.
+     *
      * @return HasMany<Producto, $this>
      */
     public function enlacesSecundarios(): HasMany
     {
+        return $this->todosLosEnlacesSecundarios()->whereNull('archivado_en');
+    }
+
+    /**
+     * Todos los enlaces secundarios, incluidos los archivados (eliminación,
+     * transferencia y reactivación del segundo QR).
+     *
+     * @return HasMany<Producto, $this>
+     */
+    public function todosLosEnlacesSecundarios(): HasMany
+    {
         return $this->hasMany(Producto::class, 'producto_principal_id')->orderBy('id');
+    }
+
+    /**
+     * Enlaces que van impresos como QR, en orden (QR 1, QR 2): todos los
+     * vigentes salvo el del NFC. En un producto de un solo enlace es él
+     * mismo (también en NFC, donde el QR es un respaldo opcional).
+     *
+     * @return list<Producto>
+     */
+    public function enlacesQr(): array
+    {
+        $principal = $this->principal ?? $this;
+
+        return array_values(array_filter(
+            [$principal, ...$principal->enlacesSecundarios->all()],
+            fn (Producto $enlace) => $enlace->medio !== MedioEnlace::Nfc,
+        ));
+    }
+
+    public function estaArchivado(): bool
+    {
+        return $this->archivado_en !== null;
+    }
+
+    /**
+     * Número de QR impresos del producto físico: 0 en productos NFC; 1 o 2
+     * en QR y combinados.
+     */
+    public function cantidadQr(): int
+    {
+        if ($this->tipo === TipoProducto::Nfc) {
+            return 0;
+        }
+
+        return $this->cantidad_qr === 2 ? 2 : 1;
+    }
+
+    public function admiteVariosQr(): bool
+    {
+        return $this->tipo !== TipoProducto::Nfc;
+    }
+
+    /**
+     * Etiqueta del medio de este enlace: «QR 1» / «QR 2» cuando el producto
+     * lleva dos QR; si no, la del medio («NFC (frente)», «QR (reverso)»).
+     */
+    public function etiquetaMedio(): ?string
+    {
+        if ($this->numero_qr !== null) {
+            return "QR {$this->numero_qr}";
+        }
+
+        return $this->medio?->etiqueta();
     }
 
     public function esEnlaceSecundario(): bool

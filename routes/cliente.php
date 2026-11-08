@@ -28,6 +28,11 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
         Route::put('productos/{producto}/destino', [ProductoController::class, 'destino'])
             ->middleware('throttle:cambios-destino')
             ->name('productos.destino');
+        // Ampliar a 2 QR o reducir a 1: requiere «productos.cambiar_cantidad_qr»
+        // (ningún rol de cliente lo tiene de inicio; ProductoPolicy).
+        Route::patch('productos/{producto}/cantidad-qr', [ProductoController::class, 'cantidadQr'])
+            ->middleware('throttle:cambios-destino')
+            ->name('productos.cantidad-qr');
         Route::get('estadisticas', EstadisticaController::class)
             ->middleware('can:ver-estadisticas-cliente')
             ->name('estadisticas.index');

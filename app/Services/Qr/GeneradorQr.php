@@ -9,6 +9,7 @@ use Endroid\QrCode\Color\Color;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Writer\Result\GdResult;
 use Endroid\QrCode\Writer\Result\SvgResult;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Support\Facades\Log;
@@ -20,11 +21,16 @@ use Throwable;
 /**
  * Genera el QR de un producto con su URL permanente.
  *
- * El QR nunca incluye marca de DASTI: solo el código y, si se solicita y el
- * negocio cargó uno, el logotipo del propio negocio.
+ * El QR nunca incluye el nombre de la plataforma en texto. Sus tres patrones
+ * de localización («ojos») llevan la insignia (favicon) como sello, dibujada
+ * de forma que los lectores sigan detectándolos (InsigniaOjosQr). El cliente
+ * personaliza color, fondo, margen y, si lo cargó, el logotipo de su negocio
+ * al centro.
  */
 class GeneradorQr
 {
+    public function __construct(private readonly InsigniaOjosQr $insignia = new InsigniaOjosQr) {}
+
     // Proporción del ancho que ocupa el logotipo. Con corrección de errores
     // alta (~30 %) un logo del 20 % de ancho cubre ~4 % del área.
     private const PROPORCION_LOGO = 0.2;
@@ -53,8 +59,13 @@ class GeneradorQr
 
         $builder = new Builder(
             writer: $formato === 'svg' ? new SvgWriter : new PngWriter,
+            // Sin reducir a 16 colores: la paleta degradaría los tonos de la
+            // insignia de los ojos y los bordes suavizados.
+            writerOptions: $formato === 'png' ? [PngWriter::WRITER_OPTION_NUMBER_OF_COLORS => null] : [],
             data: $producto->url_permanente,
-            errorCorrectionLevel: $logo !== null ? ErrorCorrectionLevel::High : ErrorCorrectionLevel::Medium,
+            // Las insignias no ocupan módulos de datos, pero un nivel alto deja
+            // margen ante impresiones o lecturas imperfectas.
+            errorCorrectionLevel: $logo !== null ? ErrorCorrectionLevel::High : ErrorCorrectionLevel::Quartile,
             size: $tamano,
             margin: (int) round($tamano * OpcionesQr::MARGENES[$opciones->margen]),
             roundBlockSizeMode: RoundBlockSizeMode::Margin,
@@ -80,8 +91,20 @@ class GeneradorQr
             );
         }
 
-        if ($logo !== null && $resultado instanceof SvgResult) {
-            $this->recortarBajoLogo($resultado);
+        try {
+            if ($resultado instanceof SvgResult) {
+                if ($logo !== null) {
+                    $this->recortarBajoLogo($resultado);
+                }
+
+                $this->insignia->aplicarSvg($resultado->getXml(), $resultado->getMatrix(), [$r, $g, $b]);
+            } elseif ($resultado instanceof GdResult) {
+                $this->insignia->aplicarPng($resultado->getImage(), $resultado->getMatrix(), [$r, $g, $b], [$fr, $fg, $fb], $opciones->fondoTransparente);
+            }
+        } catch (Throwable $e) {
+            Log::warning('No se pudo aplicar la insignia al QR', ['producto_id' => $producto->id, 'error' => $e->getMessage()]);
+
+            throw new ErrorGeneracionQr('No se pudo generar el código QR. Inténtalo de nuevo.', previous: $e);
         }
 
         return [

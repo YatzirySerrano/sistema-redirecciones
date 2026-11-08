@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use App\Enums\EstadoPreparacion;
 use App\Enums\EstadoProducto;
+use App\Enums\MedioEnlace;
+use App\Enums\ModalidadDestino;
 use App\Enums\TipoProducto;
 use App\Models\Negocio;
 use App\Models\Producto;
@@ -36,7 +38,34 @@ class ProductoFactory extends Factory
 
     public function qr(): static
     {
-        return $this->state(fn () => ['tipo' => TipoProducto::Qr]);
+        return $this->state(fn () => ['tipo' => TipoProducto::Qr, 'cantidad_qr' => 1]);
+    }
+
+    /**
+     * Producto QR con dos QR impresos: la fila principal es el «QR 1» y se
+     * crea su enlace secundario «QR 2», cada uno con su código y destino.
+     */
+    public function dosQr(): static
+    {
+        return $this->state(fn () => [
+            'tipo' => TipoProducto::Qr,
+            'cantidad_qr' => 2,
+            'modalidad_destino' => ModalidadDestino::Independiente,
+            'medio' => MedioEnlace::Qr,
+            'numero_qr' => 1,
+        ])->afterCreating(function (Producto $producto) {
+            Producto::factory()->create([
+                'negocio_id' => $producto->negocio_id,
+                'producto_principal_id' => $producto->id,
+                'nombre' => $producto->nombre,
+                'tipo' => TipoProducto::Qr,
+                'modalidad_destino' => ModalidadDestino::Independiente,
+                'medio' => MedioEnlace::Qr,
+                'numero_qr' => 2,
+                'estado' => $producto->estado,
+                'suspendido_en' => $producto->suspendido_en,
+            ]);
+        });
     }
 
     public function suspendido(): static

@@ -14,9 +14,13 @@ use Illuminate\Support\Facades\Route;
 | Openpay. Cada servicio adicional se contrata por separado. El retorno del
 | formulario de pago solo muestra el estado verificado con Openpay.
 |
+| Todo el apartado exige «servicios.ver» (cuenta de negocio): sin él no se
+| ve, no se abre por URL y no se puede iniciar un pago. Pagar exige además
+| «servicios.contratar». Los productos QR/NFC no dependen de este permiso.
+|
 */
 
-Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefinitiva::class, 'can:usar-panel-cliente'])
+Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefinitiva::class, 'can:usar-panel-cliente', 'can:servicios.ver'])
     ->prefix('panel/servicios')
     ->name('cliente.servicios.')
     ->group(function () {

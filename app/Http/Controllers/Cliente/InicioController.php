@@ -38,9 +38,11 @@ class InicioController extends Controller
 
         $verEstadisticas = $ajustes->booleano('clientes_ven_estadisticas') && $usuario->tienePermiso('estadisticas.ver');
         $actual = FiltroEstadisticas::ultimosDias(30, $negocio->id, soloProductosVigentes: true);
-        $previo = new FiltroEstadisticas($actual->desde->subDays(30), $actual->desde->subSecond(), $negocio->id, soloProductosVigentes: true);
+        $previo = $actual->anterior();
+        $sinRedirigir = $verEstadisticas ? array_sum(array_column($estadisticas->sinRedirigir($actual), 'total')) : 0;
 
-        $enlaces = Producto::query()->deNegocio($negocio->id)->get(['id', 'producto_principal_id', 'nombre', 'estado', 'url_destino', 'medio']);
+        // Sin los QR 2 archivados al reducir a 1 QR (ya no forman parte del producto).
+        $enlaces = Producto::query()->deNegocio($negocio->id)->whereNull('archivado_en')->get(['id', 'producto_principal_id', 'nombre', 'estado', 'url_destino', 'medio']);
         $fisicos = $enlaces->whereNull('producto_principal_id');
         $sinDestino = $enlaces->where('estado', EstadoProducto::Activo)->whereNull('url_destino');
 
@@ -66,6 +68,15 @@ class InicioController extends Controller
             ];
         }
 
+        if ($sinRedirigir > 0) {
+            $alertas[] = [
+                'clave' => 'sin_redirigir',
+                'titulo' => $sinRedirigir === 1 ? 'Un acceso no llegó a tu destino' : "{$sinRedirigir} intentos no llegaron a tu destino",
+                'descripcion' => 'En los últimos 30 días alguien abrió un enlace sin destino o suspendido.',
+                'producto_id' => null,
+            ];
+        }
+
         $conFidelidad = $usuario->tienePermiso('fidelidad.ver') && $servicios->puedeConsultarFidelidad($negocio);
 
         return Inertia::render('cliente/Inicio', [
@@ -76,9 +87,15 @@ class InicioController extends Controller
                 'enlaces_sin_destino' => $sinDestino->count(),
                 'accesos_30_dias' => $verEstadisticas ? $estadisticas->totales($actual) : null,
                 'accesos_previos' => $verEstadisticas ? $estadisticas->totales($previo)['total'] : null,
+                'enlaces' => $enlaces->count(),
+                'enlaces_con_destino' => $enlaces->where('estado', EstadoProducto::Activo)->whereNotNull('url_destino')->count(),
             ],
-            'serie' => $verEstadisticas ? $estadisticas->serieDiaria($actual) : null,
-            'productos_top' => $verEstadisticas ? $estadisticas->productosMasUsados($actual, 5) : [],
+            'serie' => $verEstadisticas ? $estadisticas->serieCanales($actual) : null,
+            'serie_anterior' => $verEstadisticas ? array_column($estadisticas->serieDiaria($previo), 'total') : null,
+            'canales' => $verEstadisticas ? $estadisticas->porTipo($actual) : [],
+            'productos_top' => $verEstadisticas ? $estadisticas->actividadPorProducto($actual, 5) : [],
+            'sin_actividad' => $verEstadisticas ? $estadisticas->productosSinActividad($actual, 4) : null,
+            'ver_estadisticas' => $verEstadisticas,
             'alertas' => $alertas,
             'actividad' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['producto', 'usuario'])->where('negocio_id', $negocio->id)

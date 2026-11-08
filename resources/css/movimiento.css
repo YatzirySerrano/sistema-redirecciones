@@ -1,0 +1,304 @@
+/*
+  Sistema de movimiento de DASTI.
+
+  Principios: el movimiento responde a la persona (abrir, navegar,
+  confirmar) o marca una sola entrada por pantalla. Duraciones cortas
+  (150–300 ms) y curvas naturales. Todo se desactiva con
+  `prefers-reduced-motion: reduce`. Los colores siempre salen de las
+  variables del tema (también las personalizadas desde Apariencia).
+
+  Utilidades disponibles
+  - .entrada              aparece con un desvanecido y un leve ascenso.
+  - .entrada-escalonada   cada hijo directo entra 40 ms después del anterior
+                          (máx. 12 escalones). Útil en rejillas y listas.
+  - .entrada-pagina       transición de entrada entre pantallas (layout).
+  - .tarjeta-interactiva  tarjeta que se eleva al pasar el cursor o enfocar.
+  - .icono-vivo           el icono hijo (svg) se desplaza un poco al hover
+                          del elemento con la clase `group`.
+  - .esqueleto            marcador de carga con brillo (shimmer).
+  - .presionable          ligera compresión al pulsar.
+  - .subrayado-animado    subrayado que crece desde la izquierda.
+*/
+
+:root {
+    --mov-rapido: 150ms;
+    --mov-medio: 220ms;
+    --mov-lento: 300ms;
+    /* Salida natural (desacelera al llegar). */
+    --curva-salida: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Entrada/salida suave para cambios de estado. */
+    --curva-suave: cubic-bezier(0.4, 0, 0.2, 1);
+    /* Rebote mínimo para indicadores que se desplazan. */
+    --curva-resorte: cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+@keyframes dasti-entrada {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Solo opacidad: un `transform` en el contenedor de la pantalla alteraría
+   los elementos `position: fixed` (barras de acciones, editores). */
+@keyframes dasti-entrada-pagina {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes dasti-brillo {
+    from {
+        background-position: 150% 0;
+    }
+    to {
+        background-position: -50% 0;
+    }
+}
+
+@keyframes dasti-deslizar-lateral {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@layer components {
+    .entrada {
+        animation: dasti-entrada var(--mov-lento) var(--curva-salida) backwards;
+    }
+
+    .entrada-escalonada > * {
+        animation: dasti-entrada var(--mov-lento) var(--curva-salida) backwards;
+    }
+
+    .entrada-escalonada > :nth-child(2) {
+        animation-delay: 40ms;
+    }
+    .entrada-escalonada > :nth-child(3) {
+        animation-delay: 80ms;
+    }
+    .entrada-escalonada > :nth-child(4) {
+        animation-delay: 120ms;
+    }
+    .entrada-escalonada > :nth-child(5) {
+        animation-delay: 160ms;
+    }
+    .entrada-escalonada > :nth-child(6) {
+        animation-delay: 200ms;
+    }
+    .entrada-escalonada > :nth-child(7) {
+        animation-delay: 240ms;
+    }
+    .entrada-escalonada > :nth-child(8) {
+        animation-delay: 280ms;
+    }
+    .entrada-escalonada > :nth-child(9) {
+        animation-delay: 320ms;
+    }
+    .entrada-escalonada > :nth-child(10) {
+        animation-delay: 360ms;
+    }
+    .entrada-escalonada > :nth-child(11) {
+        animation-delay: 400ms;
+    }
+    .entrada-escalonada > :nth-child(n + 12) {
+        animation-delay: 440ms;
+    }
+
+    .entrada-pagina {
+        animation: dasti-entrada-pagina var(--mov-medio) var(--curva-salida)
+            backwards;
+    }
+
+    .tarjeta-interactiva {
+        transition:
+            transform var(--mov-medio) var(--curva-salida),
+            box-shadow var(--mov-medio) var(--curva-salida),
+            border-color var(--mov-rapido) var(--curva-suave);
+    }
+
+    .tarjeta-interactiva:hover,
+    .tarjeta-interactiva:focus-within {
+        transform: translateY(-2px);
+        border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+        box-shadow:
+            0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
+            0 10px 24px -12px
+                color-mix(in oklab, var(--primary) 35%, transparent);
+    }
+
+    .tarjeta-interactiva:active {
+        transform: translateY(0);
+        transition-duration: var(--mov-rapido);
+    }
+
+    .icono-vivo svg {
+        transition: transform var(--mov-medio) var(--curva-resorte);
+    }
+
+    .group:hover .icono-vivo svg,
+    .group:focus-visible .icono-vivo svg {
+        transform: translateX(2px) scale(1.06);
+    }
+
+    .presionable {
+        transition: transform var(--mov-rapido) var(--curva-suave);
+    }
+
+    .presionable:active {
+        transform: scale(0.97);
+    }
+
+    .esqueleto {
+        border-radius: calc(var(--radius) - 2px);
+        background-color: var(--muted);
+        background-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            color-mix(in oklab, var(--card) 70%, transparent) 50%,
+            transparent 100%
+        );
+        background-size: 200% 100%;
+        background-repeat: no-repeat;
+        animation: dasti-brillo 1.4s var(--curva-suave) infinite;
+    }
+
+    .subrayado-animado {
+        background-image: linear-gradient(currentColor, currentColor);
+        background-size: 0% 1px;
+        background-position: 0 100%;
+        background-repeat: no-repeat;
+        transition: background-size var(--mov-medio) var(--curva-salida);
+    }
+
+    .subrayado-animado:hover,
+    .subrayado-animado:focus-visible {
+        background-size: 100% 1px;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   Barra lateral
+   --------------------------------------------------------------------- */
+
+/* Indicador del elemento activo: una píldora que se desliza entre
+   elementos (ver AppSidebar.vue). */
+.indicador-navegacion {
+    transition:
+        transform var(--mov-lento) var(--curva-resorte),
+        height var(--mov-lento) var(--curva-salida),
+        width var(--mov-medio) var(--curva-salida),
+        opacity var(--mov-rapido) linear;
+}
+
+/* Mientras el indicador está listo, el botón activo deja de pintar su
+   propio fondo para que se vea el deslizamiento. */
+[data-indicador-listo='true'] [data-sidebar='menu-button'][data-active='true'] {
+    background-color: transparent;
+}
+
+[data-sidebar='menu-button'] > svg {
+    transition:
+        transform var(--mov-medio) var(--curva-resorte),
+        color var(--mov-rapido) var(--curva-suave);
+}
+
+[data-sidebar='menu-button']:hover > svg {
+    transform: scale(1.12);
+}
+
+[data-sidebar='menu-button'][data-active='true'] > svg {
+    color: var(--sidebar-primary-foreground);
+}
+
+/* En el teléfono, los elementos entran escalonados al abrir el menú. */
+[data-mobile='true'][data-state='open'] [data-sidebar='menu-item'] {
+    animation: dasti-deslizar-lateral var(--mov-lento) var(--curva-salida) backwards;
+    animation-delay: calc(var(--orden, 0) * 25ms + 80ms);
+}
+
+/* ---------------------------------------------------------------------
+   Barra de progreso de Inertia (NProgress) con el color de marca
+   --------------------------------------------------------------------- */
+
+#nprogress .bar {
+    height: 3px !important;
+    background: linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--primary) 60%, transparent),
+        var(--primary)
+    ) !important;
+    border-radius: 0 999px 999px 0;
+}
+
+#nprogress .peg {
+    box-shadow:
+        0 0 10px var(--primary),
+        0 0 4px var(--primary) !important;
+}
+
+/* ---------------------------------------------------------------------
+   Avisos (vue-sonner)
+   --------------------------------------------------------------------- */
+
+[data-sonner-toaster] [data-sonner-toast] {
+    border-radius: var(--radius);
+    box-shadow:
+        0 1px 2px color-mix(in oklab, var(--foreground) 8%, transparent),
+        0 16px 32px -16px
+            color-mix(in oklab, var(--foreground) 30%, transparent);
+    font-family: var(--font-sans);
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+    font-weight: 600;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+    transition:
+        background-color var(--mov-rapido) var(--curva-suave),
+        transform var(--mov-rapido) var(--curva-suave);
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover {
+    transform: scale(1.08);
+}
+
+/* ---------------------------------------------------------------------
+   Movimiento reducido: sin animaciones ni transiciones perceptibles.
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
+    }
+
+    .tarjeta-interactiva:hover,
+    .tarjeta-interactiva:focus-within,
+    .group:hover .icono-vivo svg,
+    [data-sidebar='menu-button']:hover > svg {
+        transform: none;
+    }
+
+    .esqueleto {
+        animation: none !important;
+    }
+}

@@ -75,7 +75,7 @@ class PantallasAdministrativasTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.panel'))->assertInertia(fn (AssertableInertia $p) => $p
             ->where('indicadores.negocios', Negocio::query()->count())
-            ->where('indicadores.productos', Producto::query()->count())
+            ->where('indicadores.productos', Producto::query()->principales()->count()) // productos físicos (sin enlaces secundarios)
             ->where('indicadores.negocios_activos', 3)
             ->has('serie', 30));
     }

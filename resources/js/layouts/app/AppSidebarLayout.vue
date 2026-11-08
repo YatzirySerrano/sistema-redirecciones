@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
@@ -14,6 +15,10 @@ type Props = {
 withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
 });
+
+// Transición corta al cambiar de pantalla. La clave es el componente (no la
+// URL) para no reiniciar la pantalla al filtrar o paginar con preserveState.
+const page = usePage();
 </script>
 
 <template>
@@ -29,7 +34,10 @@ withDefaults(defineProps<Props>(), {
                 id="contenido"
                 class="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
             >
-                <div class="mx-auto w-full max-w-7xl space-y-6">
+                <div
+                    :key="page.component"
+                    class="entrada-pagina mx-auto w-full max-w-7xl space-y-6"
+                >
                     <slot />
                 </div>
             </main>

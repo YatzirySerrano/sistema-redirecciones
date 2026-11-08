@@ -84,6 +84,8 @@ class OpcionesController extends Controller
         $consulta = Producto::query()
             ->select(['id', 'nombre', 'codigo'])
             ->when($negocioId > 0, fn (Builder $q) => $q->where('negocio_id', $negocioId))
+            // Estadísticas filtran por producto físico (sin el reverso QR).
+            ->when($request->boolean('principales'), fn (Builder $q) => $q->principales())
             ->buscar($buscar, incluirInternos: false)
             ->orderBy('nombre')
             ->orderBy('id');

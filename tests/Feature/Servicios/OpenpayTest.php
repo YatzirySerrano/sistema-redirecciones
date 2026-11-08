@@ -14,6 +14,7 @@ use App\Models\NotificacionPago;
 use App\Models\Pago;
 use App\Models\Producto;
 use App\Models\RegistroAuditoria;
+use App\Models\Rol;
 use App\Models\Servicio;
 use App\Models\User;
 use App\Services\Servicios\AccesoServicios;
@@ -50,6 +51,10 @@ class OpenpayTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+
+        // Escenario de estas pruebas: DASTI ya habilitó «Mis servicios» para
+        // los clientes (servicios.ver no se asigna por omisión).
+        Rol::porClave('cliente')?->givePermissionTo('servicios.ver');
 
         config([
             'services.openpay.merchant_id' => 'mtestcomercio01',

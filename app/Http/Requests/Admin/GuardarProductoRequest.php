@@ -32,10 +32,10 @@ class GuardarProductoRequest extends SolicitudAdministrativa
             /** @var Producto|null $producto */
             $producto = $this->route('producto');
 
-            // Un combinado con destinos independientes tiene dos enlaces
-            // físicos: no puede convertirse en otro tipo.
-            if ($producto?->tieneDestinosIndependientes()) {
-                $reglas['tipo'][] = Rule::in([TipoProducto::Combinado->value]);
+            // Un producto con destinos independientes (NFC + QR, o 2 QR)
+            // tiene varios enlaces físicos: no puede convertirse en otro tipo.
+            if ($producto?->tieneDestinosIndependientes() || $producto?->cantidadQr() === 2) {
+                $reglas['tipo'][] = Rule::in([$producto->tipo->value]);
             }
 
             return $reglas;
@@ -47,8 +47,22 @@ class GuardarProductoRequest extends SolicitudAdministrativa
             'modalidad_destino' => ['exclude_unless:tipo,combinado', 'nullable', Rule::enum(ModalidadDestino::class)], // sin valor: compartido
             'url_destino' => ['nullable', 'string', new UrlDestinoSegura],
             'url_destino_qr' => ['exclude_unless:modalidad_destino,independiente', 'nullable', 'string', new UrlDestinoSegura],
+            // Número de QR impresos (QR y combinados); sin valor: 1.
+            'cantidad_qr' => ['exclude_if:tipo,nfc', 'nullable', 'integer', 'in:1,2'],
+            'url_destino_qr2' => ['exclude_unless:cantidad_qr,2', 'exclude_if:tipo,nfc', 'nullable', 'string', new UrlDestinoSegura],
             'cantidad' => ['required', 'integer', 'min:1', 'max:50'],
         ];
+    }
+
+    /**
+     * Dos QR implican destinos independientes: un combinado con 2 QR siempre
+     * es «independiente» (NFC, QR 1 y QR 2).
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->isMethod('POST') && $this->input('tipo') === TipoProducto::Combinado->value && (int) $this->input('cantidad_qr') === 2) {
+            $this->merge(['modalidad_destino' => ModalidadDestino::Independiente->value]);
+        }
     }
 
     /**
@@ -56,7 +70,7 @@ class GuardarProductoRequest extends SolicitudAdministrativa
      */
     public function messages(): array
     {
-        return ['tipo.in' => 'Este producto tiene destinos independientes para NFC y QR; su tipo debe seguir siendo «QR + NFC».'];
+        return ['tipo.in' => 'Este producto tiene varios enlaces (destinos independientes o 2 QR); su tipo no puede cambiar.'];
     }
 
     /**
@@ -68,6 +82,8 @@ class GuardarProductoRequest extends SolicitudAdministrativa
             'negocio_id' => 'negocio',
             'url_destino' => 'URL de destino',
             'url_destino_qr' => 'destino del QR',
+            'cantidad_qr' => 'número de QR',
+            'url_destino_qr2' => 'destino del QR 2',
             'modalidad_destino' => 'modalidad de destino',
             'estado_preparacion' => 'estado de preparación',
             'fecha_entrega' => 'fecha de entrega',

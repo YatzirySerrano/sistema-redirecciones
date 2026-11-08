@@ -76,6 +76,28 @@ class ProductoPolicy
     }
 
     /**
+     * Ampliar a 2 QR o reducir a 1 (lo fija DASTI en el alta; por defecto
+     * ningún rol de cliente tiene el permiso). Solo productos físicos QR o
+     * combinados activos; el cliente, además, con su negocio activo.
+     */
+    public function cambiarCantidadQr(User $usuario, Producto $producto): Response
+    {
+        $respuesta = $this->conPermiso($usuario, $producto, 'productos.cambiar_cantidad_qr');
+
+        if ($respuesta->denied()) {
+            return $respuesta;
+        }
+
+        if ($producto->esEnlaceSecundario() || ! $producto->admiteVariosQr()) {
+            return Response::deny('Solo los productos QR o QR + NFC pueden llevar uno o dos QR.');
+        }
+
+        $activo = $usuario->esAdministrador() ? $producto->estaActivo() : $producto->admiteCambiosDelCliente();
+
+        return $activo ? Response::allow() : Response::deny(self::SUSPENDIDO);
+    }
+
+    /**
      * Propiedad (clientes) y después permiso.
      */
     private function conPermiso(User $usuario, Producto $producto, string $permiso): Response

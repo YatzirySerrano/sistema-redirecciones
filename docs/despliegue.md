@@ -155,10 +155,10 @@ Tras cada despliegue: `php artisan queue:restart`.
 - No guardes secretos en el repositorio. Respalda `.env` y `APP_KEY` fuera del servidor.
 - Respalda la base a diario (`mariadb-dump --single-transaction`).
 
-## Identidad visual pendiente
+## Identidad visual
 
-- **Logotipo del panel:** copia los archivos oficiales a `public/marca/` (`dasti-logo.svg`, `dasti-isotipo.svg` y, opcionalmente, sus versiones `-oscuro`). La interfaz los detecta sola (`App\Services\Apariencia\MarcaDasti`); mientras no existan, el sidebar y el inicio de sesión muestran un recurso neutral temporal. Ver `public/marca/LEEME.txt`.
-- `public/favicon.*`, `public/apple-touch-icon.png` y `public/iconos/` son temporales y neutrales. Sustitúyelos por los oficiales.
+- **Logotipo del panel:** copia los archivos oficiales a `public/marca/` (`dasti-logo.svg` y, opcionalmente, versiones `-oscuro`). El isotipo oficial ya está en `public/marca/dasti-isotipo.png`; sin logotipo completo, el sidebar y el inicio de sesión muestran el isotipo junto al nombre. La interfaz detecta los archivos sola (`App\Services\Apariencia\MarcaDasti`). Ver `public/marca/LEEME.txt`.
+- `public/favicon.*`, `public/apple-touch-icon.png`, `public/iconos/` y `public/og/dasti-og.png` se generan desde el favicon oficial `public/favicon.png` (ver `public/marca/LEEME.txt`).
 - Los QR de los clientes y las páginas públicas de los negocios (Página de enlaces y tarjeta de Fidelidad) nunca llevan marca de DASTI.
 
 ## Verificaciones posteriores al despliegue
@@ -201,7 +201,7 @@ location = /manifest.webmanifest { default_type application/manifest+json; }
 ```
 
 - Al publicar una versión con cambios en `public/sw.js`, incrementar `VERSION` dentro del archivo.
-- Sustituir los íconos temporales de `public/iconos/`, `public/favicon.*` y `public/apple-touch-icon.png` por los oficiales de DASTI.
+- Tras desplegar cambios de íconos o de la imagen OG, refrescar la caché de vista previa con el Sharing Debugger de Meta (WhatsApp/Facebook) y el Post Inspector de LinkedIn.
 
 ## Pagos en línea con Openpay
 

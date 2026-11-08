@@ -60,7 +60,7 @@ class QrTest extends TestCase
         $this->assertSame($producto->url_permanente, $this->leerQr($respuesta->getContent()));
     }
 
-    public function test_svg_sin_marca_de_dasti(): void
+    public function test_svg_sin_el_nombre_de_dasti(): void
     {
         $admin = User::factory()->create();
         $producto = Producto::factory()->create();
@@ -112,7 +112,7 @@ class QrTest extends TestCase
         return $negocio;
     }
 
-    public function test_svg_sin_logotipo_contiene_solo_el_codigo(): void
+    public function test_svg_sin_logotipo_contiene_solo_el_codigo_y_la_insignia(): void
     {
         $admin = User::factory()->create();
         $producto = Producto::factory()->create();
@@ -125,7 +125,12 @@ class QrTest extends TestCase
 
         $this->assertStringContainsString('attachment; filename="qr-', (string) $this->actingAs($admin)
             ->get(route('productos.qr.show', [$producto, 'formato' => 'svg', 'descargar' => 1]))->headers->get('Content-Disposition'));
-        $this->assertStringNotContainsString('<image', $svg);
+        // Solo las tres insignias de los ojos; ningún logotipo al centro.
+        $xml = simplexml_load_string($svg);
+        $this->assertNotFalse($xml);
+        $xml->registerXPathNamespace('s', 'http://www.w3.org/2000/svg');
+        $this->assertCount(0, $xml->xpath('/s:svg/s:image'));
+        $this->assertCount(3, $xml->xpath('//s:g[@class="insignia-ojo"]/s:image'));
         $this->assertStringNotContainsString('<mask', $svg);
     }
 
@@ -145,9 +150,9 @@ class QrTest extends TestCase
         $this->assertNotFalse($svg);
         $svg->registerXPathNamespace('s', 'http://www.w3.org/2000/svg');
 
-        $imagen = $svg->xpath('//s:image')[0] ?? null;
+        $imagen = $svg->xpath('/s:svg/s:image')[0] ?? null;
         $recorte = $svg->xpath('//s:mask[@id="recorte-logo"]/s:rect[@fill="#000000"]')[0] ?? null;
-        $modulos = $svg->xpath('//s:path')[0] ?? null;
+        $modulos = $svg->xpath('/s:svg/s:path')[0] ?? null;
 
         $this->assertNotNull($imagen, 'El SVG no incluye el logotipo.');
         $this->assertNotNull($recorte, 'El SVG no recorta los módulos bajo el logotipo.');

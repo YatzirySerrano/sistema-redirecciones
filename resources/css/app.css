@@ -2,6 +2,9 @@
 
 @import 'tw-animate-css';
 
+/* Sistema de movimiento (entradas, hovers, transiciones, carga). */
+@import './movimiento.css';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
@@ -69,6 +72,9 @@
     --color-warning: var(--warning);
     --color-warning-soft: var(--warning-soft);
     --color-grid: var(--grid);
+    --color-canal-nfc: var(--canal-nfc);
+    --color-canal-qr: var(--canal-qr);
+    --color-canal-combinado: var(--canal-combinado);
 }
 
 /*
@@ -141,6 +147,12 @@
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
     --grid: hsl(250 16% 92%);
+    /* Canales de las estadísticas: tonos fijos (no dependen del color de
+       marca personalizado) y distinguibles entre sí, también en daltonismo
+       rojo-verde. */
+    --canal-nfc: hsl(262 72% 54%);
+    --canal-qr: hsl(186 80% 32%);
+    --canal-combinado: hsl(36 90% 48%);
     --radius: 0.75rem;
     --sidebar-background: hsl(252 30% 9%);
     --sidebar-foreground: hsl(250 12% 78%);
@@ -186,6 +198,9 @@
     --chart-4: hsl(43 74% 56%);
     --chart-5: hsl(27 87% 60%);
     --grid: hsl(252 16% 16%);
+    --canal-nfc: hsl(262 85% 72%);
+    --canal-qr: hsl(184 70% 52%);
+    --canal-combinado: hsl(40 92% 60%);
     --sidebar-background: hsl(252 30% 4%);
     --sidebar-foreground: hsl(250 12% 76%);
     --sidebar-primary: hsl(262 85% 70%);

@@ -42,7 +42,13 @@ class CrearProducto
      * unidad, la fila principal (frente NFC, `url_destino`) y su enlace
      * secundario (reverso QR, `url_destino_qr`), cada uno con su código.
      *
-     * @param  array{nombre: string, tipo: string, modalidad_destino?: string|null, url_destino?: string|null, url_destino_qr?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null}  $datos
+     * `cantidad_qr` = 2 (QR y combinados) agrega un segundo QR impreso con su
+     * propio enlace (`url_destino_qr2`). Dos QR implican destinos
+     * independientes:
+     * - QR con 2 QR: principal = QR 1, secundario = QR 2.
+     * - Combinado con 2 QR: principal = NFC, secundarios = QR 1 y QR 2.
+     *
+     * @param  array{nombre: string, tipo: string, modalidad_destino?: string|null, cantidad_qr?: int|string|null, url_destino?: string|null, url_destino_qr?: string|null, url_destino_qr2?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null}  $datos
      * @return list<Producto>
      */
     public function ejecutar(Negocio $negocio, array $datos, User $actor, int $cantidad = 1): array
@@ -69,22 +75,33 @@ class CrearProducto
      */
     private function crearUno(Negocio $negocio, array $datos, User $actor): Producto
     {
-        $independiente = $datos['tipo'] === TipoProducto::Combinado->value
-            && ($datos['modalidad_destino'] ?? null) === ModalidadDestino::Independiente->value;
+        $tipo = TipoProducto::from((string) $datos['tipo']);
+        $cantidadQr = $tipo === TipoProducto::Nfc ? null : ((int) ($datos['cantidad_qr'] ?? 1) === 2 ? 2 : 1);
+        $dosQr = $cantidadQr === 2;
+        $combinadoIndependiente = $tipo === TipoProducto::Combinado
+            && ($dosQr || ($datos['modalidad_destino'] ?? null) === ModalidadDestino::Independiente->value);
+        $independiente = $combinadoIndependiente || $dosQr;
 
         $producto = $this->crearEnlace($negocio, $datos, $actor, $datos['url_destino'] ?? null, [
             'modalidad_destino' => $independiente ? ModalidadDestino::Independiente : ModalidadDestino::Compartido,
-            'medio' => $independiente ? MedioEnlace::Nfc : null,
+            'medio' => match (true) {
+                $combinadoIndependiente => MedioEnlace::Nfc,
+                $dosQr => MedioEnlace::Qr,
+                default => null,
+            },
+            'cantidad_qr' => $cantidadQr,
+            'numero_qr' => $dosQr && ! $combinadoIndependiente ? 1 : null,
         ]);
 
         $secundario = null;
+        $segundoQr = null;
 
-        if ($independiente) {
-            $secundario = $this->crearEnlace($negocio, [...$datos, 'tipo' => TipoProducto::Qr->value], $actor, $datos['url_destino_qr'] ?? null, [
-                'producto_principal_id' => $producto->id,
-                'modalidad_destino' => ModalidadDestino::Independiente,
-                'medio' => MedioEnlace::Qr,
-            ]);
+        if ($combinadoIndependiente) {
+            $secundario = $this->crearEnlaceQr($producto, $datos, $actor, $datos['url_destino_qr'] ?? null, $dosQr ? 1 : null);
+        }
+
+        if ($dosQr) {
+            $segundoQr = $this->crearEnlaceQr($producto, $datos, $actor, $datos['url_destino_qr2'] ?? null, 2);
         }
 
         $this->auditoria->registrar(
@@ -96,15 +113,49 @@ class CrearProducto
                 'nombre' => $producto->nombre,
                 'tipo' => $producto->tipo,
                 'modalidad_destino' => $independiente ? ModalidadDestino::Independiente : null,
+                'cantidad_qr' => $dosQr ? 2 : null,
                 'codigo' => $producto->codigo,
                 'url_destino' => $producto->url_destino,
                 'codigo_qr_reverso' => $secundario?->codigo,
                 'url_destino_qr' => $secundario?->url_destino,
+                'codigo_qr2' => $segundoQr?->codigo,
+                'url_destino_qr2' => $segundoQr?->url_destino,
             ], fn ($v) => $v !== null),
             actor: $actor,
         );
 
         return $producto;
+    }
+
+    /**
+     * Enlace secundario QR del producto físico (reverso, QR 1 o QR 2). Copia
+     * los datos administrativos del principal.
+     *
+     * @param  array<string, mixed>|null  $datos
+     * @param  array<string, mixed>|null  $opcionesQr
+     */
+    public function crearEnlaceQr(Producto $principal, ?array $datos, User $actor, mixed $destino, ?int $numeroQr, ?array $opcionesQr = null): Producto
+    {
+        $datos ??= [
+            'nombre' => $principal->nombre,
+            'estado_preparacion' => $principal->estado_preparacion->value,
+            'fecha_entrega' => $principal->fecha_entrega?->toDateString(),
+            'referencia_comercial' => $principal->referencia_comercial,
+            'notas_internas' => $principal->notas_internas,
+        ];
+
+        $principal->loadMissing('negocio');
+
+        return $this->crearEnlace($principal->negocio, [...$datos, 'tipo' => TipoProducto::Qr->value], $actor, $destino, [
+            'producto_principal_id' => $principal->id,
+            'modalidad_destino' => ModalidadDestino::Independiente,
+            'medio' => MedioEnlace::Qr,
+            'numero_qr' => $numeroQr,
+            'cantidad_qr' => null,
+            'estado' => $principal->estado,
+            'suspendido_en' => $principal->suspendido_en,
+            'opciones_qr' => $opcionesQr,
+        ]);
     }
 
     /**
@@ -127,9 +178,9 @@ class CrearProducto
             'notas_internas' => $datos['notas_internas'] ?? null,
         ]);
         $producto->forceFill([
+            'estado' => EstadoProducto::Activo,
             ...$extra,
             'negocio_id' => $negocio->id,
-            'estado' => EstadoProducto::Activo,
             'url_destino' => $url,
             'destino_actualizado_en' => $url !== null ? now() : null,
         ]);
@@ -141,7 +192,7 @@ class CrearProducto
                 'producto_id' => $producto->id,
                 'negocio_id' => $negocio->id,
                 'user_id' => $actor->id,
-                'origen' => OrigenCambio::Admin,
+                'origen' => $actor->esAdministrador() ? OrigenCambio::Admin : OrigenCambio::Cliente,
                 'url_anterior' => null,
                 'url_nueva' => $url,
             ]);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Activity,
     Ban,
@@ -14,24 +14,24 @@ import {
     UserRound,
     UserRoundPlus,
     UsersRound,
-} from '@lucide/vue';
-import { computed, ref } from 'vue';
-import BotonCopiar from '@/components/comun/BotonCopiar.vue';
-import DialogoConfirmacion from '@/components/comun/DialogoConfirmacion.vue';
-import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import EstadoVacio from '@/components/comun/EstadoVacio.vue';
-import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
-import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
-import ListaAuditoria from '@/components/comun/ListaAuditoria.vue';
-import Panel from '@/components/comun/Panel.vue';
-import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
-import GraficaArea from '@/components/graficas/GraficaArea.vue';
-import InputError from '@/components/InputError.vue';
-import LogoNegocio from '@/components/negocios/LogoNegocio.vue';
-import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "@lucide/vue";
+import { computed, ref } from "vue";
+import BotonCopiar from "@/components/comun/BotonCopiar.vue";
+import DialogoConfirmacion from "@/components/comun/DialogoConfirmacion.vue";
+import EncabezadoPagina from "@/components/comun/EncabezadoPagina.vue";
+import EstadoVacio from "@/components/comun/EstadoVacio.vue";
+import InsigniaEstado from "@/components/comun/InsigniaEstado.vue";
+import InsigniaTipo from "@/components/comun/InsigniaTipo.vue";
+import ListaAuditoria from "@/components/comun/ListaAuditoria.vue";
+import Panel from "@/components/comun/Panel.vue";
+import TarjetaIndicador from "@/components/comun/TarjetaIndicador.vue";
+import GraficaArea from "@/components/graficas/GraficaArea.vue";
+import InputError from "@/components/InputError.vue";
+import LogoNegocio from "@/components/negocios/LogoNegocio.vue";
+import HistorialDestinos from "@/components/productos/HistorialDestinos.vue";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
     coberturaVisitantes,
     dominio,
@@ -41,17 +41,17 @@ import {
     pendienteDeAcceso,
     relativo,
     visitantes,
-} from '@/lib/formato';
-import { usePermisos } from '@/composables/usePermisos';
-import { edit, estado, index } from '@/routes/admin/negocios';
+} from "@/lib/formato";
+import { usePermisos } from "@/composables/usePermisos";
+import { edit, estado, index } from "@/routes/admin/negocios";
 import {
     create as crearProducto,
     show as verProducto,
-} from '@/routes/admin/productos';
+} from "@/routes/admin/productos";
 import {
     create as crearUsuario,
     edit as editarUsuario,
-} from '@/routes/admin/usuarios';
+} from "@/routes/admin/usuarios";
 import type {
     CambioDestino,
     Coleccion,
@@ -62,13 +62,13 @@ import type {
     RegistroAuditoria,
     TotalesEstadisticas,
     Usuario,
-} from '@/types';
+} from "@/types";
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Negocios', href: index() },
-            { title: 'Ficha del negocio', href: '#' },
+            { title: "Negocios", href: index() },
+            { title: "Ficha del negocio", href: "#" },
         ],
     },
 });
@@ -85,11 +85,11 @@ const props = defineProps<{
 }>();
 
 const n = computed(() => props.negocio.data);
-const suspendido = computed(() => n.value.estado === 'suspendido');
+const suspendido = computed(() => n.value.estado === "suspendido");
 
 // Suspensión / reactivación
 const dialogoEstado = ref(false);
-const motivo = ref('');
+const motivo = ref("");
 const errorEstado = ref<string | undefined>();
 const cambiandoEstado = ref(false);
 
@@ -97,7 +97,7 @@ const cambiarEstado = () => {
     router.patch(
         estado.url(n.value.id),
         {
-            estado: suspendido.value ? 'activo' : 'suspendido',
+            estado: suspendido.value ? "activo" : "suspendido",
             motivo: motivo.value || null,
         },
         {
@@ -114,7 +114,7 @@ const cambiarEstado = () => {
                     Object.values(errores)[0]),
             onSuccess: () => {
                 dialogoEstado.value = false;
-                motivo.value = '';
+                motivo.value = "";
             },
         },
     );
@@ -159,7 +159,7 @@ const cambiarEstado = () => {
             >
                 <CircleCheck v-if="suspendido" />
                 <Ban v-else />
-                {{ suspendido ? 'Reactivar' : 'Suspender' }}
+                {{ suspendido ? "Reactivar" : "Suspender" }}
             </Button>
         </template>
     </EncabezadoPagina>
@@ -241,7 +241,7 @@ const cambiarEstado = () => {
                             <dd>
                                 {{
                                     n.responsable ??
-                                    'Sin responsable registrado'
+                                    "Sin responsable registrado"
                                 }}
                             </dd>
                         </div>
@@ -292,7 +292,7 @@ const cambiarEstado = () => {
                         Notas internas
                     </p>
                     <p class="mt-1 text-sm whitespace-pre-line">
-                        {{ n.notas_internas || 'Sin notas.' }}
+                        {{ n.notas_internas || "Sin notas." }}
                     </p>
                 </div>
             </Panel>
@@ -361,11 +361,16 @@ const cambiarEstado = () => {
                                 class="font-medium hover:text-primary hover:underline"
                                 >{{ p.nombre }}</Link
                             >
-                            <div class="mt-1">
+                            <div class="mt-1 flex items-center gap-1.5">
                                 <InsigniaTipo
                                     :tipo="p.tipo"
                                     :etiqueta="p.tipo_etiqueta"
                                 />
+                                <span
+                                    v-if="p.cantidad_qr === 2"
+                                    class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                                    >2 QR</span
+                                >
                             </div>
                         </td>
                         <td class="hidden px-3 py-3 md:table-cell">

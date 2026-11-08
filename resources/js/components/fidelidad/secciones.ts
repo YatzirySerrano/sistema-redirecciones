@@ -140,7 +140,7 @@ export const GRUPOS_FIDELIDAD = (): GrupoFidelidad[] => [
                 descripcion: 'Plan, vigencia y pagos del servicio',
                 href: contratacion(),
                 icono: CreditCard,
-                permiso: 'servicios.contratar',
+                permiso: 'servicios.ver',
                 sinServicio: true,
             },
         ],

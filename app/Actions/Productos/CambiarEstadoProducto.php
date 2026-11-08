@@ -17,7 +17,8 @@ class CambiarEstadoProducto
 
     /**
      * El estado es del producto físico: se aplica a la fila principal y a
-     * sus enlaces secundarios (frente NFC y reverso QR quedan igual).
+     * sus enlaces secundarios vigentes (frente NFC, reverso QR, QR 1 / QR 2
+     * quedan igual). Un QR 2 archivado sigue suspendido al reactivar.
      */
     public function ejecutar(Producto $producto, EstadoProducto $estado, ?string $motivo = null): Producto
     {

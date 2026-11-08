@@ -23,7 +23,7 @@
  * interfaz pide activarla (mensaje SKIP_WAITING); al activarse se borran
  * las cachés de versiones anteriores.
  */
-const VERSION = 'dasti-pwa-v2';
+const VERSION = 'dasti-pwa-v3';
 const CACHE_BASE = `${VERSION}-base`;
 const CACHE_ASSETS = `${VERSION}-assets`;
 const OFFLINE = '/offline.html';
@@ -32,7 +32,7 @@ const PRECACHE = [
     '/manifest.webmanifest',
     '/iconos/icono-192.png',
     '/iconos/icono-512.png',
-    '/iconos/icono.svg',
+    '/iconos/favicon-32.png',
 ];
 
 // Prefijos que jamás se interceptan ni se guardan.

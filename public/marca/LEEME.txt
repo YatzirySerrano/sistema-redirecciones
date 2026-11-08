@@ -1,13 +1,37 @@
-Logotipo oficial de DASTI
-=========================
+Identidad oficial de DASTI
+==========================
 
-Coloca aquí los archivos oficiales (SVG recomendado; PNG o WEBP también funcionan):
+Fuente: public/favicon.png (favicon oficial de DASTI: triángulo azul
+degradado con «</>»). A partir de él se generan:
 
-  dasti-logo.svg            Variante completa (sidebar expandido, inicio de sesión).
-  dasti-logo-oscuro.svg     Opcional: versión para fondos oscuros.
-  dasti-isotipo.svg         Variante compacta y cuadrada (sidebar colapsado, móvil).
-  dasti-isotipo-oscuro.svg  Opcional: versión compacta para fondos oscuros.
+  public/favicon.ico                    16/32/48 px, fondo transparente.
+  public/iconos/favicon-32.png          Favicon PNG.
+  public/apple-touch-icon.png           180 px, fondo blanco con margen
+  public/iconos/apple-touch-icon.png    (iOS «Agregar a inicio»).
+  public/iconos/icono-192.png           PWA (manifest.webmanifest).
+  public/iconos/icono-512.png           PWA.
+  public/iconos/icono-maskable-512.png  PWA maskable (logo dentro del 80 %
+                                        central, fondo blanco).
+  public/marca/dasti-isotipo.png        Isotipo de la interfaz (sidebar,
+                                        inicio de sesión).
+  public/og/dasti-og.png                Imagen para compartir 1200x630
+                                        (portada, inicio de sesión y vista
+                                        previa de los enlaces cortos /r/).
 
-La interfaz los detecta automáticamente (App\Services\Apariencia\MarcaDasti).
-Mientras no existan se muestra un recurso neutral temporal.
+Si cambia el logotipo, reemplaza public/favicon.png, vuelve a generar los
+archivos anteriores con los mismos nombres e incrementa VERSION en
+public/sw.js. WhatsApp/Facebook guardan la imagen en caché: refréscala con
+el Sharing Debugger de Meta.
+
+Variantes opcionales que la interfaz detecta automáticamente
+(App\Services\Apariencia\MarcaDasti; SVG, PNG o WEBP):
+
+  dasti-logo.svg            Logotipo completo (sidebar expandido, login).
+  dasti-logo-oscuro.svg     Versión para fondos oscuros.
+  dasti-isotipo.svg|png     Variante compacta y cuadrada (ya incluida).
+  dasti-isotipo-oscuro.svg  Versión compacta para fondos oscuros.
+
+Sin logotipo completo se muestra el isotipo junto al nombre «DASTI».
 Las imágenes se ajustan con object-contain: nunca se estiran ni se recortan.
+
+Las Páginas de enlaces públicas de los negocios NO llevan la marca DASTI.

@@ -56,7 +56,9 @@ class ContratacionesTest extends TestCase
         app(AccesoServicios::class)->olvidar();
 
         $propietario = $this->propietario($negocio);
-        $this->actingAs($propietario)->get(route('cliente.fidelidad.consumidores.index'))->assertRedirect(route('cliente.servicios.show', 'fidelidad'));
+        // Sin «Mis servicios» (servicios.ver, no asignado por omisión) vuelve al
+        // inicio en lugar de la contratación (ver VisibilidadServiciosTest).
+        $this->actingAs($propietario)->get(route('cliente.fidelidad.consumidores.index'))->assertRedirect(route('cliente.inicio'));
         $this->assertNotNull(Consumidor::query()->find($consumidor->id));
         $this->get('/r/'.$producto->codigo)->assertRedirect('https://ejemplo.mx');
         $this->assertTrue($negocio->fresh()?->estaActivo());

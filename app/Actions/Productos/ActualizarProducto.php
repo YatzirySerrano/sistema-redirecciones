@@ -2,6 +2,7 @@
 
 namespace App\Actions\Productos;
 
+use App\Enums\TipoProducto;
 use App\Models\Producto;
 use App\Services\Auditoria\RegistradorAuditoria;
 
@@ -20,6 +21,11 @@ class ActualizarProducto
     {
         $producto->fill($datos);
 
+        // El número de QR solo aplica a productos QR y combinados.
+        if ($producto->isDirty('tipo') && ! $producto->esEnlaceSecundario()) {
+            $producto->forceFill(['cantidad_qr' => $producto->tipo === TipoProducto::Nfc ? null : ($producto->cantidad_qr ?? 1)]);
+        }
+
         if (! $producto->isDirty()) {
             return $producto;
         }
@@ -28,9 +34,9 @@ class ActualizarProducto
         $anteriores = array_intersect_key($producto->getOriginal(), array_flip($cambios));
         $producto->save();
 
-        // El reverso QR de un combinado independiente comparte los datos del
-        // producto físico (nombre, preparación, entrega, referencias).
-        $producto->enlacesSecundarios()->each(fn (Producto $enlace) => $enlace->forceFill(
+        // Los enlaces secundarios (reverso QR, QR 1 / QR 2) comparten los
+        // datos del producto físico (nombre, preparación, entrega, referencias).
+        $producto->todosLosEnlacesSecundarios()->each(fn (Producto $enlace) => $enlace->forceFill(
             $producto->only(['nombre', 'estado_preparacion', 'fecha_entrega', 'referencia_comercial', 'notas_internas']),
         )->save());
 

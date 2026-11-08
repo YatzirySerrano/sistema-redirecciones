@@ -68,12 +68,50 @@ const porcentaje = (v: number) =>
             </div>
             <div class="h-2 w-full rounded-full bg-muted" aria-hidden="true">
                 <div
+                    v-if="barra.partes && barra.partes.some((p) => p.valor > 0)"
+                    class="flex h-2 overflow-hidden rounded-full transition-[width] duration-500"
+                    :style="{
+                        width: `${Math.max(2, (barra.total / maximo) * 100)}%`,
+                    }"
+                >
+                    <div
+                        v-for="p in barra.partes.filter((x) => x.valor > 0)"
+                        :key="p.clave"
+                        class="h-full group-hover:opacity-85"
+                        :style="{
+                            width: `${(p.valor / barra.total) * 100}%`,
+                            background: p.color,
+                        }"
+                    />
+                </div>
+                <div
+                    v-else
                     class="h-2 rounded-full bg-primary transition-[width] duration-500 group-hover:bg-primary/80"
                     :style="{
                         width: `${Math.max(2, (barra.total / maximo) * 100)}%`,
                     }"
                 />
             </div>
+            <p
+                v-if="
+                    barra.partes &&
+                    barra.partes.filter((p) => p.valor > 0).length > 1
+                "
+                class="mt-1 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground"
+            >
+                <span
+                    v-for="p in barra.partes.filter((x) => x.valor > 0)"
+                    :key="p.clave"
+                    class="inline-flex items-center gap-1"
+                >
+                    <span
+                        class="size-1.5 rounded-full"
+                        :style="{ background: p.color }"
+                        aria-hidden="true"
+                    />
+                    {{ p.etiqueta }} {{ numero(p.valor) }}
+                </span>
+            </p>
         </li>
     </ul>
 </template>

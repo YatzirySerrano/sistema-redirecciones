@@ -1,29 +1,30 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { Info, Link2 } from '@lucide/vue';
-import { computed, toRef } from 'vue';
-import Ayuda from '@/components/comun/Ayuda.vue';
-import CampoFormulario from '@/components/comun/CampoFormulario.vue';
-import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import Panel from '@/components/comun/Panel.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
-import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
-import SelectorTipoProducto from '@/components/admin-productos/SelectorTipoProducto.vue';
-import EstadoValidacionDestino from '@/components/productos/EstadoValidacionDestino.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
-import { useValidacionDestino } from '@/composables/useValidacionDestino';
-import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
-import { create, index, store } from '@/routes/admin/productos';
-import type { Opcion } from '@/types';
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import { Info, Link2 } from "@lucide/vue";
+import { computed, toRef } from "vue";
+import Ayuda from "@/components/comun/Ayuda.vue";
+import CampoFormulario from "@/components/comun/CampoFormulario.vue";
+import EncabezadoPagina from "@/components/comun/EncabezadoPagina.vue";
+import Panel from "@/components/comun/Panel.vue";
+import SelectNativo from "@/components/comun/SelectNativo.vue";
+import SelectorBuscable from "@/components/formularios/SelectorBuscable.vue";
+import SelectorTipoProducto from "@/components/admin-productos/SelectorTipoProducto.vue";
+import EstadoValidacionDestino from "@/components/productos/EstadoValidacionDestino.vue";
+import SelectorCantidadQr from "@/components/productos/SelectorCantidadQr.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { useValidacionDestino } from "@/composables/useValidacionDestino";
+import { negocios as opcionesNegocios } from "@/routes/admin/opciones";
+import { create, index, store } from "@/routes/admin/productos";
+import type { Opcion } from "@/types";
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Productos', href: index() },
-            { title: 'Registrar producto', href: create() },
+            { title: "Productos", href: index() },
+            { title: "Registrar producto", href: create() },
         ],
     },
 });
@@ -38,38 +39,60 @@ const props = defineProps<{
 }>();
 
 const form = useForm({
-    negocio_id: props.negocio_id !== null ? String(props.negocio_id) : '',
-    nombre: '',
-    tipo: 'nfc',
+    negocio_id: props.negocio_id !== null ? String(props.negocio_id) : "",
+    nombre: "",
+    tipo: "nfc",
     cantidad: 1,
-    url_destino: '',
-    modalidad_destino: 'compartido' as 'compartido' | 'independiente',
-    url_destino_qr: '',
-    estado_preparacion: 'pendiente',
-    fecha_entrega: '',
-    referencia_comercial: '',
-    notas_internas: '',
+    url_destino: "",
+    modalidad_destino: "compartido" as "compartido" | "independiente",
+    cantidad_qr: 1,
+    url_destino_qr: "",
+    url_destino_qr2: "",
+    estado_preparacion: "pendiente",
+    fecha_entrega: "",
+    referencia_comercial: "",
+    notas_internas: "",
 });
 
-const { resultado } = useValidacionDestino(toRef(form, 'url_destino'));
+const { resultado } = useValidacionDestino(toRef(form, "url_destino"));
 const { resultado: resultadoQr } = useValidacionDestino(
-    toRef(form, 'url_destino_qr'),
+    toRef(form, "url_destino_qr"),
 );
+const { resultado: resultadoQr2 } = useValidacionDestino(
+    toRef(form, "url_destino_qr2"),
+);
+/** La pregunta «¿1 o 2 QR?» no aplica a productos solo NFC. */
+const llevaQr = computed(() => form.tipo !== "nfc");
+const dosQr = computed(() => llevaQr.value && form.cantidad_qr === 2);
+/** Combinado con NFC y QR separados (2 QR siempre lo implica). */
 const independiente = computed(
     () =>
-        form.tipo === 'combinado' && form.modalidad_destino === 'independiente',
+        form.tipo === "combinado" &&
+        (dosQr.value || form.modalidad_destino === "independiente"),
 );
+const etiquetaPrincipal = computed(() => {
+    if (independiente.value) {
+        return "Destino del NFC (frente)";
+    }
+
+    return dosQr.value ? "Destino del QR 1" : "URL de destino";
+});
+const columnasDestino = computed(() => {
+    const total = 1 + (independiente.value ? 1 : 0) + (dosQr.value ? 1 : 0);
+
+    return total === 3 ? "lg:grid-cols-3" : total === 2 ? "lg:grid-cols-2" : "";
+});
 const DESCRIPCION_MODALIDAD: Record<string, string> = {
     compartido:
-        'Un solo enlace permanente: el chip NFC y el QR llevan al mismo lugar.',
+        "Un solo enlace permanente: el chip NFC y el QR llevan al mismo lugar.",
     independiente:
-        'Dos enlaces permanentes en la misma tarjeta: el NFC del frente y el QR del reverso llevan a destinos distintos, con estadísticas separadas.',
+        "Dos enlaces permanentes en la misma tarjeta: el NFC del frente y el QR del reverso llevan a destinos distintos, con estadísticas separadas.",
 };
 const cantidad = computed(() =>
     Math.max(1, Math.min(50, Number(form.cantidad) || 1)),
 );
 const nombreEjemplo = computed(
-    () => form.nombre.trim() || 'Tarjeta NFC mostrador',
+    () => form.nombre.trim() || "Tarjeta NFC mostrador",
 );
 
 const guardar = () => {
@@ -78,9 +101,17 @@ const guardar = () => {
         cantidad: cantidad.value,
         url_destino: datos.url_destino.trim() || null,
         modalidad_destino:
-            datos.tipo === 'combinado' ? datos.modalidad_destino : null,
+            datos.tipo === "combinado"
+                ? independiente.value
+                    ? "independiente"
+                    : "compartido"
+                : null,
+        cantidad_qr: llevaQr.value ? datos.cantidad_qr : null,
         url_destino_qr: independiente.value
             ? datos.url_destino_qr.trim() || null
+            : null,
+        url_destino_qr2: dosQr.value
+            ? datos.url_destino_qr2.trim() || null
             : null,
         fecha_entrega: datos.fecha_entrega || null,
         referencia_comercial: datos.referencia_comercial.trim() || null,
@@ -190,6 +221,28 @@ const guardar = () => {
                             {{ form.errors.tipo }}
                         </p>
                     </fieldset>
+
+                    <fieldset v-if="llevaQr" class="grid gap-2">
+                        <legend
+                            class="mb-2 flex items-center gap-1.5 text-sm font-medium"
+                        >
+                            ¿Tendrá uno o dos QR impresos?
+                            <Ayuda
+                                texto="Con 2 QR, cada código tiene su propio enlace permanente, destino, diseño y estadísticas; el cliente puede personalizar cada uno por separado. Después solo DASTI (o quien tenga el permiso) puede cambiarlo."
+                            />
+                        </legend>
+                        <SelectorCantidadQr
+                            v-model="form.cantidad_qr"
+                            :con-nfc="form.tipo === 'combinado'"
+                            class="max-w-md"
+                        />
+                        <p
+                            v-if="form.errors.cantidad_qr"
+                            class="text-sm text-destructive"
+                        >
+                            {{ form.errors.cantidad_qr }}
+                        </p>
+                    </fieldset>
                 </div>
             </Panel>
 
@@ -197,7 +250,10 @@ const guardar = () => {
                 titulo="Destino inicial"
                 descripcion="Opcional. El cliente podrá cambiarlo después desde su panel."
             >
-                <fieldset v-if="form.tipo === 'combinado'" class="mb-5">
+                <fieldset
+                    v-if="form.tipo === 'combinado' && !dosQr"
+                    class="mb-5"
+                >
                     <legend
                         class="mb-2 flex items-center gap-1.5 text-sm font-medium"
                     >
@@ -238,17 +294,17 @@ const guardar = () => {
                     </p>
                 </fieldset>
 
-                <div
-                    class="grid gap-5"
-                    :class="independiente && 'lg:grid-cols-2'"
+                <p
+                    v-if="form.tipo === 'combinado' && dosQr"
+                    class="mb-5 rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground"
                 >
+                    Con 2 QR, el NFC, el QR 1 y el QR 2 tienen cada uno su
+                    propio enlace y destino.
+                </p>
+                <div class="grid gap-5" :class="columnasDestino">
                     <div>
                         <CampoFormulario
-                            :etiqueta="
-                                independiente
-                                    ? 'Destino del NFC (frente)'
-                                    : 'URL de destino'
-                            "
+                            :etiqueta="etiquetaPrincipal"
                             para="url_destino"
                             :error="form.errors.url_destino"
                             opcional
@@ -277,7 +333,11 @@ const guardar = () => {
                     </div>
                     <div v-if="independiente">
                         <CampoFormulario
-                            etiqueta="Destino del QR (reverso)"
+                            :etiqueta="
+                                dosQr
+                                    ? 'Destino del QR 1'
+                                    : 'Destino del QR (reverso)'
+                            "
                             para="url_destino_qr"
                             :error="form.errors.url_destino_qr"
                             opcional
@@ -302,6 +362,35 @@ const guardar = () => {
                             class="mt-2"
                             :resultado="resultadoQr"
                             texto-vacio="Sin destino, el QR mostrará «no disponible» hasta configurarlo."
+                        />
+                    </div>
+                    <div v-if="dosQr">
+                        <CampoFormulario
+                            etiqueta="Destino del QR 2"
+                            para="url_destino_qr2"
+                            :error="form.errors.url_destino_qr2"
+                            opcional
+                        >
+                            <Input
+                                id="url_destino_qr2"
+                                v-model="form.url_destino_qr2"
+                                type="url"
+                                inputmode="url"
+                                spellcheck="false"
+                                maxlength="2048"
+                                placeholder="https://www.tiktok.com/@negocio"
+                                class="font-mono text-sm"
+                                :aria-invalid="
+                                    !!form.errors.url_destino_qr2 || undefined
+                                "
+                                aria-describedby="ayuda-url-destino-qr2"
+                            />
+                        </CampoFormulario>
+                        <EstadoValidacionDestino
+                            id="ayuda-url-destino-qr2"
+                            class="mt-2"
+                            :resultado="resultadoQr2"
+                            texto-vacio="Sin destino, el QR 2 mostrará «no disponible» hasta configurarlo."
                         />
                     </div>
                 </div>
@@ -384,6 +473,22 @@ const guardar = () => {
                             ></span
                         >
                     </div>
+                    <p
+                        v-if="dosQr || independiente"
+                        class="text-xs font-medium"
+                    >
+                        Se generarán
+                        {{ 1 + (independiente ? 1 : 0) + (dosQr ? 1 : 0) }}
+                        enlaces permanentes por producto ({{
+                            [
+                                independiente ? "NFC" : null,
+                                dosQr ? "QR 1" : independiente ? "QR" : null,
+                                dosQr ? "QR 2" : null,
+                            ]
+                                .filter(Boolean)
+                                .join(", ")
+                        }}).
+                    </p>
                     <p class="text-xs text-muted-foreground">
                         El código aleatorio se genera al guardar. Es el enlace
                         que se imprime en el QR o se graba en el NFC, y nunca
@@ -401,7 +506,7 @@ const guardar = () => {
                     {{
                         cantidad > 1
                             ? `Registrar ${cantidad} productos`
-                            : 'Registrar producto'
+                            : "Registrar producto"
                     }}
                 </Button>
                 <Button variant="ghost" as-child class="w-full">

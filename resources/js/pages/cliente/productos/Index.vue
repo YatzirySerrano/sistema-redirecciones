@@ -1,27 +1,28 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { Download, Eye, PackageOpen, PencilLine, SearchX } from '@lucide/vue';
-import TarjetaProducto from '@/components/cliente/TarjetaProducto.vue';
-import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
-import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
-import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
-import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import EstadoVacio from '@/components/comun/EstadoVacio.vue';
-import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
-import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
-import Paginacion from '@/components/comun/Paginacion.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
-import SelectorVista from '@/components/comun/SelectorVista.vue';
-import { Button } from '@/components/ui/button';
-import { useFiltros } from '@/composables/useFiltros';
-import { useVistaListado } from '@/composables/useVistaListado';
-import { dominio, numero } from '@/lib/formato';
-import { index, show } from '@/routes/cliente/productos';
-import { show as qrShow } from '@/routes/productos/qr';
-import type { Opcion, Paginado, Producto } from '@/types';
+import { Head, Link } from "@inertiajs/vue3";
+import { Download, Eye, PackageOpen, PencilLine, SearchX } from "@lucide/vue";
+import TarjetaProducto from "@/components/cliente/TarjetaProducto.vue";
+import type { AccionRegistro } from "@/components/comun/AccionesRegistro.vue";
+import AccionesRegistro from "@/components/comun/AccionesRegistro.vue";
+import CampoBusqueda from "@/components/comun/CampoBusqueda.vue";
+import EncabezadoPagina from "@/components/comun/EncabezadoPagina.vue";
+import EstadoVacio from "@/components/comun/EstadoVacio.vue";
+import InsigniaEstado from "@/components/comun/InsigniaEstado.vue";
+import InsigniaTipo from "@/components/comun/InsigniaTipo.vue";
+import Paginacion from "@/components/comun/Paginacion.vue";
+import SelectNativo from "@/components/comun/SelectNativo.vue";
+import SelectorVista from "@/components/comun/SelectorVista.vue";
+import { Button } from "@/components/ui/button";
+import { useFiltros } from "@/composables/useFiltros";
+import { useVistaListado } from "@/composables/useVistaListado";
+import { dominio, numero } from "@/lib/formato";
+import { enlacesQr } from "@/lib/productos";
+import { index, show } from "@/routes/cliente/productos";
+import { show as qrShow } from "@/routes/productos/qr";
+import type { Opcion, Paginado, Producto } from "@/types";
 
 defineOptions({
-    layout: { breadcrumbs: [{ title: 'Mis productos', href: index() }] },
+    layout: { breadcrumbs: [{ title: "Mis productos", href: index() }] },
 });
 
 const props = defineProps<{
@@ -33,33 +34,36 @@ const props = defineProps<{
 }>();
 
 const { filtros, limpiar } = useFiltros(index().url, { ...props.filtros });
-const { vista } = useVistaListado('cliente_productos');
+const { vista } = useVistaListado("cliente_productos");
 
 const acciones = (p: Producto): AccionRegistro[] => {
-    const qr = p.enlaces_secundarios?.[0] ?? p;
+    const qrs = enlacesQr(p);
 
     return [
         {
-            clave: 'ver',
-            etiqueta: p.permisos.cambiar_destino ? 'Cambiar destino' : 'Ver',
+            clave: "ver",
+            etiqueta: p.permisos.cambiar_destino ? "Cambiar destino" : "Ver",
             icono: p.permisos.cambiar_destino ? PencilLine : Eye,
             href: show(p.id),
             principal: true,
         },
-        {
-            clave: 'qr',
-            etiqueta: 'Descargar QR',
+        // Un QR: descarga directa; dos QR: una acción por cada QR.
+        ...qrs.map((qr, i) => ({
+            clave: i === 0 ? "qr" : `qr-${qr.id}`,
+            etiqueta: qr.numero_qr
+                ? `Descargar ${qr.medio_etiqueta}`
+                : "Descargar QR",
             icono: Download,
             href: descarga(qr),
             externo: true,
-            principal: true,
-            visible: qr.permisos.descargar_qr && p.tipo !== 'nfc',
-        },
+            principal: qrs.length === 1,
+            visible: qr.permisos.descargar_qr && p.tipo !== "nfc",
+        })),
     ];
 };
 
 const descarga = (p: Producto) =>
-    qrShow.url(p.id, { query: { formato: 'png', descargar: 1 } });
+    qrShow.url(p.id, { query: { formato: "png", descargar: 1 } });
 </script>
 
 <template>
@@ -176,6 +180,12 @@ const descarga = (p: Producto) =>
                                     :tipo="producto.tipo"
                                     :etiqueta="producto.tipo_etiqueta"
                                 />
+                                <p
+                                    v-if="producto.cantidad_qr === 2"
+                                    class="mt-0.5 text-[11px] font-medium text-primary"
+                                >
+                                    2 QR
+                                </p>
                             </td>
                             <td class="hidden max-w-56 px-3 py-3 md:table-cell">
                                 <span
@@ -184,7 +194,7 @@ const descarga = (p: Producto) =>
                                     >{{
                                         producto.url_destino
                                             ? dominio(producto.url_destino)
-                                            : 'Sin destino'
+                                            : "Sin destino"
                                     }}</span
                                 >
                             </td>
@@ -199,7 +209,7 @@ const descarga = (p: Producto) =>
                             >
                                 {{
                                     producto.total_accesos === null
-                                        ? '—'
+                                        ? "—"
                                         : numero(producto.total_accesos)
                                 }}
                             </td>

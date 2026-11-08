@@ -32,8 +32,8 @@ export type Coleccion<T> = { data: T[] };
 
 export type Recurso<T> = { data: T };
 
-export type EstadoCuenta = 'activo' | 'suspendido';
-export type TipoProducto = 'qr' | 'nfc' | 'combinado';
+export type EstadoCuenta = "activo" | "suspendido";
+export type TipoProducto = "qr" | "nfc" | "combinado";
 
 export type Producto = {
     id: number;
@@ -41,11 +41,15 @@ export type Producto = {
     nombre: string;
     tipo: TipoProducto;
     tipo_etiqueta: string;
-    modalidad_destino: 'compartido' | 'independiente';
-    medio: 'nfc' | 'qr' | null;
+    modalidad_destino: "compartido" | "independiente";
+    medio: "nfc" | "qr" | null;
     medio_etiqueta: string | null;
+    /** QR impresos del producto físico: 0 (NFC), 1 o 2; null en enlaces secundarios. */
+    cantidad_qr: number | null;
+    /** 1 o 2 en los enlaces QR de un producto con dos QR. */
+    numero_qr: number | null;
     producto_principal_id: number | null;
-    /** Reverso QR de un combinado con destinos independientes. */
+    /** Reverso QR de un combinado con destinos independientes, o QR 1 / QR 2. */
     enlaces_secundarios?: Producto[];
     url_permanente: string;
     url_destino: string | null;
@@ -63,7 +67,7 @@ export type Producto = {
         tiene_logo: boolean;
     };
     // Solo administrador:
-    estado_preparacion?: 'pendiente' | 'listo' | 'entregado';
+    estado_preparacion?: "pendiente" | "listo" | "entregado";
     estado_preparacion_etiqueta?: string;
     fecha_entrega?: string | null;
     referencia_comercial?: string | null;
@@ -73,6 +77,7 @@ export type Producto = {
         cambiar_destino: boolean;
         descargar_qr: boolean;
         disenar_qr: boolean;
+        cambiar_cantidad_qr: boolean;
     };
 };
 
@@ -101,7 +106,7 @@ export type Usuario = {
     id: number;
     name: string;
     email: string;
-    rol: 'admin' | 'cliente';
+    rol: "admin" | "cliente";
     rol_etiqueta: string;
     /** Rol dinámico (permisos). */
     rol_asignado?: { id: number; nombre: string } | null;
@@ -114,7 +119,7 @@ export type Usuario = {
     } | null;
     debe_cambiar_password: boolean;
     /** null si el acceso se creó con contraseña temporal. */
-    invitacion: 'pendiente' | 'fallida' | 'aceptada' | null;
+    invitacion: "pendiente" | "fallida" | "aceptada" | null;
     invitacion_enviada_en: string | null;
     two_factor: boolean;
     ultimo_acceso_en: string | null;
@@ -126,7 +131,7 @@ export type CambioDestino = {
     id: number;
     url_anterior: string | null;
     url_nueva: string | null;
-    origen: 'admin' | 'cliente' | 'sistema';
+    origen: "admin" | "cliente" | "sistema";
     origen_etiqueta: string;
     autor: string;
     producto?: {
@@ -184,11 +189,88 @@ export type ProductoTop = {
 
 export type NegocioTop = { id: number; nombre: string; total: number };
 
+/** Actividad de un producto físico con su reparto por canal. */
+export type ActividadProducto = {
+    id: number;
+    nombre: string;
+    codigo: string;
+    tipo: string;
+    tipo_clave: "qr" | "nfc" | "combinado";
+    negocio: string;
+    total: number;
+    nfc: number;
+    qr: number;
+    combinado: number;
+};
+
+export type PuntoSerieCanales = {
+    fecha: string;
+    total: number;
+    nfc: number;
+    qr: number;
+    combinado: number;
+};
+
+export type DiaSemana = {
+    dia: number;
+    etiqueta: string;
+    total: number;
+    dias: number;
+    promedio: number;
+};
+
+export type MapaHorario = {
+    disponible: boolean;
+    desde: string | null;
+    parcial: boolean;
+    total: number;
+    celdas: { dia: number; hora: number; total: number }[];
+    por_hora: number[];
+};
+
+export type ProductosSinActividad = {
+    total: number;
+    productos: {
+        id: number;
+        nombre: string;
+        codigo: string;
+        tipo: string;
+        ultimo_acceso_en: string | null;
+    }[];
+};
+
+/** Análisis de accesos de un periodo (ConsultasEstadisticas::analisis). */
+export type AnalisisAccesos = {
+    totales: TotalesEstadisticas;
+    anterior: {
+        desde: string;
+        hasta: string;
+        total: number;
+        promedio_diario: number;
+    };
+    serie: PuntoSerieCanales[];
+    serie_anterior: number[];
+    canales: ElementoDesglose[];
+    dias_semana: DiaSemana[];
+    horario: MapaHorario;
+    productos_top: ActividadProducto[];
+    dispositivos: ElementoDesglose[];
+    navegadores: ElementoDesglose[];
+    sistemas: ElementoDesglose[];
+    sin_redirigir: ElementoDesglose[];
+    cobertura: {
+        detalle_desde: string | null;
+        detalle_parcial: boolean;
+        retencion_dias: number;
+        huella_dias: number;
+    };
+};
+
 export type OpcionesQr = {
     color: string;
     fondo: string;
     fondo_transparente: boolean;
-    margen: 'ninguno' | 'reducido' | 'estandar' | 'amplio';
+    margen: "ninguno" | "reducido" | "estandar" | "amplio";
     incluir_logo: boolean;
 };
 
@@ -198,6 +280,13 @@ export type Barra = {
     detalle?: string;
     total: number;
     href?: string;
+    /** Reparto opcional del total (p. ej. por canal), en barra apilada. */
+    partes?: {
+        clave: string;
+        etiqueta: string;
+        valor: number;
+        color: string;
+    }[];
 };
 
 export type Rol = {
@@ -205,7 +294,7 @@ export type Rol = {
     nombre: string;
     clave: string | null;
     descripcion: string | null;
-    ambito: 'plataforma' | 'negocio';
+    ambito: "plataforma" | "negocio";
     ambito_etiqueta: string;
     del_sistema: boolean;
     protegido: boolean;
@@ -220,7 +309,7 @@ export type PermisoCatalogo = {
     nombre: string;
     etiqueta: string;
     descripcion: string;
-    ambitos: ('plataforma' | 'negocio')[];
+    ambitos: ("plataforma" | "negocio")[];
     /** Agrupa permisos relacionados dentro de un módulo grande. */
     seccion?: string;
 };
@@ -230,7 +319,7 @@ export type ModuloPermisos = {
     etiqueta: string;
     descripcion: string;
     /** plataforma (solo DASTI), negocio (clientes) o mixto. */
-    grupo: 'plataforma' | 'negocio' | 'mixto';
+    grupo: "plataforma" | "negocio" | "mixto";
     permisos: PermisoCatalogo[];
 };
 

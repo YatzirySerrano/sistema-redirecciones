@@ -27,7 +27,7 @@ class EliminarProducto
             return false;
         }
 
-        $enlaces = [$producto, ...$producto->enlacesSecundarios()->get()->all()];
+        $enlaces = [$producto, ...$producto->todosLosEnlacesSecundarios()->get()->all()];
 
         return $producto->estado_preparacion === EstadoPreparacion::Pendiente
             && collect($enlaces)->every(fn (Producto $p) => $p->total_accesos === 0 && ! $p->eventosAcceso()->exists());
@@ -52,7 +52,7 @@ class EliminarProducto
 
             // Los enlaces secundarios no se borran solos (clave foránea
             // restrictiva): se eliminan primero, junto con su historial.
-            $producto->enlacesSecundarios()->get()->each(function (Producto $enlace) {
+            $producto->todosLosEnlacesSecundarios()->get()->each(function (Producto $enlace) {
                 $enlace->cambiosDestino()->delete();
                 $enlace->delete();
             });

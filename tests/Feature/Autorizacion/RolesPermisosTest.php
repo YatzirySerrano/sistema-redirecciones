@@ -51,7 +51,13 @@ class RolesPermisosTest extends TestCase
         $this->assertNotContains('roles.administrar_permisos', $admin->nombresPermisos());
         $this->assertContains('negocios.crear', $admin->nombresPermisos());
         $this->assertSame('negocio', $cliente->ambito);
-        $this->assertEqualsCanonicalizing(CatalogoPermisos::delAmbito('negocio'), $cliente->nombresPermisos());
+        // Todos los permisos de negocio salvo «servicios.ver» («Mis servicios»
+        // queda oculto hasta que DASTI lo habilite) y el cambio de número de
+        // QR (lo fija DASTI en el alta).
+        $this->assertEqualsCanonicalizing(array_values(array_diff(CatalogoPermisos::delAmbito('negocio'), ['servicios.ver', 'productos.cambiar_cantidad_qr'])), $cliente->nombresPermisos());
+        $this->assertNotContains('servicios.ver', $cliente->nombresPermisos());
+        $this->assertNotContains('productos.cambiar_cantidad_qr', $cliente->nombresPermisos());
+        $this->assertContains('productos.cambiar_cantidad_qr', $admin->nombresPermisos());
     }
 
     public function test_la_migracion_conserva_el_acceso_de_los_usuarios_existentes(): void

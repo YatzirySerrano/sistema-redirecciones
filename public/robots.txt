@@ -1,2 +1,28 @@
+# DASTI · https://redirecciones.dasti.cloud
+#
+# Solo la portada y el inicio de sesión son indexables. El panel y las
+# cuentas se bloquean aquí y además llevan "noindex".
+#
+# NO se bloquean los enlaces cortos (/r/), Fidelidad (/f/, /mi-fidelidad)
+# ni las Páginas de enlaces (/l/): los robots de vista previa (X, LinkedIn…)
+# respetan robots.txt y sin acceso no podrían mostrar la tarjeta al
+# compartirlos. Esas rutas ya responden con noindex cuando corresponde.
+# (Los dominios personalizados de los negocios tienen su propio robots.txt.)
+
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /admin/
+Disallow: /panel/
+Disallow: /inicio
+Disallow: /guia
+Disallow: /productos/
+Disallow: /settings/
+Disallow: /user/
+Disallow: /cambiar-contrasena
+Disallow: /invitacion/
+Disallow: /reset-password
+Disallow: /two-factor-challenge
+Disallow: /interno/
+Disallow: /_inertia/
+
+Sitemap: https://redirecciones.dasti.cloud/sitemap.xml

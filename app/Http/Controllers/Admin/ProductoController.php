@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Productos\ActualizarProducto;
+use App\Actions\Productos\CambiarCantidadQr;
 use App\Actions\Productos\CambiarDestinoProducto;
 use App\Actions\Productos\CambiarEstadoProducto;
 use App\Actions\Productos\CrearProducto;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CambiarEstadoRequest;
 use App\Http\Requests\Admin\GuardarProductoRequest;
 use App\Http\Requests\Admin\TransferirProductoRequest;
+use App\Http\Requests\CambiarCantidadQrRequest;
 use App\Http\Requests\CambiarDestinoRequest;
 use App\Http\Resources\CambioDestinoResource;
 use App\Http\Resources\ProductoResource;
@@ -111,7 +113,7 @@ class ProductoController extends Controller
     public function store(GuardarProductoRequest $request, CrearProducto $accion): RedirectResponse
     {
         $negocio = Negocio::query()->findOrFail($request->integer('negocio_id'));
-        /** @var array{nombre: string, tipo: string, modalidad_destino?: string|null, url_destino?: string|null, url_destino_qr?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null} $datos */
+        /** @var array{nombre: string, tipo: string, modalidad_destino?: string|null, cantidad_qr?: int|string|null, url_destino?: string|null, url_destino_qr?: string|null, url_destino_qr2?: string|null, estado_preparacion?: string|null, fecha_entrega?: string|null, referencia_comercial?: string|null, notas_internas?: string|null} $datos */
         $datos = $request->safe()->except(['negocio_id', 'cantidad']);
         $productos = $accion->ejecutar($negocio, $datos, $request->user(), $request->integer('cantidad', 1));
 
@@ -143,14 +145,17 @@ class ProductoController extends Controller
         return Inertia::render('admin/productos/Show', [
             'producto' => new ProductoResource($producto),
             // El diseño corresponde al enlace que lleva el QR: el reverso en
-            // los combinados con destinos independientes.
-            'opciones_qr' => OpcionesQr::desdeArreglo(($producto->enlacesSecundarios->first() ?? $producto)->opciones_qr)->aArreglo(),
+            // los combinados con destinos independientes; con 2 QR, cada QR
+            // tiene el suyo (opciones_qr_enlaces, por id de enlace).
+            'opciones_qr' => OpcionesQr::desdeArreglo($producto->enlacesQr()[0]->opciones_qr)->aArreglo(),
+            'opciones_qr_enlaces' => $this->opcionesPorEnlace($producto),
+            'qr2_archivado' => $this->qr2Archivado($producto),
             'puede_eliminarse' => EliminarProducto::puedeEliminarse($producto),
-            // Combinado con destinos independientes: accesos de cada medio.
+            // Destinos independientes (NFC + QR o 2 QR): accesos de cada enlace.
             'estadisticas_medios' => $producto->tieneDestinosIndependientes()
                 ? array_map(fn (Producto $enlace) => [
                     'id' => $enlace->id,
-                    'medio' => $enlace->medio?->etiqueta(),
+                    'medio' => $enlace->etiquetaMedio(),
                     'totales' => $estadisticas->totales(new FiltroEstadisticas($filtro->desde, $filtro->hasta, productoId: $enlace->id)),
                 ], [$producto, ...$producto->enlacesSecundarios->all()])
                 : [],
@@ -161,7 +166,7 @@ class ProductoController extends Controller
             ],
             'cambios' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['usuario', 'producto'])
-                    ->whereIn('producto_id', [$producto->id, ...$producto->enlacesSecundarios->pluck('id')->all()])
+                    ->whereIn('producto_id', [$producto->id, ...$producto->todosLosEnlacesSecundarios()->pluck('id')->all()])
                     ->latest('created_at')->latest('id')->limit(20)->get()
             ),
             'auditoria' => RegistroAuditoriaResource::collection(
@@ -223,6 +228,21 @@ class ProductoController extends Controller
         return redirect()->route('admin.productos.show', $producto);
     }
 
+    /**
+     * Ampliar a 2 QR o reducir a 1 (misma acción que el cliente con permiso).
+     */
+    public function cantidadQr(CambiarCantidadQrRequest $request, Producto $producto, CambiarCantidadQr $accion): RedirectResponse
+    {
+        $cantidad = $request->integer('cantidad_qr');
+        $accion->ejecutar($producto, $cantidad, $request->user(), $request->validated('motivo'), $request->validated('url_destino_qr2'));
+
+        $this->notificar($cantidad === 2
+            ? 'El producto ahora lleva 2 QR, cada uno con su propio enlace.'
+            : 'El producto ahora lleva 1 QR. El QR 2 quedó archivado: ya no redirige, pero su historial se conserva.');
+
+        return back();
+    }
+
     public function destroy(Producto $producto, EliminarProducto $accion): RedirectResponse
     {
         $negocioId = $producto->negocio_id;
@@ -231,6 +251,37 @@ class ProductoController extends Controller
         $this->notificar('Producto eliminado.');
 
         return redirect()->route('admin.negocios.show', $negocioId);
+    }
+
+    /**
+     * Diseño guardado de cada enlace QR del producto, por id de enlace.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function opcionesPorEnlace(Producto $producto): array
+    {
+        $opciones = [];
+
+        foreach ($producto->enlacesQr() as $enlace) {
+            $opciones[$enlace->id] = OpcionesQr::desdeArreglo($enlace->opciones_qr)->aArreglo();
+        }
+
+        return $opciones;
+    }
+
+    /**
+     * QR 2 archivado al reducir a 1 QR (se reactiva al volver a ampliar).
+     *
+     * @return array{codigo: string, archivado_en: string|null}|null
+     */
+    private function qr2Archivado(Producto $producto): ?array
+    {
+        $archivado = $producto->todosLosEnlacesSecundarios()->whereNotNull('archivado_en')->where('numero_qr', 2)->first();
+
+        return $archivado === null ? null : [
+            'codigo' => $archivado->codigo,
+            'archivado_en' => $archivado->archivado_en?->toIso8601String(),
+        ];
     }
 
     /**

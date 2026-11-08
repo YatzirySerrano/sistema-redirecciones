@@ -43,6 +43,11 @@ return [
     // de los eventos, conservando el resto de datos agregables.
     'dias_conservacion_huella' => (int) env('DASTI_DIAS_CONSERVACION_HUELLA', 30),
 
+    // Segundos que se reutiliza el análisis global de estadísticas (todos los
+    // negocios) en el panel de DASTI. 0 = sin caché. Las consultas de un solo
+    // negocio nunca se guardan en caché.
+    'cache_estadisticas_segundos' => (int) env('DASTI_CACHE_ESTADISTICAS', 300),
+
     // Límite de solicitudes por minuto e IP sobre los enlaces públicos.
     'limite_redirecciones_por_minuto' => (int) env('DASTI_LIMITE_REDIRECCIONES', 120),
 
@@ -187,6 +192,22 @@ return [
             'por_pagina_por_hora' => 60,
             'max_enlaces' => 2,
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Portada pública
+    |--------------------------------------------------------------------------
+    |
+    | Datos de contacto opcionales que se muestran en la portada (/). Si están
+    | vacíos, el botón «Contactar» no aparece.
+    |
+    */
+
+    'sitio' => [
+        'correo_contacto' => env('DASTI_CONTACTO_CORREO'),
+        // Número con lada internacional (p. ej. 5215512345678).
+        'whatsapp_contacto' => env('DASTI_CONTACTO_WHATSAPP'),
     ],
 
 ];

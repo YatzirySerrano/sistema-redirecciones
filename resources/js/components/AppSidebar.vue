@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    BookOpenText,
     Building2,
     ChartColumnBig,
     History,
@@ -20,7 +21,8 @@ import {
     ShieldCheck,
     UsersRound,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { gruposVisibles } from '@/components/fidelidad/secciones';
 import MarcaDasti from '@/components/MarcaDasti.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -33,8 +35,11 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarRail,
+    useSidebar,
 } from '@/components/ui/sidebar';
-import { inicio } from '@/routes';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { guia, inicio } from '@/routes';
 import { panel } from '@/routes/admin';
 import { index as auditoria } from '@/routes/admin/auditoria';
 import { edit as configuracion } from '@/routes/admin/configuracion';
@@ -244,7 +249,7 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                 })),
             ),
         });
-    } else if (puede('servicios.contratar')) {
+    } else if (puede('servicios.ver') && puede('servicios.contratar')) {
         porContratar.push({
             title: 'Fidelidad',
             href: servicioCliente('fidelidad'),
@@ -284,7 +289,7 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
                 },
             ]),
         });
-    } else if (puede('servicios.contratar')) {
+    } else if (puede('servicios.ver') && puede('servicios.contratar')) {
         porContratar.push({
             title: 'Página de enlaces',
             href: servicioCliente('pagina_enlaces'),
@@ -293,32 +298,125 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
         });
     }
 
-    secciones.push({
-        titulo: 'Servicios',
-        items: [
-            {
-                title: 'Mis servicios',
-                href: serviciosCliente(),
-                icon: Sparkles,
-                exact: true,
-            },
-            ...porContratar,
-        ],
-    });
+    // «Mis servicios» depende de servicios.ver (el servidor también lo exige).
+    if (puede('servicios.ver')) {
+        secciones.push({
+            titulo: 'Servicios',
+            items: [
+                {
+                    title: 'Mis servicios',
+                    href: serviciosCliente(),
+                    icon: Sparkles,
+                    exact: true,
+                },
+                ...porContratar,
+            ],
+        });
+    }
 
     return secciones.filter((s) => s.items.length > 0);
 });
+
+// Posición de inicio de cada sección en el menú (entrada escalonada).
+const inicios = computed(() => {
+    let cuenta = 0;
+
+    return secciones.value.map((s) => {
+        const desde = cuenta;
+        cuenta += s.items.length;
+
+        return desde;
+    });
+});
+
+/*
+ * Indicador deslizante del elemento activo: una sola píldora que se mueve
+ * hasta el botón activo al navegar o al colapsar la barra. Si hay cero o
+ * varios activos, cada botón vuelve a pintar su propio fondo.
+ */
+const { isMobile, setOpenMobile, state } = useSidebar();
+const { isCurrentUrl } = useCurrentUrl();
+const contenedor = ref<HTMLElement | null>(null);
+const indicador = ref<{
+    x: number;
+    y: number;
+    ancho: number;
+    alto: number;
+} | null>(null);
+const sinTransicion = ref(true);
+
+const medir = () => {
+    const raiz = contenedor.value;
+    const activos = raiz?.querySelectorAll<HTMLElement>(
+        '[data-sidebar="menu-button"][data-active="true"]',
+    );
+
+    if (!raiz || !activos || activos.length !== 1) {
+        indicador.value = null;
+
+        return;
+    }
+
+    const a = activos[0].getBoundingClientRect();
+    const b = raiz.getBoundingClientRect();
+
+    if (a.width === 0) {
+        indicador.value = null;
+
+        return;
+    }
+
+    indicador.value = {
+        x: a.left - b.left,
+        y: a.top - b.top,
+        ancho: a.width,
+        alto: a.height,
+    };
+
+    // La primera colocación es inmediata; las siguientes se deslizan.
+    if (sinTransicion.value) {
+        requestAnimationFrame(() => (sinTransicion.value = false));
+    }
+};
+
+const medirTrasRender = () => void nextTick(medir);
+
+onMounted(medirTrasRender);
+watch(() => page.url, medirTrasRender);
+watch(contenedor, (el) => {
+    if (el) {
+        sinTransicion.value = true;
+        medirTrasRender();
+        // En el teléfono los elementos entran con un desplazamiento breve.
+        setTimeout(medir, 450);
+    }
+});
+// El ancho cambia durante el colapso (transición de 200 ms).
+watch(state, () => setTimeout(medir, 220));
+useResizeObserver(contenedor, medir);
+
+// En el teléfono, el menú se cierra al elegir una pantalla.
+watch(
+    () => page.url,
+    () => {
+        if (isMobile.value) {
+            setOpenMobile(false);
+        }
+    },
+);
+
+const enGuia = computed(() => isCurrentUrl(guia()));
 </script>
 
 <template>
     <Sidebar collapsible="icon" variant="sidebar">
-        <SidebarHeader class="py-4">
+        <SidebarHeader class="gap-0 pt-4 pb-2">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="hover:bg-sidebar-accent"
+                        class="transition-colors duration-200 hover:bg-sidebar-accent/70"
                     >
                         <Link :href="inicio()" aria-label="DASTI · Inicio">
                             <MarcaDasti />
@@ -328,35 +426,91 @@ const secciones = computed<{ titulo: string; items: NavItem[] }[]>(() => {
             </SidebarMenu>
             <!-- Contexto: dónde estoy y con qué rol (se oculta al colapsar). -->
             <div
-                class="mx-2 mt-2 rounded-lg border border-sidebar-border bg-sidebar-accent/50 px-3 py-2 group-data-[collapsible=icon]:hidden"
+                class="mx-2 mt-3 flex items-center gap-2.5 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-2.5 py-2 group-data-[collapsible=icon]:hidden"
             >
-                <p
-                    class="truncate text-xs font-medium text-sidebar-accent-foreground"
+                <span
+                    class="flex size-7 shrink-0 items-center justify-center rounded-md bg-sidebar-primary/15 text-sidebar-primary"
+                    aria-hidden="true"
                 >
-                    {{
-                        permisos.administrar
-                            ? 'Administración DASTI'
-                            : (negocio?.nombre_comercial ?? 'Mi negocio')
-                    }}
-                </p>
-                <p class="truncate text-[11px] text-sidebar-foreground">
-                    {{ page.props.auth.user.rol_nombre ?? 'Sin rol asignado' }}
-                </p>
+                    <ShieldCheck v-if="permisos.administrar" class="size-4" />
+                    <Building2 v-else class="size-4" />
+                </span>
+                <span class="min-w-0">
+                    <span
+                        class="block truncate text-xs font-medium text-sidebar-accent-foreground"
+                    >
+                        {{
+                            permisos.administrar
+                                ? 'Administración DASTI'
+                                : (negocio?.nombre_comercial ?? 'Mi negocio')
+                        }}
+                    </span>
+                    <span
+                        class="block truncate text-[11px] text-sidebar-foreground"
+                    >
+                        {{
+                            page.props.auth.user.rol_nombre ??
+                            'Sin rol asignado'
+                        }}
+                    </span>
+                </span>
             </div>
         </SidebarHeader>
 
-        <SidebarContent>
-            <NavMain
-                v-for="seccion in secciones"
-                :key="seccion.titulo"
-                :titulo="seccion.titulo"
-                :items="seccion.items"
-            />
+        <SidebarContent class="pb-2">
+            <div
+                ref="contenedor"
+                class="relative"
+                :data-indicador-listo="indicador ? 'true' : 'false'"
+            >
+                <!-- Píldora del elemento activo -->
+                <div
+                    v-if="indicador"
+                    class="indicador-navegacion pointer-events-none absolute top-0 left-0 z-0 rounded-md bg-sidebar-primary shadow-[0_6px_18px_-8px_var(--sidebar-primary)]"
+                    :class="sinTransicion ? 'transition-none!' : ''"
+                    :style="{
+                        width: `${indicador.ancho}px`,
+                        height: `${indicador.alto}px`,
+                        transform: `translate(${indicador.x}px, ${indicador.y}px)`,
+                    }"
+                    aria-hidden="true"
+                >
+                    <span
+                        class="absolute inset-y-2 -left-3 w-1 rounded-r-full bg-sidebar-primary group-data-[collapsible=icon]:hidden"
+                    />
+                </div>
+                <NavMain
+                    v-for="(seccion, i) in secciones"
+                    :key="seccion.titulo"
+                    :titulo="seccion.titulo"
+                    :items="seccion.items"
+                    :desde="inicios[i]"
+                />
+            </div>
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter class="gap-1 border-t border-sidebar-border p-3">
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton
+                        as-child
+                        :is-active="enGuia"
+                        tooltip="Guía de uso"
+                        class="h-9 text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                    >
+                        <Link
+                            :href="guia()"
+                            :aria-current="enGuia ? 'page' : undefined"
+                        >
+                            <BookOpenText />
+                            <span>Guía de uso</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
             <NavUser />
         </SidebarFooter>
+        <SidebarRail />
     </Sidebar>
     <slot />
 </template>

@@ -5,7 +5,8 @@ namespace App\Services\Apariencia;
 /**
  * Identidad visual de DASTI en la interfaz administrativa.
  *
- * El logotipo oficial aún no se ha proporcionado. Cuando exista, basta con
+ * El isotipo oficial (favicon de DASTI) está en `public/marca/dasti-isotipo.png`
+ * y se genera desde `public/favicon.png`. Para añadir más variantes basta con
  * copiar los archivos a `public/marca/` con estos nombres (SVG o PNG):
  *
  * - `dasti-logo.svg`           variante completa (sidebar expandido, login).
@@ -13,8 +14,8 @@ namespace App\Services\Apariencia;
  * - `dasti-isotipo.svg`        variante compacta (sidebar colapsado, móvil).
  * - `dasti-isotipo-oscuro.svg` opcional, para modo oscuro.
  *
- * Mientras no existan, la interfaz usa un recurso neutral temporal
- * (`temporal: true`), que nunca se presenta como identidad definitiva.
+ * Sin logotipo completo, la interfaz muestra el isotipo junto al nombre en
+ * texto. Si faltaran todos, usa un recurso neutral (`temporal: true`).
  */
 class MarcaDasti
 {

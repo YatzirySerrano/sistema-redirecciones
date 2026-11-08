@@ -60,6 +60,14 @@ class RequiereServicio
                 return redirect()->route('admin.disenos.index');
             }
 
+            // Sin «Mis servicios» (servicios.ver) no se le lleva a la
+            // contratación: vuelve al inicio con la explicación.
+            if (! $request->user()?->tienePermiso('servicios.ver')) {
+                Inertia::flash('toast', ['type' => 'info', 'message' => "{$nombre} no está activo para tu negocio. Si te interesa, contacta a DASTI."]);
+
+                return redirect()->route('cliente.inicio');
+            }
+
             Inertia::flash('toast', ['type' => 'info', 'message' => "{$nombre} no está activo para tu negocio. Aquí puedes conocerlo y contratarlo."]);
 
             return redirect()->route('cliente.servicios.show', $servicio);

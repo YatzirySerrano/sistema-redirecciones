@@ -5,8 +5,8 @@ import { computed } from 'vue';
 /**
  * Identidad de DASTI en el panel (sidebar, inicio de sesión).
  *
- * - `completa`: logotipo completo (o, mientras no exista el oficial, el
- *   recurso neutral temporal + el nombre en texto).
+ * - `completa`: logotipo completo o, si solo existe el isotipo oficial
+ *   (public/marca/dasti-isotipo.png, el favicon de DASTI), isotipo + nombre.
  * - `compacta`: solo el isotipo cuadrado, centrado (sidebar colapsado).
  * - `auto`: completa, y compacta cuando el sidebar está colapsado.
  *
@@ -47,7 +47,10 @@ const isotipo = computed(() =>
         : (marca.value?.isotipo ?? null),
 );
 
-const muestraCompacta = computed(() => props.variante !== 'completa');
+// Sin logotipo completo, la variante completa es isotipo + nombre en texto.
+const muestraCompacta = computed(
+    () => props.variante !== 'completa' || (!logo.value && !!isotipo.value),
+);
 const muestraCompleta = computed(() => props.variante !== 'compacta');
 const auto = computed(() => props.variante === 'auto');
 const textoClaro = computed(() => props.superficie === 'oscura');

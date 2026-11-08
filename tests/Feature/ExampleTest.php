@@ -6,9 +6,12 @@ use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    public function test_la_raiz_envia_a_los_invitados_al_inicio_de_sesion(): void
+    public function test_la_raiz_muestra_la_portada_publica_a_los_invitados(): void
     {
-        $this->get(route('home'))->assertRedirect(route('login'));
+        $this->withoutVite();
+
+        $this->get(route('home'))->assertOk()
+            ->assertInertia(fn ($pagina) => $pagina->component('Bienvenida'));
     }
 
     public function test_no_existe_registro_publico(): void

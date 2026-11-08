@@ -10,11 +10,13 @@ use App\Http\Resources\CambioDestinoResource;
 use App\Http\Resources\RegistroAuditoriaResource;
 use App\Models\CambioDestino;
 use App\Models\Negocio;
+use App\Models\Pago;
 use App\Models\Producto;
 use App\Models\RegistroAuditoria;
 use App\Models\User;
 use App\Services\Estadisticas\ConsultasEstadisticas;
 use App\Services\Estadisticas\FiltroEstadisticas;
+use App\Services\Estadisticas\IndicadoresPlataforma;
 use App\Services\Fidelidad\ResumenFidelidad;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -28,12 +30,12 @@ use Inertia\Response;
  */
 class PanelController extends Controller
 {
-    public function __invoke(Request $request, ConsultasEstadisticas $estadisticas, ResumenFidelidad $fidelidad): Response
+    public function __invoke(Request $request, ConsultasEstadisticas $estadisticas, ResumenFidelidad $fidelidad, IndicadoresPlataforma $plataforma): Response
     {
         /** @var User $usuario */
         $usuario = $request->user();
         $actual = FiltroEstadisticas::ultimosDias(30);
-        $previo = new FiltroEstadisticas($actual->desde->subDays(30), $actual->desde->subSecond());
+        $previo = $actual->anterior();
 
         $fisicos = Producto::query()->principales();
         $negocioActivo = fn (Builder $q) => $q->where('estado', EstadoCuenta::Activo);
@@ -66,11 +68,21 @@ class PanelController extends Controller
                 // Histórico completo (todos los periodos de propiedad).
                 'accesos_totales' => $estadisticas->totalHistorico(),
             ],
-            'incidencias' => $this->incidencias($enlacesSinDestino),
+            'incidencias' => $this->incidencias($enlacesSinDestino, $usuario, $estadisticas, $plataforma, $actual),
             'fidelidad' => $usuario->tienePermiso('servicios.ver') ? $fidelidad->paraPlataforma() : null,
-            'serie' => $estadisticas->serieDiaria($actual),
-            'productos_top' => $estadisticas->productosMasUsados($actual, 6),
+            // Cada bloque solo se calcula si el usuario puede consultarlo.
+            'negocios' => $plataforma->negocios($actual),
+            'usuarios' => $usuario->tienePermiso('usuarios.ver') ? $plataforma->usuarios() : null,
+            'productos' => $plataforma->productos($actual),
+            'crecimiento' => $usuario->tienePermiso('negocios.ver') ? $plataforma->crecimientoMensual(12) : null,
+            'contrataciones' => $usuario->tienePermiso('servicios.ver') ? $plataforma->contrataciones($actual) : null,
+            'ingresos' => $usuario->tienePermiso('pagos.ver') ? $plataforma->ingresos($actual) : null,
+            'canales' => $estadisticas->porTipo($actual),
+            'serie' => $estadisticas->serieCanales($actual),
+            'serie_anterior' => array_column($estadisticas->serieDiaria($previo), 'total'),
+            'productos_top' => $estadisticas->actividadPorProducto($actual, 6),
             'negocios_top' => $estadisticas->negociosMasActivos($actual, 6),
+            'puede_estadisticas' => $usuario->tienePermiso('estadisticas.ver'),
             'ultimos_cambios' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['producto', 'usuario'])->latest('created_at')->latest('id')->limit(6)->get()
             ),
@@ -88,8 +100,10 @@ class PanelController extends Controller
      *
      * @return list<array{clave: string, titulo: string, descripcion: string, cantidad: int, ruta: string, parametros: array<string, string>, permiso: string}>
      */
-    private function incidencias(int $enlacesSinDestino): array
+    private function incidencias(int $enlacesSinDestino, User $usuario, ConsultasEstadisticas $estadisticas, IndicadoresPlataforma $plataforma, FiltroEstadisticas $periodo): array
     {
+        $sinRedirigir = array_sum(array_column($estadisticas->sinRedirigir($periodo), 'total'));
+
         $incidencias = [
             [
                 'clave' => 'sin_destino',
@@ -136,8 +150,44 @@ class PanelController extends Controller
                 'parametros' => ['rol' => RolUsuario::Admin->value],
                 'permiso' => 'usuarios.ver',
             ],
+            [
+                'clave' => 'sin_redirigir',
+                'titulo' => 'Accesos que no llegaron a un destino',
+                'descripcion' => 'Últimos 30 días: enlaces sin destino, o producto o negocio suspendido.',
+                'cantidad' => $sinRedirigir,
+                'ruta' => 'admin.enlaces.index',
+                'parametros' => [],
+                'permiso' => 'redirecciones.ver',
+            ],
+            [
+                'clave' => 'negocios_sin_actividad',
+                'titulo' => 'Negocios activos sin accesos',
+                'descripcion' => 'Tienen productos activos, pero nadie los usó en 30 días.',
+                'cantidad' => $estadisticas->negociosSinActividad($periodo),
+                'ruta' => 'admin.estadisticas.index',
+                'parametros' => [],
+                'permiso' => 'estadisticas.ver',
+            ],
+            [
+                'clave' => 'dominios_error',
+                'titulo' => 'Dominios propios con error',
+                'descripcion' => 'Páginas de enlaces cuyo dominio no responde o perdió su configuración.',
+                'cantidad' => $usuario->tienePermiso('paginas.supervisar') ? $plataforma->dominiosConError() : 0,
+                'ruta' => 'admin.paginas.index',
+                'parametros' => [],
+                'permiso' => 'paginas.supervisar',
+            ],
+            [
+                'clave' => 'pagos_revision',
+                'titulo' => 'Pagos que requieren revisión',
+                'descripcion' => 'Montos o estados que no coinciden con Openpay.',
+                'cantidad' => $usuario->tienePermiso('pagos.ver') ? Pago::query()->where('requiere_revision', true)->count() : 0,
+                'ruta' => 'admin.pagos.index',
+                'parametros' => [],
+                'permiso' => 'pagos.ver',
+            ],
         ];
 
-        return array_values(array_filter($incidencias, fn (array $i) => $i['cantidad'] > 0));
+        return array_values(array_filter($incidencias, fn (array $i) => $i['cantidad'] > 0 && $usuario->tienePermiso($i['permiso'])));
     }
 }

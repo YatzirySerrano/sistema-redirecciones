@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\BienvenidaController;
 use App\Http\Controllers\Cuenta\ContrasenaInicialController;
 use App\Http\Controllers\Cuenta\InvitacionController;
+use App\Http\Controllers\GuiaController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\PreferenciaController;
 use App\Http\Controllers\QrController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\ValidacionDestinoController;
 use App\Http\Middleware\RequerirContrasenaDefinitiva;
 use App\Http\Middleware\VerificarCuentaActiva;
@@ -21,7 +24,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', fn () => auth()->check() ? redirect()->route('inicio') : redirect()->route('login'))->name('home');
+// Portada pública (invitados) y mapa del sitio; con sesión, / lleva al panel.
+Route::get('/', BienvenidaController::class)->name('home');
+Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Invitación de acceso: enlace firmado de un solo uso enviado por correo.
 Route::get('invitacion/{usuario}', [InvitacionController::class, 'show'])
@@ -39,6 +44,9 @@ Route::middleware(['auth', VerificarCuentaActiva::class])->group(function () {
 
     Route::middleware(RequerirContrasenaDefinitiva::class)->group(function () {
         Route::get('inicio', InicioController::class)->name('inicio');
+
+        // Guía de uso de la plataforma (contenido según el tipo de cuenta).
+        Route::get('guia', GuiaController::class)->name('guia');
 
         // Comprobación en vivo de destinos con las reglas del servidor.
         Route::post('destinos/validacion', ValidacionDestinoController::class)

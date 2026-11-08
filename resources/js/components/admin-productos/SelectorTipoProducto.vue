@@ -19,7 +19,7 @@ const DETALLE: Record<string, { icono: Component; texto: string }> = {
     },
     combinado: {
         icono: ScanLine,
-        texto: 'QR y NFC comparten el mismo enlace: no se puede distinguir qué canal originó cada visita. Si necesitas estadísticas por canal, registra dos productos.',
+        texto: 'QR y NFC en el mismo producto. Pueden compartir un enlace o tener destinos independientes (con estadísticas por canal); con 2 QR, cada QR y el NFC tienen su propio enlace.',
     },
 };
 </script>

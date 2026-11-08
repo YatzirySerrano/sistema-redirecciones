@@ -70,6 +70,8 @@ class DemoSeeder extends Seeder
                 ['nombre' => 'Tarjeta NFC del dueño', 'tipo' => 'nfc', 'destinos' => ['https://example.com/taller-ruiz', 'https://example.com/taller-ruiz/contacto'], 'peso' => 2],
                 ['nombre' => 'QR ubicación', 'tipo' => 'qr', 'destinos' => ['https://maps.google.com/?q=Taller+Mecanico+Ruiz+Monterrey'], 'peso' => 3],
                 ['nombre' => 'QR reseñas', 'tipo' => 'combinado', 'destinos' => ['https://g.page/r/taller-ruiz-demo/review'], 'peso' => 2],
+                // Dos QR impresos, cada uno con su propio enlace y destino.
+                ['nombre' => 'Tarjeta 2 QR ubicación y reseñas', 'tipo' => 'qr', 'cantidad_qr' => 2, 'destinos' => ['https://maps.google.com/?q=Taller+Mecanico+Ruiz+Monterrey'], 'destino_qr2' => 'https://g.page/r/taller-ruiz-demo/review', 'peso' => 2],
             ],
         ],
         [
@@ -191,7 +193,9 @@ class DemoSeeder extends Seeder
         [$producto] = app(CrearProducto::class)->ejecutar($negocio, [
             'nombre' => (string) $datos['nombre'],
             'tipo' => (string) $datos['tipo'],
+            'cantidad_qr' => (int) ($datos['cantidad_qr'] ?? 1),
             'url_destino' => $destinos[0] ?? null,
+            'url_destino_qr2' => $datos['destino_qr2'] ?? null,
             'estado_preparacion' => $destinos === [] ? 'pendiente' : 'entregado',
             'fecha_entrega' => $destinos === [] ? null : $creadoEn->addDays(2)->toDateString(),
             'referencia_comercial' => 'PED-2026-'.str_pad((string) ($negocio->id * 10 + $indice), 4, '0', STR_PAD_LEFT),

@@ -32,8 +32,11 @@
 
 
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="/iconos/favicon-32.png" type="image/png" sizes="32x32">
+        <link rel="icon" href="/iconos/icono-192.png" type="image/png" sizes="192x192">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        {{-- SEO, Open Graph y datos estructurados (resources/views/partials). --}}
+        @include('partials.seo')
         {{-- Aplicación web progresiva (ver public/sw.js para la política de caché). --}}
         <link rel="manifest" href="/manifest.webmanifest">
         <meta name="theme-color" content="#13101e">
@@ -51,7 +54,7 @@
              desde resources/js/lib/tema.ts al cambiar la prop "tema". --}}
         <style id="tema-personalizado">{!! app(\App\Services\Apariencia\TemaVisual::class)->css() !!}</style>
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ match ($page['component'] ?? '') { 'Bienvenida' => 'DASTI · Redirecciones QR y NFC dinámicas', 'auth/Login' => 'Iniciar sesión · DASTI', default => config('app.name', 'Laravel') } }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

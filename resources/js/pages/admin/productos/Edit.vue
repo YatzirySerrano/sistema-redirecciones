@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { Info } from '@lucide/vue';
-import CampoFormulario from '@/components/comun/CampoFormulario.vue';
-import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import Panel from '@/components/comun/Panel.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
-import SelectorTipoProducto from '@/components/admin-productos/SelectorTipoProducto.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
-import { index, show, update } from '@/routes/admin/productos';
-import type { Opcion, Producto, Recurso } from '@/types';
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import { Info } from "@lucide/vue";
+import CampoFormulario from "@/components/comun/CampoFormulario.vue";
+import EncabezadoPagina from "@/components/comun/EncabezadoPagina.vue";
+import Panel from "@/components/comun/Panel.vue";
+import SelectNativo from "@/components/comun/SelectNativo.vue";
+import SelectorTipoProducto from "@/components/admin-productos/SelectorTipoProducto.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { index, show, update } from "@/routes/admin/productos";
+import type { Opcion, Producto, Recurso } from "@/types";
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Productos', href: index() },
-            { title: 'Editar producto', href: '#' },
+            { title: "Productos", href: index() },
+            { title: "Editar producto", href: "#" },
         ],
     },
 });
@@ -29,14 +29,16 @@ const props = defineProps<{
 }>();
 
 const p = props.producto.data;
+/** Con varios enlaces (independientes o 2 QR) el tipo no puede cambiar. */
+const tipoFijo = p.modalidad_destino === "independiente" || p.cantidad_qr === 2;
 
 const form = useForm({
     nombre: p.nombre,
     tipo: p.tipo as string,
-    estado_preparacion: p.estado_preparacion ?? 'pendiente',
-    fecha_entrega: p.fecha_entrega ?? '',
-    referencia_comercial: p.referencia_comercial ?? '',
-    notas_internas: p.notas_internas ?? '',
+    estado_preparacion: p.estado_preparacion ?? "pendiente",
+    fecha_entrega: p.fecha_entrega ?? "",
+    referencia_comercial: p.referencia_comercial ?? "",
+    notas_internas: p.notas_internas ?? "",
 });
 
 const guardar = () => {
@@ -97,6 +99,16 @@ const guardar = () => {
                             class="text-sm text-red-600 dark:text-red-500"
                         >
                             {{ form.errors.tipo }}
+                        </p>
+                        <p
+                            v-else-if="tipoFijo"
+                            class="text-xs text-muted-foreground"
+                        >
+                            Este producto tiene varios enlaces ({{
+                                p.cantidad_qr === 2
+                                    ? "2 QR"
+                                    : "destinos independientes"
+                            }}); su tipo no puede cambiar.
                         </p>
                     </fieldset>
                 </div>
@@ -171,6 +183,17 @@ const guardar = () => {
                             <strong class="text-foreground">destino</strong> se
                             cambia en la pestaña «Enlace y destino» del
                             producto.</span
+                        >
+                    </li>
+                    <li v-if="p.tipo !== 'nfc'" class="flex gap-2">
+                        <Info class="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span
+                            >Lleva
+                            <strong class="text-foreground">{{
+                                p.cantidad_qr === 2 ? "2 QR" : "1 QR"
+                            }}</strong
+                            >. Para ampliar o reducir usa «1 QR / 2 QR» en la
+                            ficha del producto.</span
                         >
                     </li>
                     <li class="flex gap-2">

@@ -96,6 +96,7 @@ final class CatalogoPermisos
                 'productos.reactivar' => ['etiqueta' => 'Reactivar', 'descripcion' => 'Reanuda un producto suspendido.', 'ambitos' => self::P],
                 'productos.transferir' => ['etiqueta' => 'Transferir', 'descripcion' => 'Cambiar el negocio propietario.', 'ambitos' => self::P],
                 'productos.eliminar' => ['etiqueta' => 'Eliminar', 'descripcion' => 'Solo productos sin historial ni accesos.', 'ambitos' => self::P],
+                'productos.cambiar_cantidad_qr' => ['etiqueta' => 'Ampliar o reducir los QR del producto', 'descripcion' => 'Cambiar un producto QR o QR + NFC entre 1 y 2 QR impresos. Al reducir, el segundo QR se archiva (deja de redirigir) sin perder su historial.', 'ambitos' => self::PN],
             ],
         ],
         'redirecciones' => [
@@ -148,9 +149,9 @@ final class CatalogoPermisos
             'etiqueta' => 'Servicios',
             'descripcion' => 'Servicios adicionales (Fidelidad, Página de enlaces) y su contratación. Un permiso nunca sustituye la contratación.',
             'permisos' => [
-                'servicios.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Servicios, contrataciones y su historial.', 'ambitos' => self::P],
+                'servicios.ver' => ['etiqueta' => 'Ver', 'descripcion' => 'Personal DASTI: servicios, contrataciones y su historial. Clientes: el apartado «Mis servicios» (catálogo, estado y contratación); sin él no lo ven ni pueden abrirlo, pero sus productos QR/NFC siguen funcionando.', 'ambitos' => self::PN],
                 'servicios.gestionar' => ['etiqueta' => 'Administrar', 'descripcion' => 'Activar, suspender, reactivar y configurar precio y vigencia.', 'ambitos' => self::P],
-                'servicios.contratar' => ['etiqueta' => 'Contratar', 'descripcion' => 'Contratar servicios adicionales con pago en línea.', 'ambitos' => self::N],
+                'servicios.contratar' => ['etiqueta' => 'Contratar', 'descripcion' => 'Contratar servicios adicionales con pago en línea. Requiere también «Ver».', 'ambitos' => self::N],
             ],
         ],
         'pagos' => [
@@ -237,6 +238,16 @@ final class CatalogoPermisos
     private const EXCLUIDOS_ADMINISTRADOR = ['roles.crear', 'roles.editar', 'roles.administrar_permisos', 'roles.asignar'];
 
     /**
+     * Permisos que el rol Cliente NO recibe al crearse. «servicios.ver»
+     * controla si el negocio ve «Mis servicios» y la contratación en línea:
+     * queda oculto hasta que DASTI lo habilite desde «Roles y permisos»
+     * (política inicial mientras la contratación en línea no se ofrece).
+     * «productos.cambiar_cantidad_qr»: el número de QR lo fija DASTI en el
+     * alta; solo los roles a los que DASTI lo otorgue pueden cambiarlo.
+     */
+    private const EXCLUIDOS_CLIENTE = ['servicios.ver', 'productos.cambiar_cantidad_qr'];
+
+    /**
      * @return list<string>
      */
     public static function todos(): array
@@ -292,7 +303,7 @@ final class CatalogoPermisos
         return match ($claveRol) {
             self::ROL_SUPERADMINISTRADOR => self::delAmbito(self::AMBITO_PLATAFORMA),
             self::ROL_ADMINISTRADOR => array_values(array_diff(self::delAmbito(self::AMBITO_PLATAFORMA), self::EXCLUIDOS_ADMINISTRADOR)),
-            self::ROL_CLIENTE => self::delAmbito(self::AMBITO_NEGOCIO),
+            self::ROL_CLIENTE => array_values(array_diff(self::delAmbito(self::AMBITO_NEGOCIO), self::EXCLUIDOS_CLIENTE)),
             self::ROL_EMPLEADO => self::EMPLEADO,
             default => [],
         };

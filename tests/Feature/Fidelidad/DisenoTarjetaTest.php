@@ -125,8 +125,10 @@ class DisenoTarjetaTest extends TestCase
         $sinServicio = Negocio::factory()->create();
         $propietario = $this->propietario($sinServicio);
 
+        // Sin «Mis servicios» (servicios.ver, no asignado por omisión) vuelve al
+        // inicio en lugar de la contratación (ver VisibilidadServiciosTest).
         $this->actingAs($propietario)->get(route('cliente.fidelidad.diseno.edit'))
-            ->assertRedirect(route('cliente.servicios.show', 'fidelidad'));
+            ->assertRedirect(route('cliente.inicio'));
         $this->guardar($propietario, $this->documento())->assertForbidden();
 
         $negocio = $this->negocioConFidelidad();
@@ -427,7 +429,7 @@ class DisenoTarjetaTest extends TestCase
         app(GestorContrataciones::class)->suspender($contratacion, 'Falta de pago', $admin);
         app(AccesoServicios::class)->olvidar();
 
-        $this->actingAs($propietario)->get(route('cliente.fidelidad.diseno.edit'))->assertRedirect(route('cliente.servicios.show', 'fidelidad'));
+        $this->actingAs($propietario)->get(route('cliente.fidelidad.diseno.edit'))->assertRedirect(route('cliente.inicio'));
         $this->publicar($propietario, $this->documento(), 1)->assertForbidden();
 
         // La página pública sigue mostrando un estado coherente y de solo lectura.

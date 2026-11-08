@@ -1,5 +1,7 @@
 # Manual del cliente
 
+> Dentro de la plataforma tienes la **Guía de uso** (menú lateral › Guía de uso, o el botón **?** de la parte superior, que abre el tema de la pantalla en la que estás).
+
 ## Iniciar sesión
 
 Entra en `https://redireccion.dasti.cloud/login` con el correo y la contraseña que te dio DASTI, o define tu contraseña con el enlace que recibiste por correo (funciona una sola vez y caduca; si expira, pide uno nuevo a DASTI). Si te dieron una contraseña temporal, el sistema te pedirá crear una propia al entrar.
@@ -34,13 +36,19 @@ Si un producto aparece como **Suspendido**, no se puede modificar: contacta a DA
 
 ## Descargar tu QR
 
-En los productos con QR, la ficha incluye el diseñador: elige colores, fondo, margen y, si DASTI cargó tu logotipo, inclúyelo al centro. Descarga en **PNG** o **SVG**. El código siempre contiene tu enlace permanente. Si DASTI deshabilitó las descargas, esta sección no aparece.
+En los productos con QR, la ficha incluye el diseñador: elige colores, fondo, margen y, si DASTI cargó tu logotipo, inclúyelo al centro. Descarga en **PNG** o **SVG**. El código siempre contiene tu enlace permanente y sus tres esquinas llevan la insignia de DASTI. Si tu producto tiene 2 QR, cada uno tiene su propio destino, diseño y estadísticas: personalízalos por separado. Si DASTI deshabilitó las descargas, esta sección no aparece.
 
 ## Estadísticas
 
-En **Estadísticas** puedes elegir el periodo y el producto, y ver los accesos por día, los productos más usados y el desglose por dispositivo y navegador. Las cifras son accesos registrados (sin bots identificados), no necesariamente personas distintas. Los «visitantes estimados» solo pueden calcularse para los últimos 30 días; en periodos más antiguos la tarjeta lo indica.
+Tu **Inicio** resume los últimos 30 días: interacciones comparadas con los 30 días previos, cómo se abren tus enlaces (NFC o QR), el producto más usado, productos sin uso y accesos rápidos.
+
+En **Estadísticas** eliges el periodo (hoy, 7 o 30 días, este mes, mes anterior, 90 días, 12 meses o fechas propias), un producto y un canal. Verás la evolución por día, semana o mes frente al periodo anterior de igual duración, NFC frente a QR, productos con más actividad, días de la semana y horarios con más uso (hora del centro de México), dispositivos y navegadores.
+
+Las cifras son **interacciones**: veces que se abrió un enlace y llegó a su destino, sin accesos automatizados identificados. No equivalen a personas distintas, ventas ni clientes nuevos. Los horarios y dispositivos se conservan alrededor de 13 meses; los totales por día, siempre. No registramos ubicación.
 
 ## Servicios de tu negocio
+
+El apartado **Mis servicios** aparece cuando DASTI lo habilita para tu cuenta. Si no lo ves, tus productos siguen funcionando con normalidad; para contratar un servicio, contacta a DASTI.
 
 En **Servicios › Mis servicios** ves los tres servicios de DASTI:
 

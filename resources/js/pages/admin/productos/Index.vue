@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link } from "@inertiajs/vue3";
 import {
     ArrowRightLeft,
     CirclePause,
@@ -13,37 +13,43 @@ import {
     Plus,
     QrCode,
     Trash2,
-} from '@lucide/vue';
-import { computed, ref } from 'vue';
-import CambiarEstadoProducto from '@/components/admin-productos/CambiarEstadoProducto.vue';
-import EliminarProducto from '@/components/admin-productos/EliminarProducto.vue';
-import TransferirProducto from '@/components/admin-productos/TransferirProducto.vue';
-import type { AccionRegistro } from '@/components/comun/AccionesRegistro.vue';
-import AccionesRegistro from '@/components/comun/AccionesRegistro.vue';
-import CampoBusqueda from '@/components/comun/CampoBusqueda.vue';
-import EncabezadoOrdenable from '@/components/comun/EncabezadoOrdenable.vue';
-import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import EstadoVacio from '@/components/comun/EstadoVacio.vue';
-import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
-import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
-import Paginacion from '@/components/comun/Paginacion.vue';
-import SelectNativo from '@/components/comun/SelectNativo.vue';
-import SelectorVista from '@/components/comun/SelectorVista.vue';
-import SelectorBuscable from '@/components/formularios/SelectorBuscable.vue';
-import { Button } from '@/components/ui/button';
-import { useFiltros } from '@/composables/useFiltros';
-import { usePermisos } from '@/composables/usePermisos';
-import { useVistaListado } from '@/composables/useVistaListado';
-import { dominio, fechaHora, numero, relativo } from '@/lib/formato';
-import { show as negocioShow } from '@/routes/admin/negocios';
-import { negocios as opcionesNegocios } from '@/routes/admin/opciones';
-import { create, edit, index, show } from '@/routes/admin/productos';
-import { show as qrShow } from '@/routes/productos/qr';
-import type { Opcion, Paginado, Producto } from '@/types';
+} from "@lucide/vue";
+import { computed, ref } from "vue";
+import CambiarEstadoProducto from "@/components/admin-productos/CambiarEstadoProducto.vue";
+import EliminarProducto from "@/components/admin-productos/EliminarProducto.vue";
+import TransferirProducto from "@/components/admin-productos/TransferirProducto.vue";
+import type { AccionRegistro } from "@/components/comun/AccionesRegistro.vue";
+import AccionesRegistro from "@/components/comun/AccionesRegistro.vue";
+import CampoBusqueda from "@/components/comun/CampoBusqueda.vue";
+import EncabezadoOrdenable from "@/components/comun/EncabezadoOrdenable.vue";
+import EncabezadoPagina from "@/components/comun/EncabezadoPagina.vue";
+import EstadoVacio from "@/components/comun/EstadoVacio.vue";
+import InsigniaEstado from "@/components/comun/InsigniaEstado.vue";
+import InsigniaTipo from "@/components/comun/InsigniaTipo.vue";
+import Paginacion from "@/components/comun/Paginacion.vue";
+import SelectNativo from "@/components/comun/SelectNativo.vue";
+import SelectorVista from "@/components/comun/SelectorVista.vue";
+import SelectorBuscable from "@/components/formularios/SelectorBuscable.vue";
+import { Button } from "@/components/ui/button";
+import { useFiltros } from "@/composables/useFiltros";
+import { usePermisos } from "@/composables/usePermisos";
+import { useVistaListado } from "@/composables/useVistaListado";
+import { dominio, fechaHora, numero, relativo } from "@/lib/formato";
+import {
+    enlacesDe,
+    enlacesQr,
+    etiquetaCorta,
+    tieneVariosEnlaces,
+} from "@/lib/productos";
+import { show as negocioShow } from "@/routes/admin/negocios";
+import { negocios as opcionesNegocios } from "@/routes/admin/opciones";
+import { create, edit, index, show } from "@/routes/admin/productos";
+import { show as qrShow } from "@/routes/productos/qr";
+import type { Opcion, Paginado, Producto } from "@/types";
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Productos', href: index() }],
+        breadcrumbs: [{ title: "Productos", href: index() }],
     },
 });
 
@@ -69,19 +75,19 @@ const props = defineProps<{
 const { filtros, limpiar, ordenarPor } = useFiltros(index.url(), {
     ...props.filtros,
 });
-const { vista } = useVistaListado('productos');
+const { vista } = useVistaListado("productos");
 const { puede } = usePermisos();
 
 const hayFiltros = computed(() =>
     [
-        'buscar',
-        'negocio_id',
-        'tipo',
-        'estado',
-        'preparacion',
-        'desde',
-        'hasta',
-    ].some((clave) => (filtros as Record<string, string>)[clave] !== ''),
+        "buscar",
+        "negocio_id",
+        "tipo",
+        "estado",
+        "preparacion",
+        "desde",
+        "hasta",
+    ].some((clave) => (filtros as Record<string, string>)[clave] !== ""),
 );
 
 const limpiarFiltros = () => {
@@ -92,72 +98,76 @@ const limpiarFiltros = () => {
     filtros.direccion = direccion;
 };
 
-/** Enlace que lleva el QR (el reverso si los destinos son independientes). */
-const enlaceQr = (p: Producto) => p.enlaces_secundarios?.[0] ?? p;
-const independiente = (p: Producto) => p.modalidad_destino === 'independiente';
+/** Varios enlaces: NFC + QR con destinos independientes, o dos QR. */
+const independiente = (p: Producto) => tieneVariosEnlaces(p);
 
 const acciones = (p: Producto): AccionRegistro[] => [
     {
-        clave: 'ver',
-        etiqueta: 'Ver',
+        clave: "ver",
+        etiqueta: "Ver",
         icono: Eye,
         href: show(p.id),
         principal: true,
     },
     {
-        clave: 'editar',
-        etiqueta: 'Editar',
+        clave: "editar",
+        etiqueta: "Editar",
         icono: Pencil,
         href: edit(p.id),
         principal: true,
-        visible: puede('productos.editar'),
+        visible: puede("productos.editar"),
     },
-    {
-        clave: 'qr',
-        etiqueta: independiente(p) ? 'Descargar QR (reverso)' : 'Descargar QR',
+    // Una acción de descarga por cada QR impreso (QR 1 / QR 2).
+    ...enlacesQr(p).map((qr, i) => ({
+        clave: i === 0 ? "qr" : `qr-${qr.id}`,
+        etiqueta: qr.numero_qr
+            ? `Descargar ${qr.medio_etiqueta}`
+            : independiente(p)
+              ? "Descargar QR (reverso)"
+              : "Descargar QR",
         icono: Download,
-        href: qrShow.url(enlaceQr(p).id, {
-            query: { formato: 'png', descargar: 1 },
+        href: qrShow.url(qr.id, {
+            query: { formato: "png", descargar: 1 },
         }),
         externo: true,
-        visible: enlaceQr(p).permisos.descargar_qr && p.tipo !== 'nfc',
-    },
+        visible: qr.permisos.descargar_qr && p.tipo !== "nfc",
+    })),
     {
-        clave: 'transferir',
-        etiqueta: 'Transferir',
+        clave: "transferir",
+        etiqueta: "Transferir",
         icono: ArrowRightLeft,
-        visible: puede('productos.transferir'),
+        visible: puede("productos.transferir"),
     },
     {
-        clave: 'estado',
-        etiqueta: p.estado === 'activo' ? 'Suspender' : 'Reactivar',
-        icono: p.estado === 'activo' ? CirclePause : CirclePlay,
-        destructiva: p.estado === 'activo',
+        clave: "estado",
+        etiqueta: p.estado === "activo" ? "Suspender" : "Reactivar",
+        icono: p.estado === "activo" ? CirclePause : CirclePlay,
+        destructiva: p.estado === "activo",
         visible: puede(
-            p.estado === 'activo'
-                ? 'productos.suspender'
-                : 'productos.reactivar',
+            p.estado === "activo"
+                ? "productos.suspender"
+                : "productos.reactivar",
         ),
     },
     {
         // Eliminación física solo para productos pendientes sin accesos (el
         // servidor vuelve a comprobarlo); el resto se suspende.
-        clave: 'eliminar',
-        etiqueta: 'Eliminar',
+        clave: "eliminar",
+        etiqueta: "Eliminar",
         icono: Trash2,
         destructiva: true,
         visible:
-            puede('productos.eliminar') &&
-            p.estado_preparacion === 'pendiente' &&
+            puede("productos.eliminar") &&
+            p.estado_preparacion === "pendiente" &&
             (p.total_accesos ?? 0) === 0,
     },
 ];
 
 // Un solo diálogo por tipo de acción, para el producto elegido.
 const seleccionado = ref<Producto | null>(null);
-const dialogo = ref<'transferir' | 'estado' | 'eliminar' | null>(null);
+const dialogo = ref<"transferir" | "estado" | "eliminar" | null>(null);
 const abrir = (p: Producto, clave: string) => {
-    if (clave === 'transferir' || clave === 'estado' || clave === 'eliminar') {
+    if (clave === "transferir" || clave === "estado" || clave === "eliminar") {
         seleccionado.value = p;
         dialogo.value = clave;
     }
@@ -171,9 +181,9 @@ const dialogoAbierto = (clave: string) =>
             }
         },
     });
-const abiertoTransferir = dialogoAbierto('transferir');
-const abiertoEstado = dialogoAbierto('estado');
-const abiertoEliminar = dialogoAbierto('eliminar');
+const abiertoTransferir = dialogoAbierto("transferir");
+const abiertoEstado = dialogoAbierto("estado");
+const abiertoEliminar = dialogoAbierto("eliminar");
 </script>
 
 <template>
@@ -384,7 +394,13 @@ const abiertoEliminar = dialogoAbierto('eliminar');
                                 :etiqueta="producto.tipo_etiqueta"
                             />
                             <p
-                                v-if="independiente(producto)"
+                                v-if="producto.cantidad_qr === 2"
+                                class="mt-0.5 text-[11px] font-medium text-primary"
+                            >
+                                2 QR
+                            </p>
+                            <p
+                                v-else-if="independiente(producto)"
                                 class="mt-0.5 text-[11px] text-muted-foreground"
                             >
                                 2 destinos
@@ -393,35 +409,18 @@ const abiertoEliminar = dialogoAbierto('eliminar');
                         <td class="max-w-40 px-3 py-2.5 xl:max-w-56">
                             <template v-if="independiente(producto)">
                                 <p
+                                    v-for="enlace in enlacesDe(producto)"
+                                    :key="enlace.id"
                                     class="truncate text-xs"
-                                    :title="producto.url_destino ?? undefined"
+                                    :title="enlace.url_destino ?? undefined"
                                 >
                                     <span class="text-muted-foreground"
-                                        >NFC:</span
+                                        >{{ etiquetaCorta(enlace) }}:</span
                                     >
                                     {{
-                                        producto.url_destino
-                                            ? dominio(producto.url_destino)
-                                            : 'sin destino'
-                                    }}
-                                </p>
-                                <p
-                                    class="truncate text-xs"
-                                    :title="
-                                        enlaceQr(producto).url_destino ??
-                                        undefined
-                                    "
-                                >
-                                    <span class="text-muted-foreground"
-                                        >QR:</span
-                                    >
-                                    {{
-                                        enlaceQr(producto).url_destino
-                                            ? dominio(
-                                                  enlaceQr(producto)
-                                                      .url_destino!,
-                                              )
-                                            : 'sin destino'
+                                        enlace.url_destino
+                                            ? dominio(enlace.url_destino)
+                                            : "sin destino"
                                     }}
                                 </p>
                             </template>
@@ -506,9 +505,7 @@ const abiertoEliminar = dialogoAbierto('eliminar');
                 </div>
                 <div class="mx-4 space-y-1.5 rounded-lg bg-muted/40 p-2.5">
                     <p
-                        v-for="enlace in independiente(producto)
-                            ? [producto, enlaceQr(producto)]
-                            : [producto]"
+                        v-for="enlace in enlacesDe(producto)"
                         :key="enlace.id"
                         class="flex min-w-0 items-center gap-1.5 text-xs"
                     >
@@ -519,7 +516,7 @@ const abiertoEliminar = dialogoAbierto('eliminar');
                         <span
                             v-if="independiente(producto)"
                             class="shrink-0 text-muted-foreground"
-                            >{{ enlace.medio === 'qr' ? 'QR' : 'NFC' }}</span
+                            >{{ etiquetaCorta(enlace) }}</span
                         >
                         <span
                             class="min-w-0 truncate font-medium"
@@ -528,7 +525,7 @@ const abiertoEliminar = dialogoAbierto('eliminar');
                             >{{
                                 enlace.url_destino
                                     ? dominio(enlace.url_destino)
-                                    : 'Sin destino'
+                                    : "Sin destino"
                             }}</span
                         >
                     </p>

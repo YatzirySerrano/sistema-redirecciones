@@ -181,7 +181,9 @@ class AntifraudeTest extends TestCase
 
         $this->assertTrue($propietario->tienePermiso('fidelidad.visitas'));
         $this->visita($propietario, $consumidor->id, $campana->id)->assertForbidden();
-        $this->actingAs($propietario)->get(route('cliente.fidelidad.inicio'))->assertRedirect(route('cliente.servicios.show', 'fidelidad'));
+        // Sin «Mis servicios» (servicios.ver, no asignado por omisión) vuelve al
+        // inicio en lugar de la contratación (ver VisibilidadServiciosTest).
+        $this->actingAs($propietario)->get(route('cliente.fidelidad.inicio'))->assertRedirect(route('cliente.inicio'));
         $this->assertSame(0, Movimiento::query()->count());
     }
 

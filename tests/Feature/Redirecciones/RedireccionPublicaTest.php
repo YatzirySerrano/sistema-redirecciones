@@ -68,7 +68,9 @@ class RedireccionPublicaTest extends TestCase
         config(['dasti.eventos_en_cola' => true]);
         $producto = Producto::factory()->create();
 
-        $this->withHeader('User-Agent', 'WhatsApp/2.23.20.0 A')->get('/r/'.$producto->codigo)->assertStatus(302);
+        // Los robots de vista previa (WhatsApp…) ni siquiera se registran:
+        // ver VistaPreviaTest.
+        $this->withHeader('User-Agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')->get('/r/'.$producto->codigo)->assertStatus(302);
         $this->withHeader('User-Agent', 'curl/8.4.0')->get('/r/'.$producto->codigo)->assertStatus(302);
 
         $this->assertSame(2, EventoAcceso::query()->where('es_bot', true)->count());

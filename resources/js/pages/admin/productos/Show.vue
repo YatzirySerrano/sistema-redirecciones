@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link } from "@inertiajs/vue3";
 import {
     Activity,
     Building2,
@@ -10,28 +10,29 @@ import {
     Pencil,
     TriangleAlert,
     UsersRound,
-} from '@lucide/vue';
-import { computed } from 'vue';
-import CambiarEstadoProducto from '@/components/admin-productos/CambiarEstadoProducto.vue';
-import EliminarProducto from '@/components/admin-productos/EliminarProducto.vue';
-import TransferirProducto from '@/components/admin-productos/TransferirProducto.vue';
-import EncabezadoPagina from '@/components/comun/EncabezadoPagina.vue';
-import Ayuda from '@/components/comun/Ayuda.vue';
-import EnlacePermanente from '@/components/comun/EnlacePermanente.vue';
-import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
-import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
-import ListaAuditoria from '@/components/comun/ListaAuditoria.vue';
-import Panel from '@/components/comun/Panel.vue';
-import TarjetaIndicador from '@/components/comun/TarjetaIndicador.vue';
-import GraficaArea from '@/components/graficas/GraficaArea.vue';
-import GraficaBarras from '@/components/graficas/GraficaBarras.vue';
-import DisenadorQr from '@/components/productos/DisenadorQr.vue';
-import EnlacesPorMedio from '@/components/productos/EnlacesPorMedio.vue';
-import FormularioDestino from '@/components/productos/FormularioDestino.vue';
-import HistorialDestinos from '@/components/productos/HistorialDestinos.vue';
-import InstruccionesNfc from '@/components/productos/InstruccionesNfc.vue';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@lucide/vue";
+import { computed, ref, watch } from "vue";
+import CambiarEstadoProducto from "@/components/admin-productos/CambiarEstadoProducto.vue";
+import EliminarProducto from "@/components/admin-productos/EliminarProducto.vue";
+import TransferirProducto from "@/components/admin-productos/TransferirProducto.vue";
+import EncabezadoPagina from "@/components/comun/EncabezadoPagina.vue";
+import Ayuda from "@/components/comun/Ayuda.vue";
+import EnlacePermanente from "@/components/comun/EnlacePermanente.vue";
+import InsigniaEstado from "@/components/comun/InsigniaEstado.vue";
+import InsigniaTipo from "@/components/comun/InsigniaTipo.vue";
+import ListaAuditoria from "@/components/comun/ListaAuditoria.vue";
+import Panel from "@/components/comun/Panel.vue";
+import TarjetaIndicador from "@/components/comun/TarjetaIndicador.vue";
+import GraficaArea from "@/components/graficas/GraficaArea.vue";
+import GraficaBarras from "@/components/graficas/GraficaBarras.vue";
+import CambiarCantidadQr from "@/components/productos/CambiarCantidadQr.vue";
+import DisenadorQr from "@/components/productos/DisenadorQr.vue";
+import EnlacesPorMedio from "@/components/productos/EnlacesPorMedio.vue";
+import FormularioDestino from "@/components/productos/FormularioDestino.vue";
+import HistorialDestinos from "@/components/productos/HistorialDestinos.vue";
+import InstruccionesNfc from "@/components/productos/InstruccionesNfc.vue";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     coberturaVisitantes,
     fechaCorta,
@@ -39,10 +40,11 @@ import {
     numero,
     relativo,
     visitantes,
-} from '@/lib/formato';
-import { usePermisos } from '@/composables/usePermisos';
-import { show as negocioShow } from '@/routes/admin/negocios';
-import { destino, edit, index } from '@/routes/admin/productos';
+} from "@/lib/formato";
+import { usePermisos } from "@/composables/usePermisos";
+import { enlacesQr } from "@/lib/productos";
+import { show as negocioShow } from "@/routes/admin/negocios";
+import { cantidadQr, destino, edit, index } from "@/routes/admin/productos";
 import type {
     CambioDestino,
     Coleccion,
@@ -54,13 +56,13 @@ import type {
     Recurso,
     RegistroAuditoria,
     TotalesEstadisticas,
-} from '@/types';
+} from "@/types";
 
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Productos', href: index() },
-            { title: 'Detalle del producto', href: '#' },
+            { title: "Productos", href: index() },
+            { title: "Detalle del producto", href: "#" },
         ],
     },
 });
@@ -70,6 +72,9 @@ const { puede } = usePermisos();
 const props = defineProps<{
     producto: Recurso<Producto>;
     opciones_qr: OpcionesQr;
+    /** Diseño guardado de cada QR, por id de enlace. */
+    opciones_qr_enlaces: Record<number, OpcionesQr>;
+    qr2_archivado: { codigo: string; archivado_en: string | null } | null;
     puede_eliminarse: boolean;
     estadisticas: {
         totales: TotalesEstadisticas;
@@ -83,43 +88,58 @@ const props = defineProps<{
 
 const producto = computed(() => props.producto.data);
 const independiente = computed(
-    () => producto.value.modalidad_destino === 'independiente',
+    () => producto.value.modalidad_destino === "independiente",
 );
-/** Enlace que lleva el QR: el reverso en los combinados independientes. */
+/** Enlaces impresos como QR: el reverso en los combinados independientes; QR 1 y QR 2 si lleva dos. */
+const qrs = computed(() => enlacesQr(producto.value));
+const qrSeleccionadoId = ref<number>(qrs.value[0].id);
+watch(qrs, (lista) => {
+    if (!lista.some((e) => e.id === qrSeleccionadoId.value)) {
+        qrSeleccionadoId.value = lista[0].id;
+    }
+});
 const productoQr = computed(
-    () => producto.value.enlaces_secundarios?.[0] ?? producto.value,
+    () =>
+        qrs.value.find((e) => e.id === qrSeleccionadoId.value) ?? qrs.value[0],
 );
+const opcionesDe = (id: number) =>
+    props.opciones_qr_enlaces?.[id] ?? props.opciones_qr;
+const pestana = ref("enlace");
+const abrirDiseno = (id: number) => {
+    qrSeleccionadoId.value = id;
+    pestana.value = "qr";
+};
 const negocioSuspendido = computed(
-    () => producto.value.negocio?.estado === 'suspendido',
+    () => producto.value.negocio?.estado === "suspendido",
 );
-const llevaNfc = computed(() => producto.value.tipo !== 'qr');
-const llevaQr = computed(() => producto.value.tipo !== 'nfc');
+const llevaNfc = computed(() => producto.value.tipo !== "qr");
+const llevaQr = computed(() => producto.value.tipo !== "nfc");
 
 const situacion = computed(() => {
     if (negocioSuspendido.value) {
         return {
-            clave: 'negocio_suspendido',
-            texto: 'El negocio está suspendido: el enlace muestra «no disponible».',
+            clave: "negocio_suspendido",
+            texto: "El negocio está suspendido: el enlace muestra «no disponible».",
         };
     }
 
-    if (producto.value.estado === 'suspendido') {
+    if (producto.value.estado === "suspendido") {
         return {
-            clave: 'producto_suspendido',
-            texto: 'El producto está suspendido: el enlace muestra «no disponible».',
+            clave: "producto_suspendido",
+            texto: "El producto está suspendido: el enlace muestra «no disponible».",
         };
     }
 
     if (!producto.value.url_destino) {
         return {
-            clave: 'sin_destino',
-            texto: 'Sin destino configurado: el enlace muestra «no disponible».',
+            clave: "sin_destino",
+            texto: "Sin destino configurado: el enlace muestra «no disponible».",
         };
     }
 
     return {
-        clave: 'redirigiendo',
-        texto: 'El enlace redirige al destino configurado.',
+        clave: "redirigiendo",
+        texto: "El enlace redirige al destino configurado.",
     };
 });
 
@@ -143,12 +163,17 @@ const barrasDispositivos = computed(() =>
                     :etiqueta="producto.tipo_etiqueta"
                 />
                 <span
+                    v-if="producto.cantidad_qr === 2"
+                    class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                    >2 QR</span
+                >
+                <span
                     v-if="producto.tipo === 'combinado'"
                     class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
                     >{{
                         independiente
-                            ? 'Destinos independientes'
-                            : 'Destino compartido'
+                            ? "Destinos independientes"
+                            : "Destino compartido"
                     }}</span
                 >
                 <InsigniaEstado
@@ -182,6 +207,13 @@ const barrasDispositivos = computed(() =>
             <Button v-if="puede('productos.editar')" variant="outline" as-child>
                 <Link :href="edit(producto.id)"><Pencil /> Editar</Link>
             </Button>
+            <CambiarCantidadQr
+                v-if="producto.permisos.cambiar_cantidad_qr"
+                :producto="producto"
+                :accion="cantidadQr.url(producto.id)"
+                :qr2-archivado="qr2_archivado"
+                con-destino
+            />
             <TransferirProducto
                 v-if="puede('productos.transferir')"
                 :producto="producto"
@@ -213,7 +245,7 @@ const barrasDispositivos = computed(() =>
     </div>
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Tabs default-value="enlace" class="min-w-0 gap-4">
+        <Tabs v-model="pestana" class="min-w-0 gap-4">
             <TabsList
                 class="w-full justify-start overflow-x-auto sm:w-auto [&>button]:flex-none [&>button]:px-3"
             >
@@ -230,6 +262,8 @@ const barrasDispositivos = computed(() =>
                     :producto="producto"
                     :accion-destino="(id: number) => destino.url(id)"
                     :estadisticas="estadisticas_medios"
+                    :opciones-qr="opciones_qr_enlaces"
+                    @disenar="abrirDiseno"
                 />
                 <template v-else>
                     <Panel
@@ -288,17 +322,39 @@ const barrasDispositivos = computed(() =>
                             : 'Producto NFC: el QR es opcional (por ejemplo, para un respaldo impreso).'
                     "
                 >
+                    <div
+                        v-if="qrs.length > 1"
+                        class="mb-4 inline-flex rounded-lg border bg-muted/40 p-1"
+                        role="tablist"
+                        aria-label="QR a diseñar"
+                    >
+                        <button
+                            v-for="qr in qrs"
+                            :key="qr.id"
+                            type="button"
+                            role="tab"
+                            :aria-selected="qr.id === productoQr.id"
+                            class="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition aria-selected:bg-background aria-selected:text-foreground aria-selected:shadow-xs"
+                            @click="qrSeleccionadoId = qr.id"
+                        >
+                            {{ qr.medio_etiqueta }}
+                        </button>
+                    </div>
                     <p
                         v-if="independiente"
                         class="mb-4 rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground"
                     >
-                        Este QR corresponde al reverso de la tarjeta y lleva a
-                        su propio destino (/r/{{ productoQr.codigo }}).
+                        {{
+                            productoQr.numero_qr
+                                ? `Este es el ${productoQr.medio_etiqueta}: tiene su propio enlace, destino, diseño y estadísticas`
+                                : "Este QR corresponde al reverso de la tarjeta y lleva a su propio destino"
+                        }}
+                        (/r/{{ productoQr.codigo }}).
                     </p>
                     <DisenadorQr
                         :key="productoQr.id"
                         :producto="productoQr"
-                        :opciones="opciones_qr"
+                        :opciones="opcionesDe(productoQr.id)"
                     />
                 </Panel>
             </TabsContent>
@@ -410,7 +466,7 @@ const barrasDispositivos = computed(() =>
                     <div class="flex justify-between gap-3">
                         <dt class="text-muted-foreground">Referencia</dt>
                         <dd class="text-right font-medium break-all">
-                            {{ producto.referencia_comercial || '—' }}
+                            {{ producto.referencia_comercial || "—" }}
                         </dd>
                     </div>
                     <div class="flex justify-between gap-3">
@@ -439,7 +495,7 @@ const barrasDispositivos = computed(() =>
                             {{
                                 producto.destino_actualizado_en
                                     ? relativo(producto.destino_actualizado_en)
-                                    : '—'
+                                    : "—"
                             }}
                         </dd>
                     </div>

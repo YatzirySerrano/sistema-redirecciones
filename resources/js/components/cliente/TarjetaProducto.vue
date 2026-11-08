@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { CircleAlert, MousePointerClick, PencilLine } from '@lucide/vue';
-import EnlacePermanente from '@/components/comun/EnlacePermanente.vue';
-import InsigniaEstado from '@/components/comun/InsigniaEstado.vue';
-import InsigniaTipo from '@/components/comun/InsigniaTipo.vue';
-import { Button } from '@/components/ui/button';
-import { dominio, numero } from '@/lib/formato';
-import { show } from '@/routes/cliente/productos';
-import type { Producto } from '@/types';
+import { Link } from "@inertiajs/vue3";
+import { CircleAlert, MousePointerClick, PencilLine } from "@lucide/vue";
+import EnlacePermanente from "@/components/comun/EnlacePermanente.vue";
+import InsigniaEstado from "@/components/comun/InsigniaEstado.vue";
+import InsigniaTipo from "@/components/comun/InsigniaTipo.vue";
+import { Button } from "@/components/ui/button";
+import { dominio, numero } from "@/lib/formato";
+import { enlacesDe, etiquetaCorta, tieneVariosEnlaces } from "@/lib/productos";
+import { show } from "@/routes/cliente/productos";
+import type { Producto } from "@/types";
 
 defineProps<{ producto: Producto }>();
 </script>
@@ -36,6 +37,11 @@ defineProps<{ producto: Producto }>();
                 :etiqueta="producto.tipo_etiqueta"
             />
             <span
+                v-if="producto.cantidad_qr === 2"
+                class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                >2 QR</span
+            >
+            <span
                 v-if="producto.total_accesos !== null"
                 class="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums"
             >
@@ -45,7 +51,24 @@ defineProps<{ producto: Producto }>();
         </div>
 
         <dl class="mt-4 space-y-3 text-sm">
-            <div>
+            <div v-if="tieneVariosEnlaces(producto)">
+                <dt class="text-xs text-muted-foreground">Destinos</dt>
+                <dd
+                    v-for="enlace in enlacesDe(producto)"
+                    :key="enlace.id"
+                    class="mt-0.5 flex min-w-0 gap-1.5 font-medium"
+                    :title="enlace.url_destino ?? undefined"
+                >
+                    <span class="shrink-0 font-normal text-muted-foreground"
+                        >{{ etiquetaCorta(enlace) }}:</span
+                    >
+                    <span v-if="enlace.url_destino" class="truncate">{{
+                        dominio(enlace.url_destino)
+                    }}</span>
+                    <span v-else class="text-warning">Sin destino</span>
+                </dd>
+            </div>
+            <div v-else>
                 <dt class="text-xs text-muted-foreground">Destino actual</dt>
                 <dd
                     class="mt-0.5 truncate font-medium"
@@ -57,7 +80,7 @@ defineProps<{ producto: Producto }>();
                     <span v-else class="text-warning">Sin destino</span>
                 </dd>
             </div>
-            <div>
+            <div v-if="!tieneVariosEnlaces(producto)">
                 <dt class="mb-1 text-xs text-muted-foreground">
                     Enlace permanente
                 </dt>

@@ -1,5 +1,7 @@
 # Manual del administrador (DASTI)
 
+> Dentro de la plataforma está la **Guía de uso** (`/guia`): menú lateral › Guía de uso, o el botón **?** del encabezado, que abre el tema de la pantalla actual. Muestra contenido distinto al personal DASTI y a los negocios.
+
 Entra en `https://redireccion.dasti.cloud/login` con tu cuenta de administrador.
 
 ## Crear un cliente (negocio)
@@ -47,7 +49,7 @@ En **Producto → pestaña Código QR** puedes:
 
 Cada QR codifica exactamente la URL permanente de su producto. Si algo impide generarlo (logotipo dañado, contraste insuficiente, permisos o sesión expirada), la vista previa y la descarga muestran el motivo.
 
-Los diseños con poco contraste se bloquean para garantizar la lectura. El QR nunca lleva marca de DASTI. Usa _Guardar diseño_ para conservar los ajustes del producto.
+Los diseños con poco contraste se bloquean para garantizar la lectura. El QR no lleva el nombre de DASTI; sus tres esquinas (ojos) llevan la insignia de DASTI. Un producto puede tener 1 o 2 QR, cada uno con su propio destino, diseño y estadísticas. Usa _Guardar diseño_ para conservar los ajustes del producto.
 
 ## Cambiar el destino
 
@@ -67,7 +69,10 @@ En producción (o con `DASTI_EXIGIR_2FA_ADMIN=true`), los administradores deben 
 
 ## Estadísticas, auditoría y configuración
 
-- **Estadísticas**: filtra por periodo, negocio y producto. Muestra accesos (sin bots identificados), visitantes estimados, productos y negocios más activos, y desglose por dispositivo, navegador y sistema operativo.
+- **Panel**: negocios, productos, enlaces, usuarios e interacciones de los últimos 30 días comparados con los 30 previos, reparto NFC/QR, altas por mes, incidencias (enlaces sin destino, accesos que no llegaron a destino, negocios sin actividad, dominios con error, pagos por revisar) y, con permiso, contrataciones e ingresos. Cada bloque aparece solo si tu rol puede consultarlo.
+- **Estadísticas › Uso de enlaces**: filtra por periodo (hoy, 7/30/90 días, este mes, mes anterior, 12 meses o fechas propias), negocio, producto y canal. Incluye evolución por día/semana/mes con el periodo anterior, NFC frente a QR, productos y negocios más activos, actividad por día de la semana y por horario, dispositivos, navegadores y productos sin uso. El análisis de toda la plataforma se reutiliza 5 minutos (`DASTI_CACHE_ESTADISTICAS`).
+- **Estadísticas › Comercial** (requiere «Servicios · Ver» o «Pagos · Ver»): contrataciones por servicio y estado, nuevas y canceladas, próximas a vencer, e ingresos **cobrados y confirmados** netos de reembolsos. Las órdenes pendientes y los pagos de prueba de Openpay nunca se cuentan como ingreso.
+- **Qué no se mide**: no se registra ubicación ni el destino al que llevaba un enlace en cada acceso (el historial de destinos está en cada producto); «interacciones» no son personas, ventas ni conversiones.
 - **Auditoría**: historial legible de altas, cambios de destino, suspensiones, transferencias y accesos, con valores antes/después. Puedes filtrarlo.
 - **Configuración**:
     - permitir destinos `http`;
@@ -109,6 +114,15 @@ DASTI puede diseñar la tarjeta de Fidelidad o la Página de enlaces de un negoc
 - El negocio debe tener el servicio contratado: para guardar o publicar, activo y vigente. Un permiso nunca sustituye la contratación.
 - La dirección pública, los dominios, los mensajes y las estadísticas de la página los administra el negocio.
 - Cada apertura, guardado y publicación queda en la auditoría del negocio con tu nombre y la marca «Realizado por personal DASTI». Las operaciones anteriores conservan a su autor.
+
+## Mostrar u ocultar «Mis servicios» a los clientes
+
+El permiso **Servicios · Ver** (`servicios.ver`) controla si las cuentas de un negocio ven el apartado **Mis servicios** (catálogo, estado y contratación en línea).
+
+- **Política inicial**: ningún rol de cliente lo tiene. Los clientes no ven el apartado ni pueden abrirlo por URL ni iniciar pagos; sus productos QR/NFC, estadísticas, Fidelidad y Página de enlaces contratados siguen funcionando igual.
+- **Habilitarlo**: Roles y permisos › rol «Cliente» (u otro rol de negocio) › Editar › Servicios › marca **Ver** (y **Contratar** si deben poder pagar en línea) › Guardar. Aplica en la siguiente acción de cada usuario, aunque tenga la sesión abierta.
+- **Deshabilitarlo**: desmarca **Ver** en el mismo rol.
+- Para el personal DASTI este mismo permiso sigue significando «ver servicios y contrataciones» en la administración; no cambia.
 
 ## Roles y permisos
 

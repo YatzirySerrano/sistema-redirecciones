@@ -49,15 +49,17 @@ class PanelPaginasTest extends TestCase
         $usuario = $this->propietario($negocio);
         $this->assertTrue($usuario->tienePermiso('paginas.editar'));
 
-        $this->actingAs($usuario)->get(route('cliente.paginas.inicio'))->assertRedirect(route('cliente.servicios.show', 'pagina_enlaces'));
-        $this->actingAs($usuario)->get(route('cliente.paginas.editor'))->assertRedirect(route('cliente.servicios.show', 'pagina_enlaces'));
+        // Sin «Mis servicios» (servicios.ver, no asignado por omisión) vuelve al
+        // inicio en lugar de la contratación (ver VisibilidadServiciosTest).
+        $this->actingAs($usuario)->get(route('cliente.paginas.inicio'))->assertRedirect(route('cliente.inicio'));
+        $this->actingAs($usuario)->get(route('cliente.paginas.editor'))->assertRedirect(route('cliente.inicio'));
         $this->actingAs($usuario)->putJson(route('cliente.paginas.borrador'), ['documento' => ['perfil' => []], 'version' => 1])->assertForbidden();
         $this->actingAs($usuario)->postJson(route('cliente.paginas.publicar'), ['version' => 1])->assertForbidden();
         $this->assertSame(0, PaginaEnlaces::query()->count());
 
         // Contratar Fidelidad no habilita la Página de enlaces.
         app(GestorContrataciones::class)->activar($negocio, Servicio::fidelidad(), OrigenContratacion::Manual, motivo: 'Prueba');
-        $this->actingAs($usuario)->get(route('cliente.paginas.inicio'))->assertRedirect(route('cliente.servicios.show', 'pagina_enlaces'));
+        $this->actingAs($usuario)->get(route('cliente.paginas.inicio'))->assertRedirect(route('cliente.inicio'));
     }
 
     public function test_funciona_tras_activacion_manual_y_tras_pago_en_linea(): void

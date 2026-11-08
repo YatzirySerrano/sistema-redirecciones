@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Cliente;
 
+use App\Actions\Productos\CambiarCantidadQr;
 use App\Actions\Productos\CambiarDestinoProducto;
 use App\Enums\EstadoProducto;
 use App\Enums\TipoProducto;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CambiarCantidadQrRequest;
 use App\Http\Requests\CambiarDestinoRequest;
 use App\Http\Resources\CambioDestinoResource;
 use App\Http\Resources\ProductoResource;
@@ -103,8 +105,12 @@ class ProductoController extends Controller
         return Inertia::render('cliente/productos/Show', [
             'producto' => new ProductoResource($producto),
             // El diseño corresponde al enlace que lleva el QR: el reverso en
-            // los combinados con destinos independientes.
-            'opciones_qr' => OpcionesQr::desdeArreglo(($producto->enlacesSecundarios->first() ?? $producto)->opciones_qr)->aArreglo(),
+            // los combinados con destinos independientes; con 2 QR, cada QR
+            // tiene el suyo (opciones_qr_enlaces, por id de enlace).
+            'opciones_qr' => OpcionesQr::desdeArreglo($producto->enlacesQr()[0]->opciones_qr)->aArreglo(),
+            'opciones_qr_enlaces' => collect($producto->enlacesQr())
+                ->mapWithKeys(fn (Producto $enlace) => [$enlace->id => OpcionesQr::desdeArreglo($enlace->opciones_qr)->aArreglo()])
+                ->all(),
             'estadisticas' => $verEstadisticas ? [
                 'totales' => $estadisticas->totales($filtro),
                 'serie' => $estadisticas->serieDiaria($filtro),
@@ -112,7 +118,7 @@ class ProductoController extends Controller
             'estadisticas_medios' => $verEstadisticas && $producto->tieneDestinosIndependientes()
                 ? array_map(fn (Producto $enlace) => [
                     'id' => $enlace->id,
-                    'medio' => $enlace->medio?->etiqueta(),
+                    'medio' => $enlace->etiquetaMedio(),
                     'totales' => $estadisticas->totales(new FiltroEstadisticas($filtro->desde, $filtro->hasta, negocioId: $negocioId, productoId: $enlace->id, soloProductosVigentes: true)),
                 ], [$producto, ...$producto->enlacesSecundarios->all()])
                 : [],
@@ -125,6 +131,22 @@ class ProductoController extends Controller
                     ->latest('created_at')->latest('id')->limit(10)->get()
             ),
         ]);
+    }
+
+    /**
+     * Ampliar a 2 QR o reducir a 1. Requiere «productos.cambiar_cantidad_qr»,
+     * que ningún rol de cliente tiene de inicio (ProductoPolicy).
+     */
+    public function cantidadQr(CambiarCantidadQrRequest $request, Producto $producto, CambiarCantidadQr $accion): RedirectResponse
+    {
+        $cantidad = $request->integer('cantidad_qr');
+        $accion->ejecutar($producto, $cantidad, $request->user(), $request->validated('motivo'), $request->validated('url_destino_qr2'));
+
+        $this->notificar($cantidad === 2
+            ? 'Tu producto ahora tiene 2 QR. Configura el destino y el diseño del QR 2.'
+            : 'Tu producto ahora tiene 1 QR. El QR 2 dejó de funcionar; su historial se conserva.');
+
+        return back();
     }
 
     public function destino(CambiarDestinoRequest $request, Producto $producto, CambiarDestinoProducto $accion): RedirectResponse

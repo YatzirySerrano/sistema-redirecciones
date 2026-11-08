@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import { Building2, ShieldCheck } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { Building2, CircleHelp, ShieldCheck } from '@lucide/vue';
 import { computed } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import { temaSegunUrl } from '@/components/guia/contenido';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { guia } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(
@@ -17,6 +24,14 @@ withDefaults(
 
 const page = usePage();
 const usuario = computed(() => page.props.auth.user);
+
+// Ayuda contextual: abre la guía en el tema de la pantalla actual.
+const enlaceAyuda = computed(() => {
+    const tema = temaSegunUrl(page.url, page.props.auth.permisos.administrar);
+
+    return tema ? `${guia.url()}#${tema}` : guia.url();
+});
+const enGuia = computed(() => page.url.startsWith(guia.url()));
 </script>
 
 <template>
@@ -51,5 +66,22 @@ const usuario = computed(() => page.props.auth.user);
             <Building2 class="size-3.5 shrink-0" />
             <span class="truncate">{{ usuario.negocio.nombre_comercial }}</span>
         </span>
+        <Tooltip v-if="!enGuia">
+            <TooltipTrigger as-child>
+                <Link
+                    :href="enlaceAyuda"
+                    class="group inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                    aria-label="Ayuda: abrir la guía de uso de esta pantalla"
+                >
+                    <CircleHelp
+                        class="size-[18px] transition-transform duration-300 ease-out group-hover:rotate-12"
+                        aria-hidden="true"
+                    />
+                </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"
+                >Ayuda de esta pantalla</TooltipContent
+            >
+        </Tooltip>
     </header>
 </template>
