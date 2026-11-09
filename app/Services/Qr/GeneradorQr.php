@@ -21,9 +21,9 @@ use Throwable;
 /**
  * Genera el QR de un producto con su URL permanente.
  *
- * El QR nunca incluye el nombre de la plataforma en texto. Sus tres patrones
- * de localización («ojos») llevan la insignia (favicon) como sello, dibujada
- * de forma que los lectores sigan detectándolos (InsigniaOjosQr). El cliente
+ * El QR nunca incluye el nombre ni el logotipo de la plataforma. Sus tres
+ * patrones de localización («ojos») se dibujan limpios, en el color del
+ * código y con la forma elegida (InsigniaOjosQr). El cliente
  * personaliza color, fondo, margen, la forma de los ojos y de los módulos
  * (redondeados por defecto) y, si lo cargó, el logotipo de su negocio al
  * centro.
@@ -60,12 +60,12 @@ class GeneradorQr
 
         $builder = new Builder(
             writer: $formato === 'svg' ? new SvgWriter : new PngWriter,
-            // Sin reducir a 16 colores: la paleta degradaría los tonos de la
-            // insignia de los ojos y los bordes suavizados.
+            // Sin reducir a 16 colores: la paleta degradaría los bordes
+            // suavizados.
             writerOptions: $formato === 'png' ? [PngWriter::WRITER_OPTION_NUMBER_OF_COLORS => null] : [],
             data: $producto->url_permanente,
-            // Las insignias no ocupan módulos de datos, pero un nivel alto deja
-            // margen ante impresiones o lecturas imperfectas.
+            // Un nivel alto deja margen ante impresiones o lecturas
+            // imperfectas.
             errorCorrectionLevel: $logo !== null ? ErrorCorrectionLevel::High : ErrorCorrectionLevel::Quartile,
             size: $tamano,
             margin: (int) round($tamano * OpcionesQr::MARGENES[$opciones->margen]),

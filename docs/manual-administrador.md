@@ -44,12 +44,13 @@ El sistema no programa ni verifica tarjetas. Marca el estado **Listo** o **Entre
 En **Producto → pestaña Código QR** puedes:
 
 - elegir el color del código y del fondo (o fondo transparente) y el margen;
+- elegir la forma de las **Esquinas** (redondeadas, hoja o cuadradas) y de los **Puntos del código** (fluidos, puntos o cuadrados);
 - incluir el logotipo del negocio, si lo cargaste en su ficha (en PNG y en SVG; se usa corrección de errores alta y los módulos bajo el logotipo se recortan);
 - descargar en **PNG** (256–2048 px) o **SVG** (vectorial).
 
 Cada QR codifica exactamente la URL permanente de su producto. Si algo impide generarlo (logotipo dañado, contraste insuficiente, permisos o sesión expirada), la vista previa y la descarga muestran el motivo.
 
-Los diseños con poco contraste se bloquean para garantizar la lectura. El QR no lleva el nombre de DASTI; sus tres esquinas (ojos) llevan la insignia de DASTI. Un producto puede tener 1 o 2 QR, cada uno con su propio destino, diseño y estadísticas. Usa _Guardar diseño_ para conservar los ajustes del producto.
+Los diseños con poco contraste se bloquean para garantizar la lectura. El QR no lleva el nombre ni el logotipo de DASTI: los tres cuadros de las esquinas (patrones de posicionamiento) toman el color y la forma elegidos. Un producto puede tener 1 o 2 QR, cada uno con su propio destino, diseño y estadísticas. Usa _Guardar diseño_ para conservar los ajustes del producto.
 
 ## Cambiar el destino
 

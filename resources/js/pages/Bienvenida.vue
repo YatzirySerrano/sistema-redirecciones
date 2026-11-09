@@ -250,7 +250,7 @@ const vRevelar: Directive<HTMLElement, number | undefined> = {
             <section class="relative isolate">
                 <div class="fondo-hero" aria-hidden="true" />
                 <div
-                    class="mx-auto grid max-w-6xl items-center gap-14 px-4 pt-16 pb-20 sm:px-6 md:pt-24 lg:grid-cols-[1.1fr_0.9fr] lg:pb-28"
+                    class="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pt-16 pb-20 sm:px-6 md:pt-24 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:pb-28"
                 >
                     <div class="text-center lg:text-left">
                         <p
@@ -349,7 +349,7 @@ const vRevelar: Directive<HTMLElement, number | undefined> = {
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p
-                                        class="truncate font-mono text-xs text-foreground"
+                                        class="font-mono text-xs leading-relaxed break-all text-foreground"
                                     >
                                         {{ enlaceEjemplo }}
                                     </p>
@@ -362,17 +362,17 @@ const vRevelar: Directive<HTMLElement, number | undefined> = {
                             </div>
                             <ul class="mt-4 grid gap-2 text-sm">
                                 <li
-                                    class="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2 text-muted-foreground line-through decoration-muted-foreground/50"
+                                    class="flex items-center justify-between gap-3 rounded-lg bg-muted/60 px-3 py-2 text-muted-foreground line-through decoration-muted-foreground/50"
                                 >
                                     menú de temporada anterior
-                                    <span class="text-xs">antes</span>
+                                    <span class="shrink-0 text-xs">antes</span>
                                 </li>
                                 <li
-                                    class="flex items-center justify-between rounded-lg bg-sky-500/10 px-3 py-2 font-medium text-foreground ring-1 ring-sky-500/30"
+                                    class="flex items-center justify-between gap-3 rounded-lg bg-sky-500/10 px-3 py-2 font-medium text-foreground ring-1 ring-sky-500/30"
                                 >
                                     menú nuevo · promoción del mes
                                     <span
-                                        class="text-xs text-sky-600 dark:text-sky-400"
+                                        class="shrink-0 text-xs text-sky-600 dark:text-sky-400"
                                         >ahora</span
                                     >
                                 </li>

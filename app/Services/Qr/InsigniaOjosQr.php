@@ -8,12 +8,10 @@ use RuntimeException;
 use SimpleXMLElement;
 
 /**
- * Dibuja la insignia de la plataforma (su favicon) dentro de los tres
- * patrones de localización («ojos») de un QR ya generado por endroid/qr-code.
- *
- * Cada ojo conserva su marco de 7×7 módulos en el color del código (anillo
- * oscuro y anillo claro) y el cuadro central de 3×3 se sustituye por una
- * placa azul marino con el favicon encima.
+ * Dibuja los tres patrones de localización («ojos») de un QR ya generado por
+ * endroid/qr-code, limpios y sin ninguna insignia ni logotipo de la
+ * plataforma: marco de 7×7 módulos en el color del código, anillo claro y
+ * cuadro central de 3×3 también en el color del código.
  *
  * También dibuja el estilo elegido por el cliente: forma de los ojos
  * (cuadrado, redondeado u hoja) y de los módulos de datos (cuadrado,
@@ -23,20 +21,6 @@ use SimpleXMLElement;
  * detector de OpenCV, que busca cuadriláteros perfectos, sí empeora con
  * esquinas redondeadas: por eso el estilo «cuadrado» sigue disponible.
  *
- * Por qué el favicon va en tonos de azul puro y no con sus colores
- * originales: los lectores tipo ZXing binarizan con umbrales locales, y
- * cuando el código se lee de cerca el umbral se calcula con píxeles que caen
- * por completo dentro de la placa. Cualquier detalle claro del favicon (el
- * degradado celeste, el «</>») queda entonces como «claro», rompe la
- * proporción 1:1:3:1:1 y el ojo deja de detectarse (se comprobó con ZXing y
- * jsQR: con el favicon original menos de la mitad de las lecturas cercanas
- * funcionaban). El azul puro aporta muy poca luminancia, de modo que placa y
- * favicon difieren menos que el rango mínimo que esos lectores consideran
- * contraste y el centro se binariza entero como oscuro, mientras el ojo
- * humano sí distingue el favicon. El recurso `resources/marca/insignia-qr.png`
- * es el favicon de DASTI ya recoloreado así (canal azul entre 150 y 215,
- * rojo y verde en 0).
- *
  * Las posiciones se calculan desde la matriz real (tamaño de bloque y
  * margen), nunca a partir de píxeles supuestos.
  */
@@ -45,14 +29,10 @@ class InsigniaOjosQr
     /** Lado del patrón de localización, en módulos. */
     public const LADO_OJO = 7;
 
-    /** Clase que identifica los grupos de la insignia dentro del SVG. */
+    /** Clase que identifica el grupo de cada ojo dentro del SVG. */
     public const CLASE_SVG = 'insignia-ojo';
 
-    /** Color de la placa central (azul marino, luminancia similar al favicon). */
-    public const COLOR_PLACA = [0, 0, 120];
-
-    // Medidas en módulos. La placa ocupa el cuadro central de 3×3; el
-    // favicon, un poco menos para que la placa lo enmarque.
+    /** Lado del cuadro central del ojo, en módulos. */
     private const LADO_PLACA = 3.0;
 
     /** Lado máximo del lienzo sobremuestreado (memoria acotada). */
@@ -60,14 +40,6 @@ class InsigniaOjosQr
 
     /** Diámetro de cada punto (estilo «puntos»), en módulos. */
     private const DIAMETRO_PUNTO = 1.0;
-
-    private const ALTO_FAVICON = 2.6;
-
-    private const RUTA_FAVICON = 'marca/insignia-qr.png';
-
-    private ?string $bytesFavicon = null;
-
-    private ?GdImage $favicon = null;
 
     /**
      * Esquinas superiores izquierdas (columna, fila) de los tres ojos.
@@ -95,7 +67,7 @@ class InsigniaOjosQr
     /**
      * Radios de las esquinas del ojo, en módulos, en el orden
      * [superior izquierda, superior derecha, inferior derecha, inferior
-     * izquierda]: marco exterior, hueco claro y placa central.
+     * izquierda]: marco exterior, hueco claro y cuadro central.
      *
      * @return array{0: list<float>, 1: list<float>, 2: list<float>}
      */
@@ -104,7 +76,7 @@ class InsigniaOjosQr
         return match ($estilo) {
             'redondeado' => [[2.0, 2.0, 2.0, 2.0], [1.2, 1.2, 1.2, 1.2], [0.9, 0.9, 0.9, 0.9]],
             'hoja' => [[3.0, 0.5, 3.0, 0.5], [2.0, 0.3, 2.0, 0.3], [1.2, 0.3, 1.2, 0.3]],
-            default => [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.45, 0.45, 0.45, 0.45]],
+            default => [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
         };
     }
 
@@ -158,7 +130,6 @@ class InsigniaOjosQr
         imagealphablending($lienzo, false);
         $claro = (int) imagecolorallocatealpha($lienzo, $fondo[0], $fondo[1], $fondo[2], $transparente ? 127 : 0);
         $oscuro = (int) imagecolorallocatealpha($lienzo, $color[0], $color[1], $color[2], 0);
-        $placa = (int) imagecolorallocatealpha($lienzo, self::COLOR_PLACA[0], self::COLOR_PLACA[1], self::COLOR_PLACA[2], 0);
         imagefilledrectangle($lienzo, 0, 0, $ladoQr * $escala - 1, $ladoQr * $escala - 1, $claro);
 
         $esOscuro = function (int $fila, int $columna) use ($matriz, $n, $omitidas): bool {
@@ -194,8 +165,6 @@ class InsigniaOjosQr
         }
 
         [$radiosMarco, $radiosHueco, $radiosPlaca] = self::radiosOjo($estiloOjos);
-        $favicon = $this->favicon();
-        [$anchoFav, $altoFav] = $this->medidasFavicon(self::ALTO_FAVICON * $u);
         $inicioPlaca = (self::LADO_OJO - self::LADO_PLACA) / 2 * $u;
 
         foreach (self::origenes($matriz) as [$columna, $fila]) {
@@ -204,16 +173,7 @@ class InsigniaOjosQr
 
             $this->rectangulo($lienzo, $x, $y, 7 * $u, 7 * $u, $this->escalar($radiosMarco, $u), $oscuro);
             $this->rectangulo($lienzo, $x + $u, $y + $u, 5 * $u, 5 * $u, $this->escalar($radiosHueco, $u), $claro);
-            $this->rectangulo($lienzo, $x + $inicioPlaca, $y + $inicioPlaca, self::LADO_PLACA * $u, self::LADO_PLACA * $u, $this->escalar($radiosPlaca, $u), $placa);
-
-            // El favicon se mezcla sobre la placa conservando su transparencia.
-            imagealphablending($lienzo, true);
-            imagecopyresampled(
-                $lienzo, $favicon,
-                (int) round($x + 3.5 * $u - $anchoFav / 2), (int) round($y + 3.5 * $u - $altoFav / 2),
-                0, 0, (int) round($anchoFav), (int) round($altoFav), imagesx($favicon), imagesy($favicon),
-            );
-            imagealphablending($lienzo, false);
+            $this->rectangulo($lienzo, $x + $inicioPlaca, $y + $inicioPlaca, self::LADO_PLACA * $u, self::LADO_PLACA * $u, $this->escalar($radiosPlaca, $u), $oscuro);
         }
 
         // Se copia sobrescribiendo (incluida la transparencia), por franjas
@@ -248,7 +208,7 @@ class InsigniaOjosQr
 
     /**
      * Sustituye el trazado de módulos de endroid por el del estilo elegido y
-     * dibuja los ojos con su marco, la placa y el favicon.
+     * dibuja los ojos con su marco y su cuadro central.
      *
      * @param  array{0: int<0, 255>, 1: int<0, 255>, 2: int<0, 255>}  $color
      */
@@ -263,11 +223,8 @@ class InsigniaOjosQr
         $modulos['d'] = $this->trazadoModulos($matriz, $estiloModulos);
 
         $hex = sprintf('#%02x%02x%02x', ...$color);
-        $hexPlaca = sprintf('#%02x%02x%02x', ...self::COLOR_PLACA);
         $b = $matriz->getBlockSize();
         $m = $matriz->getMarginLeft();
-        $uri = 'data:image/png;base64,'.base64_encode($this->bytesFavicon());
-        [$anchoFav, $altoFav] = $this->medidasFavicon(self::ALTO_FAVICON * $b);
         $inicioPlaca = (self::LADO_OJO - self::LADO_PLACA) / 2 * $b;
         [$radiosMarco, $radiosHueco, $radiosPlaca] = self::radiosOjo($estiloOjos);
 
@@ -285,15 +242,8 @@ class InsigniaOjosQr
             $marco->addAttribute('d', $this->rectanguloSvg($x, $y, 7 * $b, $this->escalar($radiosMarco, $b)).$this->rectanguloSvg($x + $b, $y + $b, 5 * $b, $this->escalar($radiosHueco, $b)));
 
             $placa = $grupo->addChild('path');
-            $placa->addAttribute('fill', $hexPlaca);
+            $placa->addAttribute('fill', $hex);
             $placa->addAttribute('d', $this->rectanguloSvg($x + $inicioPlaca, $y + $inicioPlaca, self::LADO_PLACA * $b, $this->escalar($radiosPlaca, $b)));
-
-            $imagen = $grupo->addChild('image');
-            $imagen->addAttribute('x', $this->numero($x + 3.5 * $b - $anchoFav / 2));
-            $imagen->addAttribute('y', $this->numero($y + 3.5 * $b - $altoFav / 2));
-            $imagen->addAttribute('width', $this->numero($anchoFav));
-            $imagen->addAttribute('height', $this->numero($altoFav));
-            $imagen->addAttribute('href', $uri);
         }
     }
 
@@ -452,53 +402,12 @@ class InsigniaOjosQr
         return $trazado;
     }
 
-    /**
-     * @return array{0: float, 1: float}
-     */
-    private function medidasFavicon(float $alto): array
-    {
-        $favicon = $this->favicon();
-
-        return [$alto * imagesx($favicon) / imagesy($favicon), $alto];
-    }
-
-    private function favicon(): GdImage
-    {
-        if ($this->favicon === null) {
-            $imagen = @imagecreatefromstring($this->bytesFavicon());
-
-            if (! $imagen instanceof GdImage) {
-                throw new RuntimeException('No se pudo leer la insignia del QR.');
-            }
-
-            imagesavealpha($imagen, true);
-            $this->favicon = $imagen;
-        }
-
-        return $this->favicon;
-    }
-
-    private function bytesFavicon(): string
-    {
-        if ($this->bytesFavicon === null) {
-            $bytes = @file_get_contents(resource_path(self::RUTA_FAVICON));
-
-            if ($bytes === false || $bytes === '') {
-                throw new RuntimeException('No se encontró la insignia del QR.');
-            }
-
-            $this->bytesFavicon = $bytes;
-        }
-
-        return $this->bytesFavicon;
-    }
-
     private function lienzo(int $ancho, int $alto): GdImage
     {
         $imagen = imagecreatetruecolor(max(1, $ancho), max(1, $alto));
 
         if (! $imagen instanceof GdImage) {
-            throw new RuntimeException('No se pudo preparar la insignia del QR.');
+            throw new RuntimeException('No se pudo preparar el lienzo del QR.');
         }
 
         imagesavealpha($imagen, true);

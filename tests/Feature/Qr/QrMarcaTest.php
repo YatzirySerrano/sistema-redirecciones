@@ -24,7 +24,8 @@ use Tests\TestCase;
 use Zxing\QrReader;
 
 /**
- * Insignia (favicon) de la plataforma dentro de los tres ojos del QR.
+ * Los tres ojos del QR se dibujan limpios (sin logotipo de la plataforma),
+ * en el color del código y con el estilo elegido, y siguen siendo legibles.
  */
 class QrMarcaTest extends TestCase
 {
@@ -74,7 +75,7 @@ class QrMarcaTest extends TestCase
         }
     }
 
-    public function test_los_ojos_del_png_llevan_marco_del_color_del_codigo_y_la_insignia_al_centro(): void
+    public function test_los_ojos_del_png_son_limpios_del_color_del_codigo_sin_logotipo(): void
     {
         $producto = Producto::factory()->create();
         $opciones = new OpcionesQr('#7F1D1D', '#FFFFFF', false, 'amplio');
@@ -95,18 +96,18 @@ class QrMarcaTest extends TestCase
         foreach (InsigniaOjosQr::origenes($matriz) as [$c, $f]) {
             $this->assertSame([0x7F, 0x1D, 0x1D], $pixel($c + 0.5, $f + 3.5), 'Anillo oscuro del color del código.');
             $this->assertSame([255, 255, 255], $pixel($c + 1.5, $f + 3.5), 'Anillo claro del color de fondo.');
-            $this->assertSame(InsigniaOjosQr::COLOR_PLACA, $pixel($c + 3.5, $f + 2.08), 'Placa de la insignia.');
 
-            // El favicon (tonos de azul) ocupa el centro: hay píxeles distintos de la placa.
-            $tonos = [];
+            // El cuadro central de 3×3 es de un solo color (el del código):
+            // ningún favicon, placa ni otro tono dentro del ojo.
             for ($i = 0; $i < 40; $i++) {
-                $tonos[implode(',', $pixel($c + 2.3 + $i * 0.06, $f + 3.5))] = true;
+                for ($j = 0; $j < 40; $j++) {
+                    $this->assertSame([0x7F, 0x1D, 0x1D], $pixel($c + 2.3 + $i * 0.06, $f + 2.3 + $j * 0.06), 'Centro del ojo sin logotipo.');
+                }
             }
-            $this->assertGreaterThan(3, count($tonos), 'El favicon no aparece dentro del ojo.');
         }
     }
 
-    public function test_el_svg_lleva_la_insignia_en_los_tres_ojos_sin_el_nombre_de_la_plataforma(): void
+    public function test_el_svg_dibuja_los_tres_ojos_limpios_sin_marca_de_la_plataforma(): void
     {
         $producto = Producto::factory()->create();
         $opciones = new OpcionesQr('#4C1D95', estiloOjos: 'cuadrado', estiloModulos: 'cuadrado');
@@ -115,18 +116,19 @@ class QrMarcaTest extends TestCase
         $this->assertStringNotContainsStringIgnoringCase('dasti', $svg);
         $this->assertStringNotContainsString('<text', $svg);
         $this->assertStringNotContainsString('<script', $svg);
+        $this->assertStringNotContainsString('<image', $svg, 'Sin imágenes: ni favicon en los ojos ni logotipo.');
 
         $xml = $this->xml($svg);
         $insignias = $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]');
         $this->assertCount(3, $insignias);
 
         foreach ($insignias as $insignia) {
-            $imagen = $this->buscar($insignia, 's:image')[0] ?? null;
-            $marco = $this->buscar($insignia, 's:path')[0] ?? null;
+            $trazos = $this->buscar($insignia, 's:path');
 
-            $this->assertNotNull($imagen);
-            $this->assertStringStartsWith('data:image/png;base64,', (string) $imagen['href']);
-            $this->assertSame('#4c1d95', (string) $marco['fill']);
+            $this->assertCount(0, $this->buscar($insignia, 's:image'));
+            $this->assertCount(2, $trazos, 'Marco y cuadro central.');
+            $this->assertSame('#4c1d95', (string) $trazos[0]['fill']);
+            $this->assertSame('#4c1d95', (string) $trazos[1]['fill'], 'Cuadro central del color del código.');
         }
 
         // El trazado de módulos ya no dibuja los ojos (los dibuja la insignia).
@@ -149,14 +151,15 @@ class QrMarcaTest extends TestCase
         }
     }
 
-    public function test_el_svg_con_logotipo_conserva_el_recorte_y_agrega_la_insignia(): void
+    public function test_el_svg_con_logotipo_conserva_el_recorte_y_los_ojos_limpios(): void
     {
         $producto = Producto::factory()->for($this->negocioConLogo())->create();
         $svg = app(GeneradorQr::class)->generar($producto, new OpcionesQr(incluirLogo: true), 'svg', 1024)['contenido'];
         $xml = $this->xml($svg);
 
         $this->assertCount(1, $this->buscar($xml, '/s:svg/s:image'), 'El logotipo del negocio sigue al centro.');
-        $this->assertCount(3, $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]/s:image'));
+        $this->assertCount(3, $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]'));
+        $this->assertCount(1, $this->buscar($xml, '//s:image'), 'La única imagen es el logotipo del negocio.');
         $this->assertSame('url(#recorte-logo)', (string) $this->buscar($xml, '/s:svg/s:path')[0]['mask']);
         $this->assertStringNotContainsStringIgnoringCase('dasti', $svg);
     }
@@ -188,6 +191,7 @@ class QrMarcaTest extends TestCase
             $png = $generador->generar($producto, $opciones, 'png', $tamano)['contenido'];
 
             $this->assertSame($producto->url_permanente, $this->detectarComoCamara($png), "{$ojos}/{$modulos} {$tamano}: el detector no localiza el código.");
+            $this->assertOjosLimpios($producto, $png, $color, $tamano, $margen, "{$ojos}/{$modulos} {$tamano}");
         }
     }
 
@@ -210,14 +214,15 @@ class QrMarcaTest extends TestCase
         $this->assertStringContainsString('A', (string) $this->buscar($xml, '/s:svg/s:path')[0]['d']);
     }
 
-    public function test_el_svg_de_puntos_dibuja_circulos_y_conserva_la_insignia(): void
+    public function test_el_svg_de_puntos_dibuja_circulos_y_ojos_sin_logotipo(): void
     {
         $producto = Producto::factory()->create();
         $svg = app(GeneradorQr::class)->generar($producto, new OpcionesQr(estiloOjos: 'hoja', estiloModulos: 'puntos'), 'svg', 512)['contenido'];
         $xml = $this->xml($svg);
 
         $this->assertMatchesRegularExpression('/a[\d.]+,[\d.]+ 0 1 0 /', (string) $this->buscar($xml, '/s:svg/s:path')[0]['d']);
-        $this->assertCount(3, $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]/s:image'));
+        $this->assertCount(3, $this->buscar($xml, '//s:g[@class="'.InsigniaOjosQr::CLASE_SVG.'"]'));
+        $this->assertCount(0, $this->buscar($xml, '//s:image'));
     }
 
     public function test_los_estilos_se_validan_y_se_guardan_en_el_diseno(): void
@@ -234,7 +239,7 @@ class QrMarcaTest extends TestCase
         $this->assertSame('puntos', $producto->fresh()->opciones_qr['estilo_modulos']);
     }
 
-    public function test_la_respuesta_svg_incluye_la_insignia_y_respeta_la_politica_de_contenido(): void
+    public function test_la_respuesta_svg_incluye_los_tres_ojos_y_respeta_la_politica_de_contenido(): void
     {
         $producto = Producto::factory()->create();
 
@@ -273,6 +278,29 @@ class QrMarcaTest extends TestCase
         }
 
         return null;
+    }
+
+    /**
+     * El cuadro central (3×3) de cada ojo es completamente del color del
+     * código: no queda ningún resto del favicon ni de la placa.
+     */
+    private function assertOjosLimpios(Producto $producto, string $png, string $color, int $tamano, string $margen, string $caso): void
+    {
+        $imagen = imagecreatefromstring($png);
+        $this->assertInstanceOf(GdImage::class, $imagen);
+        $esperado = OpcionesQr::rgb($color);
+        $matriz = $this->matriz($producto, $tamano, $margen);
+        $b = $matriz->getBlockSize();
+        $m = $matriz->getMarginLeft();
+
+        foreach (InsigniaOjosQr::origenes($matriz) as [$c, $f]) {
+            for ($i = 0; $i <= 10; $i++) {
+                for ($j = 0; $j <= 10; $j++) {
+                    $p = imagecolorat($imagen, (int) ($m + ($c + 2.8 + $i * 0.14) * $b), (int) ($m + ($f + 2.8 + $j * 0.14) * $b));
+                    $this->assertSame($esperado, [($p >> 16) & 255, ($p >> 8) & 255, $p & 255], "{$caso}: centro del ojo con otro color.");
+                }
+            }
+        }
     }
 
     /**

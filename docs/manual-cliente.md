@@ -36,7 +36,7 @@ Si un producto aparece como **Suspendido**, no se puede modificar: contacta a DA
 
 ## Descargar tu QR
 
-En los productos con QR, la ficha incluye el diseñador: elige colores, fondo, margen y, si DASTI cargó tu logotipo, inclúyelo al centro. Descarga en **PNG** o **SVG**. El código siempre contiene tu enlace permanente y sus tres esquinas llevan la insignia de DASTI. Si tu producto tiene 2 QR, cada uno tiene su propio destino, diseño y estadísticas: personalízalos por separado. Si DASTI deshabilitó las descargas, esta sección no aparece.
+En los productos con QR, la ficha incluye el diseñador: elige colores, fondo, margen, la forma de las esquinas (redondeadas, hoja o cuadradas) y de los puntos del código (fluidos, puntos o cuadrados) y, si DASTI cargó tu logotipo, inclúyelo al centro. Los tres cuadros de las esquinas conservan su función para que el código se lea y toman el color y la forma que elijas, sin logotipos. Descarga en **PNG** o **SVG**. El código siempre contiene tu enlace permanente. Si tu producto tiene 2 QR, cada uno tiene su propio destino, diseño y estadísticas: personalízalos por separado. Si DASTI deshabilitó las descargas, esta sección no aparece.
 
 ## Estadísticas
 

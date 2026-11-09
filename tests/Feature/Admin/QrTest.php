@@ -112,7 +112,7 @@ class QrTest extends TestCase
         return $negocio;
     }
 
-    public function test_svg_sin_logotipo_contiene_solo_el_codigo_y_la_insignia(): void
+    public function test_svg_sin_logotipo_contiene_solo_el_codigo_y_sus_ojos(): void
     {
         $admin = User::factory()->create();
         $producto = Producto::factory()->create();
@@ -125,12 +125,13 @@ class QrTest extends TestCase
 
         $this->assertStringContainsString('attachment; filename="qr-', (string) $this->actingAs($admin)
             ->get(route('productos.qr.show', [$producto, 'formato' => 'svg', 'descargar' => 1]))->headers->get('Content-Disposition'));
-        // Solo las tres insignias de los ojos; ningún logotipo al centro.
+        // Solo el código y sus tres ojos limpios: ninguna imagen (ni logotipo
+        // al centro ni insignia de la plataforma en los ojos).
         $xml = simplexml_load_string($svg);
         $this->assertNotFalse($xml);
         $xml->registerXPathNamespace('s', 'http://www.w3.org/2000/svg');
-        $this->assertCount(0, $xml->xpath('/s:svg/s:image'));
-        $this->assertCount(3, $xml->xpath('//s:g[@class="insignia-ojo"]/s:image'));
+        $this->assertCount(0, $xml->xpath('//s:image'));
+        $this->assertCount(3, $xml->xpath('//s:g[@class="insignia-ojo"]'));
         $this->assertStringNotContainsString('<mask', $svg);
     }
 

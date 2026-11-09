@@ -16,7 +16,7 @@ import type { OpcionesQr, Producto } from '@/types';
 
 /**
  * Diseño, vista previa y descarga del QR de un producto. El QR siempre
- * contiene la URL permanente; no lleva el nombre de DASTI, solo su insignia en los ojos.
+ * contiene la URL permanente; no lleva el nombre ni el logotipo de DASTI.
  *
  * La vista previa y las descargas se piden con fetch para poder mostrar el
  * motivo real de un error (contraste, logotipo dañado, permisos, sesión

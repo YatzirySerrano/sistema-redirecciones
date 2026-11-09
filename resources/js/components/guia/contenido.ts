@@ -208,6 +208,7 @@ const temasCliente = (): Tema[] => [
                 pasos: [
                     'En la ficha del producto, abre el diseñador del código QR.',
                     'Elige el color del código y del fondo (o fondo transparente) y el margen.',
+                    'Elige la forma de las **Esquinas** (redondeadas, hoja o cuadradas) y de los **Puntos del código** (fluidos, puntos o cuadrados).',
                     'Si DASTI cargó tu logotipo, inclúyelo **al centro** del código.',
                     'Descarga en **PNG** o **SVG**. El código siempre contiene tu enlace permanente.',
                 ],
@@ -215,8 +216,8 @@ const temasCliente = (): Tema[] => [
             {
                 tipo: 'nota',
                 tono: 'consejo',
-                titulo: 'La insignia de DASTI',
-                texto: 'Los ojos del QR (los tres cuadros de las esquinas) llevan la insignia de DASTI. Tu logotipo va al centro. Los diseños con poco contraste se bloquean para que el código siempre se pueda leer.',
+                titulo: 'Las esquinas del QR',
+                texto: 'Los tres cuadros de las esquinas sirven para que el teléfono localice el código: toman el color y la forma que elijas, sin logotipos. Tu logotipo va al centro. Los diseños con poco contraste se bloquean para que el código siempre se pueda leer.',
             },
             {
                 tipo: 'lista',
@@ -600,8 +601,8 @@ const temasAdmin = (): Tema[] => [
                 titulo: 'Diseño y descarga del QR',
                 elementos: [
                     'Elige el color del código y del fondo (o transparente) y el margen.',
+                    'Elige la forma de las **Esquinas** (redondeadas, hoja o cuadradas) y de los **Puntos del código** (fluidos, puntos o cuadrados). Los tres cuadros de las esquinas toman el color y la forma elegidos, sin logotipos.',
                     'Incluye el logotipo del negocio al centro si lo cargaste en su ficha.',
-                    'Los ojos del QR llevan la insignia de DASTI.',
                     'Descarga en **PNG** (256–2048 px) o **SVG**. Usa **Guardar diseño** para conservar los ajustes.',
                     'Los diseños con poco contraste se bloquean para garantizar la lectura.',
                 ],
