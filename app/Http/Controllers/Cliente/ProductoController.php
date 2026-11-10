@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Cliente;
 
+use App\Actions\Productos\ActualizarProducto;
 use App\Actions\Productos\CambiarCantidadQr;
 use App\Actions\Productos\CambiarDestinoProducto;
 use App\Enums\EstadoProducto;
@@ -9,6 +10,7 @@ use App\Enums\TipoProducto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CambiarCantidadQrRequest;
 use App\Http\Requests\CambiarDestinoRequest;
+use App\Http\Requests\EditarNombreProductoRequest;
 use App\Http\Resources\CambioDestinoResource;
 use App\Http\Resources\ProductoResource;
 use App\Models\CambioDestino;
@@ -90,16 +92,21 @@ class ProductoController extends Controller
         $negocioId = (int) $usuario->negocio_id;
         $producto->load(['negocio', 'enlacesSecundarios.negocio']);
 
+        // Las estadísticas del producto suman todos sus enlaces (QR 2, reverso
+        // QR de un combinado, incluso los archivados); cada enlace por
+        // separado se muestra en estadisticas_medios.
         $filtro = new FiltroEstadisticas(
             FiltroEstadisticas::ultimosDias(30)->desde,
             FiltroEstadisticas::ultimosDias(30)->hasta,
             negocioId: $negocioId,
-            productoId: $producto->id,
             soloProductosVigentes: true,
+            productoFisicoId: $producto->id,
         );
         $historicos = $estadisticas->totalesHistoricosPorProducto($negocioId);
         $producto->total_accesos = $historicos[$producto->id] ?? 0;
         $producto->enlacesSecundarios->each(fn (Producto $e) => $e->total_accesos = $historicos[$e->id] ?? 0);
+        $idsSecundarios = $producto->todosLosEnlacesSecundarios()->pluck('id');
+        $totalHistorico = $producto->total_accesos + (int) $idsSecundarios->sum(fn (int $id) => $historicos[$id] ?? 0);
         $verEstadisticas = $ajustes->booleano('clientes_ven_estadisticas');
 
         return Inertia::render('cliente/productos/Show', [
@@ -114,6 +121,8 @@ class ProductoController extends Controller
             'estadisticas' => $verEstadisticas ? [
                 'totales' => $estadisticas->totales($filtro),
                 'serie' => $estadisticas->serieDiaria($filtro),
+                'total_historico' => $totalHistorico,
+                'varios_enlaces' => $idsSecundarios->isNotEmpty(),
             ] : null,
             'estadisticas_medios' => $verEstadisticas && $producto->tieneDestinosIndependientes()
                 ? array_map(fn (Producto $enlace) => [
@@ -124,10 +133,13 @@ class ProductoController extends Controller
                 : [],
             // Página de enlaces publicada del negocio como destino sugerido.
             'destinos_pagina' => app(DestinosPagina::class)->paraNegocio($producto->negocio),
+            // Solo los cambios hechos con la cuenta del propio usuario: los de
+            // DASTI u otros usuarios se siguen registrando, pero no se envían.
             'cambios' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['usuario', 'producto'])
                     ->whereIn('producto_id', [$producto->id, ...$producto->enlacesSecundarios->pluck('id')->all()])
                     ->where('negocio_id', $negocioId)
+                    ->where('user_id', $usuario->id)
                     ->latest('created_at')->latest('id')->limit(10)->get()
             ),
         ]);
@@ -145,6 +157,23 @@ class ProductoController extends Controller
         $this->notificar($cantidad === 2
             ? 'Tu producto ahora tiene 2 QR. Configura el destino y el diseño del QR 2.'
             : 'Tu producto ahora tiene 1 QR. El QR 2 dejó de funcionar; su historial se conserva.');
+
+        return back();
+    }
+
+    /**
+     * Cambia únicamente el nombre descriptivo: solo se toma el campo
+     * validado «nombre», nunca el resto de la petición.
+     */
+    public function nombre(EditarNombreProductoRequest $request, Producto $producto, ActualizarProducto $accion): RedirectResponse
+    {
+        $anterior = $producto->nombre;
+        $accion->ejecutar($producto, ['nombre' => (string) $request->validated('nombre')]);
+
+        $this->notificar(
+            $producto->nombre !== $anterior ? 'Nombre actualizado.' : 'El producto ya tenía ese nombre.',
+            $producto->nombre !== $anterior ? 'success' : 'info',
+        );
 
         return back();
     }

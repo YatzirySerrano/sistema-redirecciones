@@ -96,6 +96,7 @@ final class CatalogoPermisos
                 'productos.reactivar' => ['etiqueta' => 'Reactivar', 'descripcion' => 'Reanuda un producto suspendido.', 'ambitos' => self::P],
                 'productos.transferir' => ['etiqueta' => 'Transferir', 'descripcion' => 'Cambiar el negocio propietario.', 'ambitos' => self::P],
                 'productos.eliminar' => ['etiqueta' => 'Eliminar', 'descripcion' => 'Solo productos sin historial ni accesos.', 'ambitos' => self::P],
+                'productos.editar_nombre' => ['etiqueta' => 'Editar el nombre', 'descripcion' => 'Cambiar solo el nombre descriptivo de sus productos (p. ej. «Mostrador principal»). No modifica el enlace, el código QR, los destinos ni ningún otro dato.', 'ambitos' => self::N],
                 'productos.cambiar_cantidad_qr' => ['etiqueta' => 'Ampliar o reducir los QR del producto', 'descripcion' => 'Cambiar un producto QR o QR + NFC entre 1 y 2 QR impresos. Al reducir, el segundo QR se archiva (deja de redirigir) sin perder su historial.', 'ambitos' => self::PN],
             ],
         ],
@@ -244,8 +245,10 @@ final class CatalogoPermisos
      * (política inicial mientras la contratación en línea no se ofrece).
      * «productos.cambiar_cantidad_qr»: el número de QR lo fija DASTI en el
      * alta; solo los roles a los que DASTI lo otorgue pueden cambiarlo.
+     * «productos.editar_nombre»: DASTI decide qué roles de cliente pueden
+     * renombrar sus productos.
      */
-    private const EXCLUIDOS_CLIENTE = ['servicios.ver', 'productos.cambiar_cantidad_qr'];
+    private const EXCLUIDOS_CLIENTE = ['servicios.ver', 'productos.cambiar_cantidad_qr', 'productos.editar_nombre'];
 
     /**
      * @return list<string>

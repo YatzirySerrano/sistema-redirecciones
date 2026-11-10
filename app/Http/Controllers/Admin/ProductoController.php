@@ -136,11 +136,15 @@ class ProductoController extends Controller
         }
 
         $producto->load(['negocio', 'enlacesSecundarios.negocio']);
+        // Las estadísticas del producto suman todos sus enlaces (QR 2, reverso
+        // QR de un combinado, incluso los archivados); cada enlace por
+        // separado se muestra en estadisticas_medios.
         $filtro = new FiltroEstadisticas(
             FiltroEstadisticas::ultimosDias(30)->desde,
             FiltroEstadisticas::ultimosDias(30)->hasta,
-            productoId: $producto->id,
+            productoFisicoId: $producto->id,
         );
+        $secundarios = $producto->todosLosEnlacesSecundarios()->get(['id', 'total_accesos']);
 
         return Inertia::render('admin/productos/Show', [
             'producto' => new ProductoResource($producto),
@@ -163,6 +167,10 @@ class ProductoController extends Controller
                 'totales' => $estadisticas->totales($filtro),
                 'serie' => $estadisticas->serieDiaria($filtro),
                 'dispositivos' => $estadisticas->dispositivos($filtro),
+                // Mismo contador que «Accesos totales» de cada enlace
+                // (periodo del dueño vigente), sumado para el producto.
+                'total_historico' => $producto->total_accesos + (int) $secundarios->sum('total_accesos'),
+                'varios_enlaces' => $secundarios->isNotEmpty(),
             ],
             'cambios' => CambioDestinoResource::collection(
                 CambioDestino::query()->with(['usuario', 'producto'])

@@ -54,9 +54,10 @@ class RolesPermisosTest extends TestCase
         // Todos los permisos de negocio salvo «servicios.ver» («Mis servicios»
         // queda oculto hasta que DASTI lo habilite) y el cambio de número de
         // QR (lo fija DASTI en el alta).
-        $this->assertEqualsCanonicalizing(array_values(array_diff(CatalogoPermisos::delAmbito('negocio'), ['servicios.ver', 'productos.cambiar_cantidad_qr'])), $cliente->nombresPermisos());
+        $this->assertEqualsCanonicalizing(array_values(array_diff(CatalogoPermisos::delAmbito('negocio'), ['servicios.ver', 'productos.cambiar_cantidad_qr', 'productos.editar_nombre'])), $cliente->nombresPermisos());
         $this->assertNotContains('servicios.ver', $cliente->nombresPermisos());
         $this->assertNotContains('productos.cambiar_cantidad_qr', $cliente->nombresPermisos());
+        $this->assertNotContains('productos.editar_nombre', $cliente->nombresPermisos());
         $this->assertContains('productos.cambiar_cantidad_qr', $admin->nombresPermisos());
     }
 

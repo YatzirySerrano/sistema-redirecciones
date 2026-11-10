@@ -28,6 +28,11 @@ Route::middleware(['auth', VerificarCuentaActiva::class, RequerirContrasenaDefin
         Route::put('productos/{producto}/destino', [ProductoController::class, 'destino'])
             ->middleware('throttle:cambios-destino')
             ->name('productos.destino');
+        // Solo el nombre descriptivo: requiere «productos.editar_nombre»
+        // (ProductoPolicy::editarNombre); ignora cualquier otro campo.
+        Route::patch('productos/{producto}/nombre', [ProductoController::class, 'nombre'])
+            ->middleware('throttle:cambios-destino')
+            ->name('productos.nombre');
         // Ampliar a 2 QR o reducir a 1: requiere «productos.cambiar_cantidad_qr»
         // (ningún rol de cliente lo tiene de inicio; ProductoPolicy).
         Route::patch('productos/{producto}/cantidad-qr', [ProductoController::class, 'cantidadQr'])

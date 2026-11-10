@@ -78,6 +78,7 @@ export type Producto = {
         descargar_qr: boolean;
         disenar_qr: boolean;
         cambiar_cantidad_qr: boolean;
+        editar_nombre: boolean;
     };
 };
 

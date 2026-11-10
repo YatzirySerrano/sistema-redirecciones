@@ -632,8 +632,13 @@ const semanas = computed(() =>
 
     <Panel
         titulo="Cambios de destino recientes"
-        descripcion="Cada cambio queda registrado con quién lo hizo."
+        descripcion="Los últimos cambios de destino que hiciste."
     >
-        <HistorialDestinos :cambios="actividad.data" mostrar-producto />
+        <HistorialDestinos
+            :cambios="actividad.data"
+            mostrar-producto
+            titulo-vacio="Aún no has realizado cambios"
+            descripcion-vacio="Aquí aparecerán los cambios de destino que hagas."
+        />
     </Panel>
 </template>

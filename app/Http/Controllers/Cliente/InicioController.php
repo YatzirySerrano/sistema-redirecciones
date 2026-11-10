@@ -98,7 +98,9 @@ class InicioController extends Controller
             'ver_estadisticas' => $verEstadisticas,
             'alertas' => $alertas,
             'actividad' => CambioDestinoResource::collection(
+                // Solo los cambios hechos con la cuenta del propio usuario.
                 CambioDestino::query()->with(['producto', 'usuario'])->where('negocio_id', $negocio->id)
+                    ->where('user_id', $usuario->id)
                     ->whereHas('producto', fn ($q) => $q->where('negocio_id', $negocio->id))
                     ->latest('created_at')->latest('id')->limit(6)->get()
             ),

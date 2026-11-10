@@ -80,6 +80,8 @@ const props = defineProps<{
         totales: TotalesEstadisticas;
         serie: PuntoSerie[];
         dispositivos: ElementoDesglose[];
+        total_historico: number;
+        varios_enlaces: boolean;
     };
     cambios: Coleccion<CambioDestino>;
     auditoria: Coleccion<RegistroAuditoria>;
@@ -412,6 +414,11 @@ const barrasDispositivos = computed(() =>
                         etiqueta="Accesos (30 días)"
                         :valor="numero(estadisticas.totales.total)"
                         :icono="MousePointerClick"
+                        :detalle="
+                            estadisticas.varios_enlaces
+                                ? 'Suma de todos los enlaces del producto.'
+                                : undefined
+                        "
                     />
                     <TarjetaIndicador
                         etiqueta="Visitantes estimados"
@@ -431,7 +438,11 @@ const barrasDispositivos = computed(() =>
                 </div>
                 <Panel
                     titulo="Accesos por día"
-                    descripcion="Últimos 30 días, sin bots identificados."
+                    :descripcion="
+                        estadisticas.varios_enlaces
+                            ? 'Últimos 30 días, todos los enlaces del producto, sin bots identificados.'
+                            : 'Últimos 30 días, sin bots identificados.'
+                    "
                 >
                     <GraficaArea :serie="estadisticas.serie" />
                 </Panel>
@@ -445,8 +456,12 @@ const barrasDispositivos = computed(() =>
                     class="flex items-center gap-2 text-xs text-muted-foreground"
                 >
                     <ChartColumnBig class="size-4" />
-                    Total histórico:
-                    {{ numero(producto.total_accesos) }} accesos.
+                    Total histórico{{
+                        estadisticas.varios_enlaces
+                            ? " (todos los enlaces)"
+                            : ""
+                    }}:
+                    {{ numero(estadisticas.total_historico) }} accesos.
                 </p>
             </TabsContent>
 
@@ -525,7 +540,7 @@ const barrasDispositivos = computed(() =>
                             <Eye class="size-4" /> Accesos totales
                         </dt>
                         <dd class="font-semibold tabular-nums">
-                            {{ numero(producto.total_accesos) }}
+                            {{ numero(estadisticas.total_historico) }}
                         </dd>
                     </div>
                     <div class="flex items-center justify-between gap-3">

@@ -158,10 +158,14 @@ class AnalisisYPanelesTest extends TestCase
 
     public function test_mapa_horario_usa_la_hora_local_registrada(): void
     {
+        // Reloj fijo en jueves: con la fecha real, si la prueba corría lunes
+        // o martes el evento del miércoles quedaba en el futuro (fuera del
+        // periodo, que termina hoy) y el total daba 2 en lugar de 3.
+        $this->travelTo(CarbonImmutable::parse('2026-11-12 13:00'));
+
         $producto = Producto::factory()->create();
         // Hora local de la plataforma (America/Mexico_City), tal como se guarda.
         $lunes = CarbonImmutable::now()->startOfWeek()->setTime(10, 15);
-        $lunes = $lunes->isFuture() ? $lunes->subWeek() : $lunes;
         $this->acceso($producto, $lunes);
         $this->acceso($producto, $lunes->addMinutes(20));
         $this->acceso($producto, $lunes->addDays(2)->setTime(21, 5));
@@ -175,6 +179,44 @@ class AnalisisYPanelesTest extends TestCase
         $this->assertContains(['dia' => 3, 'hora' => 21, 'total' => 1], $mapa['celdas']);
         $this->assertSame(2, $mapa['por_hora'][10]);
         $this->assertCount(24, $mapa['por_hora']);
+    }
+
+    public function test_mapa_horario_respeta_medianoche_el_dia_local_y_el_periodo(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-12 13:00')); // jueves
+        $producto = Producto::factory()->create();
+
+        $this->acceso($producto, CarbonImmutable::parse('2026-11-07 12:00')); // sábado, fuera del periodo personalizado
+        $this->acceso($producto, CarbonImmutable::parse('2026-11-08 23:55')); // domingo, antes de medianoche
+        $this->acceso($producto, CarbonImmutable::parse('2026-11-09 00:05')); // lunes, después de medianoche
+        // Martes 20:30 local = miércoles 02:30 UTC: cuenta en martes a las 20 h.
+        $this->acceso($producto, CarbonImmutable::parse('2026-11-10 20:30'));
+        $this->acceso($producto, CarbonImmutable::parse('2026-11-11 07:00')); // miércoles
+        $this->acceso($producto, CarbonImmutable::parse('2026-11-13 09:00')); // futuro: nunca se cuenta
+
+        $periodo = new FiltroEstadisticas(
+            CarbonImmutable::parse('2026-11-08')->startOfDay(),
+            CarbonImmutable::parse('2026-11-11')->endOfDay(),
+            $producto->negocio_id,
+        );
+        $mapa = $this->consultas()->mapaHorario($periodo);
+
+        $this->assertSame(4, $mapa['total']);
+        $this->assertEqualsCanonicalizing([
+            ['dia' => 7, 'hora' => 23, 'total' => 1],
+            ['dia' => 1, 'hora' => 0, 'total' => 1],
+            ['dia' => 2, 'hora' => 20, 'total' => 1],
+            ['dia' => 3, 'hora' => 7, 'total' => 1],
+        ], $mapa['celdas']);
+
+        $esperado = array_fill(0, 24, 0);
+        $esperado[0] = $esperado[7] = $esperado[20] = $esperado[23] = 1;
+        $this->assertSame($esperado, $mapa['por_hora'], 'Horas sin actividad en cero, sin desplazamientos.');
+
+        // Últimos 14 días: incluye el sábado, pero no el evento futuro.
+        $catorce = $this->consultas()->mapaHorario(FiltroEstadisticas::ultimosDias(14, $producto->negocio_id));
+        $this->assertSame(5, $catorce['total']);
+        $this->assertContains(['dia' => 6, 'hora' => 12, 'total' => 1], $catorce['celdas']);
     }
 
     public function test_el_detalle_no_se_inventa_fuera_de_la_retencion(): void

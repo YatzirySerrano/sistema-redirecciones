@@ -76,6 +76,26 @@ class ProductoPolicy
     }
 
     /**
+     * Cambiar solo el nombre descriptivo (clientes con
+     * «productos.editar_nombre»). Se renombra el producto físico; sus
+     * enlaces secundarios toman el mismo nombre.
+     */
+    public function editarNombre(User $usuario, Producto $producto): Response
+    {
+        $respuesta = $this->conPermiso($usuario, $producto, 'productos.editar_nombre');
+
+        if ($respuesta->denied()) {
+            return $respuesta;
+        }
+
+        if ($producto->esEnlaceSecundario()) {
+            return Response::deny('El nombre se cambia desde el producto principal.');
+        }
+
+        return $producto->admiteCambiosDelCliente() ? Response::allow() : Response::deny(self::SUSPENDIDO);
+    }
+
+    /**
      * Ampliar a 2 QR o reducir a 1 (lo fija DASTI en el alta; por defecto
      * ningún rol de cliente tiene el permiso). Solo productos físicos QR o
      * combinados activos; el cliente, además, con su negocio activo.

@@ -10,13 +10,20 @@ import Panel from "@/components/comun/Panel.vue";
 import GraficaArea from "@/components/graficas/GraficaArea.vue";
 import CambiarCantidadQr from "@/components/productos/CambiarCantidadQr.vue";
 import DisenadorQr from "@/components/productos/DisenadorQr.vue";
+import EditarNombreProducto from "@/components/productos/EditarNombreProducto.vue";
 import EnlacesPorMedio from "@/components/productos/EnlacesPorMedio.vue";
 import FormularioDestino from "@/components/productos/FormularioDestino.vue";
 import HistorialDestinos from "@/components/productos/HistorialDestinos.vue";
 import { Button } from "@/components/ui/button";
 import { numero, visitantes } from "@/lib/formato";
 import { enlacesQr } from "@/lib/productos";
-import { cantidadQr, destino, index, show } from "@/routes/cliente/productos";
+import {
+    cantidadQr,
+    destino,
+    index,
+    nombre,
+    show,
+} from "@/routes/cliente/productos";
 import type {
     EstadisticaMedio,
     CambioDestino,
@@ -33,7 +40,12 @@ const props = defineProps<{
     opciones_qr: OpcionesQr;
     /** Diseño guardado de cada QR, por id de enlace. */
     opciones_qr_enlaces?: Record<number, OpcionesQr>;
-    estadisticas: { totales: TotalesEstadisticas; serie: PuntoSerie[] } | null;
+    estadisticas: {
+        totales: TotalesEstadisticas;
+        serie: PuntoSerie[];
+        total_historico: number;
+        varios_enlaces: boolean;
+    } | null;
     cambios: Coleccion<CambioDestino>;
     estadisticas_medios: EstadisticaMedio[];
     destinos_pagina?: { etiqueta: string; url: string }[];
@@ -108,8 +120,20 @@ const muestraQr = computed(
                 />
             </div>
         </template>
-        <template v-if="p.permisos.cambiar_cantidad_qr" #acciones>
-            <CambiarCantidadQr :producto="p" :accion="cantidadQr.url(p.id)" />
+        <template
+            v-if="p.permisos.cambiar_cantidad_qr || p.permisos.editar_nombre"
+            #acciones
+        >
+            <EditarNombreProducto
+                v-if="p.permisos.editar_nombre"
+                :producto="p"
+                :accion="nombre.url(p.id)"
+            />
+            <CambiarCantidadQr
+                v-if="p.permisos.cambiar_cantidad_qr"
+                :producto="p"
+                :accion="cantidadQr.url(p.id)"
+            />
         </template>
     </EncabezadoPagina>
 
@@ -213,7 +237,11 @@ const muestraQr = computed(
             </template>
 
             <Panel titulo="Historial de cambios">
-                <HistorialDestinos :cambios="cambios.data" />
+                <HistorialDestinos
+                    :cambios="cambios.data"
+                    titulo-vacio="Aún no has realizado cambios en este producto"
+                    descripcion-vacio="Aquí aparecerá cada cambio de destino que hagas."
+                />
             </Panel>
         </div>
 
@@ -242,7 +270,15 @@ const muestraQr = computed(
                 </div>
             </Panel>
 
-            <Panel v-if="estadisticas" titulo="Últimos 30 días">
+            <Panel
+                v-if="estadisticas"
+                titulo="Últimos 30 días"
+                :descripcion="
+                    estadisticas.varios_enlaces
+                        ? 'Suma de todos los enlaces de este producto.'
+                        : undefined
+                "
+            >
                 <dl class="mb-4 grid grid-cols-2 gap-3">
                     <div class="rounded-lg bg-muted/50 p-3">
                         <dt class="text-xs text-muted-foreground">Accesos</dt>
@@ -266,7 +302,7 @@ const muestraQr = computed(
                 />
                 <p class="mt-2 text-xs text-muted-foreground">
                     <Link2 class="mr-1 inline size-3" aria-hidden="true" />Total
-                    histórico: {{ numero(p.total_accesos) }} accesos.
+                    histórico: {{ numero(estadisticas.total_historico) }} accesos.
                 </p>
             </Panel>
 

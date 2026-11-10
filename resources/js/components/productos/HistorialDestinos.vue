@@ -5,9 +5,16 @@ import { dominio, fechaHora, relativo } from '@/lib/formato';
 import type { CambioDestino } from '@/types';
 
 withDefaults(
-    defineProps<{ cambios: CambioDestino[]; mostrarProducto?: boolean }>(),
+    defineProps<{
+        cambios: CambioDestino[];
+        mostrarProducto?: boolean;
+        tituloVacio?: string;
+        descripcionVacio?: string;
+    }>(),
     {
         mostrarProducto: false,
+        tituloVacio: 'Sin cambios registrados',
+        descripcionVacio: 'Aquí aparecerá cada modificación del destino.',
     },
 );
 </script>
@@ -16,8 +23,8 @@ withDefaults(
     <EstadoVacio
         v-if="cambios.length === 0"
         :icono="History"
-        titulo="Sin cambios registrados"
-        descripcion="Aquí aparecerá cada modificación del destino."
+        :titulo="tituloVacio"
+        :descripcion="descripcionVacio"
     />
     <ol v-else class="relative space-y-5 border-l pl-5">
         <li v-for="cambio in cambios" :key="cambio.id" class="relative">

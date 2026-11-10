@@ -112,18 +112,21 @@ class TransferenciaAisladaTest extends TestCase
             ->assertInertia(fn (AssertableInertia $pagina) => $pagina->where('totales.total', 0));
     }
 
-    public function test_conservando_el_destino_el_nuevo_propietario_solo_ve_su_punto_de_partida(): void
+    public function test_conservando_el_destino_el_nuevo_propietario_ve_el_destino_sin_historial_ajeno(): void
     {
         $this->transferir(conservarDestino: true);
+
+        // El punto de partida se sigue registrando (lo hizo DASTI al
+        // transferir), pero el historial del cliente solo muestra los cambios
+        // hechos con su propia cuenta.
+        $this->assertTrue(CambioDestino::query()->where('producto_id', $this->producto->id)
+            ->where('negocio_id', $this->destino->id)->where('user_id', $this->admin->id)->where('url_nueva', self::URL_PRIVADA)->exists());
 
         $this->actingAs($this->clienteDestino)->get(route('cliente.productos.show', $this->producto))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $pagina) => $pagina
                 ->where('producto.data.url_destino', self::URL_PRIVADA)
-                ->has('cambios.data', 1)
-                ->where('cambios.data.0.url_anterior', null)
-                ->where('cambios.data.0.url_nueva', self::URL_PRIVADA)
-                ->where('cambios.data.0.autor', 'Sistema'));
+                ->has('cambios.data', 0));
 
         // La URL inicial del anterior propietario (antes de su cambio) nunca aparece.
         $this->actingAs($this->clienteDestino)->get(route('cliente.productos.show', $this->producto))

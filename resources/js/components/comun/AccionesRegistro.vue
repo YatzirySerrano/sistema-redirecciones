@@ -3,7 +3,7 @@ import type { InertiaLinkProps } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
 import { Ellipsis } from '@lucide/vue';
 import type { Component } from 'vue';
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -64,6 +64,13 @@ const secundarias = computed(() =>
 const peligrosas = computed(() =>
     visibles.value.filter((a) => !a.principal && a.destructiva),
 );
+
+// El disparador del menú está dentro del Tooltip, que también es un
+// «popper»: su ancla se registra en el tooltip y el menú se quedaba sin
+// referencia (se abría fuera de la pantalla, en la esquina superior
+// izquierda). Por eso el menú recibe el botón explícitamente.
+const botonMas = useTemplateRef<{ $el: HTMLElement }>('botonMas');
+const referenciaMenu = computed(() => botonMas.value?.$el);
 
 const nombreAccesible = (a: AccionRegistro) =>
     props.nombre ? `${a.etiqueta}: ${props.nombre}` : a.etiqueta;
@@ -131,6 +138,7 @@ const nombreAccesible = (a: AccionRegistro) =>
                 <TooltipTrigger as-child>
                     <DropdownMenuTrigger as-child>
                         <Button
+                            ref="botonMas"
                             variant="ghost"
                             :size="variante === 'tabla' ? 'icon-sm' : 'sm'"
                             class="text-muted-foreground hover:text-foreground"
@@ -147,7 +155,11 @@ const nombreAccesible = (a: AccionRegistro) =>
                 </TooltipTrigger>
                 <TooltipContent>Más acciones</TooltipContent>
             </Tooltip>
-            <DropdownMenuContent align="end" class="min-w-44">
+            <DropdownMenuContent
+                align="end"
+                class="min-w-44"
+                :reference="referenciaMenu"
+            >
                 <template v-for="a in secundarias" :key="a.clave">
                     <DropdownMenuItem v-if="a.href && a.externo" as-child>
                         <a :href="String(a.href)">

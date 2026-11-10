@@ -64,6 +64,7 @@ class ProductoResource extends JsonResource
                 'descargar_qr' => $usuario?->can('descargarQr', $this->resource) ?? false,
                 'disenar_qr' => $usuario?->can('disenarQr', $this->resource) ?? false,
                 'cambiar_cantidad_qr' => $this->esEnlaceSecundario() ? false : ($usuario?->can('cambiarCantidadQr', $this->resource) ?? false),
+                'editar_nombre' => $esAdmin || $this->esEnlaceSecundario() ? false : ($usuario?->can('editarNombre', $this->resource) ?? false),
             ],
         ];
 
