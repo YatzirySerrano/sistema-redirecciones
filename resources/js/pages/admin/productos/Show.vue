@@ -416,8 +416,8 @@ const barrasDispositivos = computed(() =>
                         :icono="MousePointerClick"
                         :detalle="
                             estadisticas.varios_enlaces
-                                ? 'Suma de todos los enlaces del producto.'
-                                : undefined
+                                ? 'Veces que se abrieron todos los enlaces del producto, sin accesos automatizados.'
+                                : 'Veces que se abrió el enlace, sin accesos automatizados.'
                         "
                     />
                     <TarjetaIndicador
@@ -426,7 +426,7 @@ const barrasDispositivos = computed(() =>
                         :icono="UsersRound"
                         :detalle="
                             coberturaVisitantes(estadisticas.totales) ??
-                            'Huellas diarias anónimas distintas; no son personas únicas.'
+                            'Aproximado: teléfonos o equipos distintos por día; no son personas únicas.'
                         "
                     />
                     <TarjetaIndicador
@@ -440,8 +440,8 @@ const barrasDispositivos = computed(() =>
                     titulo="Accesos por día"
                     :descripcion="
                         estadisticas.varios_enlaces
-                            ? 'Últimos 30 días, todos los enlaces del producto, sin bots identificados.'
-                            : 'Últimos 30 días, sin bots identificados.'
+                            ? 'Cuántos accesos recibió el producto cada día en los últimos 30 días, sumando todos sus enlaces y sin bots identificados.'
+                            : 'Cuántos accesos recibió el producto cada día en los últimos 30 días, sin bots identificados.'
                     "
                 >
                     <GraficaArea :serie="estadisticas.serie" />
@@ -461,7 +461,8 @@ const barrasDispositivos = computed(() =>
                             ? " (todos los enlaces)"
                             : ""
                     }}:
-                    {{ numero(estadisticas.total_historico) }} accesos.
+                    {{ numero(estadisticas.total_historico) }} accesos, desde
+                    que el producto pertenece a su negocio actual.
                 </p>
             </TabsContent>
 

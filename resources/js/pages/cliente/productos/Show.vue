@@ -285,6 +285,15 @@ const muestraQr = computed(
                         <dd class="text-xl font-semibold tabular-nums">
                             {{ numero(estadisticas.totales.total) }}
                         </dd>
+                        <p
+                            class="mt-1 text-[11px] leading-snug text-muted-foreground"
+                        >
+                            {{
+                                estadisticas.varios_enlaces
+                                    ? 'Veces que se abrieron sus enlaces, sin contar accesos automatizados.'
+                                    : 'Veces que se abrió el enlace, sin contar accesos automatizados.'
+                            }}
+                        </p>
                     </div>
                     <div class="rounded-lg bg-muted/50 p-3">
                         <dt class="text-xs text-muted-foreground">
@@ -293,8 +302,17 @@ const muestraQr = computed(
                         <dd class="text-xl font-semibold tabular-nums">
                             {{ visitantes(estadisticas.totales) }}
                         </dd>
+                        <p
+                            class="mt-1 text-[11px] leading-snug text-muted-foreground"
+                        >
+                            Aproximado: teléfonos o equipos distintos por día.
+                            Quien entra varios días cuenta una vez por día.
+                        </p>
                     </div>
                 </dl>
+                <p class="mb-2 text-xs text-muted-foreground">
+                    Cuántos accesos recibió tu producto cada día.
+                </p>
                 <GraficaArea
                     :serie="estadisticas.serie"
                     etiqueta="Accesos"
@@ -303,6 +321,13 @@ const muestraQr = computed(
                 <p class="mt-2 text-xs text-muted-foreground">
                     <Link2 class="mr-1 inline size-3" aria-hidden="true" />Total
                     histórico: {{ numero(estadisticas.total_historico) }} accesos.
+                    <span class="mt-0.5 block text-[11px] leading-snug">
+                        {{
+                            estadisticas.varios_enlaces
+                                ? 'Todos los accesos de sus enlaces desde que el producto es de tu negocio.'
+                                : 'Todos los accesos desde que el producto es de tu negocio.'
+                        }}
+                    </span>
                 </p>
             </Panel>
 
